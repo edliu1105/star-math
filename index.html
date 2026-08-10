@@ -205,6 +205,14 @@ canvas{display:block}
 .card .dotwrap{position:absolute;inset:9%}
 .card .cardnum{position:absolute;right:5%;top:3%;font-weight:900;color:#2a1f4d;opacity:.85;
   font-size:clamp(15px,3.4vmin,30px);text-shadow:0 1px 0 #fff}
+.eqbar{display:flex;gap:clamp(4px,1vmin,10px);align-items:center;justify-content:center;
+  position:absolute;left:50%;top:2%;transform:translateX(-50%);z-index:9;white-space:nowrap;
+  background:rgba(20,14,50,.72);border-radius:14px;padding:clamp(4px,1vmin,10px) clamp(10px,2vmin,20px);
+  box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.eqbar b{font-weight:900;color:#fff;font-size:clamp(18px,4.2vmin,40px);line-height:1.15;min-width:.6em;text-align:center}
+.eqbar b.hole{color:#ffd75e;background:rgba(255,255,255,.13);border-radius:10px;padding:0 .16em;
+  border:3px dashed rgba(255,215,94,.85)}
+.eqbar b.hole.filled{border-style:solid;background:rgba(255,215,94,.25)}
 .card .dot{position:absolute;width:20%;height:20%;border-radius:50%;background:#e2453f;
   box-shadow:inset 0 -3px 0 rgba(0,0,0,.16);transform:translate(-50%,-50%)}
 .card .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -484,7 +492,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "2.1.0";
+const VERSION = "3.0.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -504,24 +512,24 @@ const cnSeq=n=>CN_SEQ[clamp(n,0,10)], cnQty=n=>CN_QTY[clamp(n,0,10)];
 
 /* ========================= 世界 ========================= */
 const WORLDS=[
- {id:"peppa", name:"佩奇的泥坑", bg:"bg_peppa", lead:"peppa", skill:"瞬识",
+ {id:"peppa", name:"佩奇的泥坑", bg:"bg_peppa", lead:"peppa", skill:"闪算加减",
   cast:["peppa","george","daddypig","mummypig"],
-  intro:"佩奇要跳泥坑啦！看看溅起几个泥点。"},
- {id:"paw", name:"冒险湾救援", bg:"bg_paw", lead:"chase", skill:"点数与总数",
+  intro:"泥点闪一下就要算出来！看好啦！"},
+ {id:"paw", name:"冒险湾救援", bg:"bg_paw", lead:"chase", skill:"数字任务",
   cast:["ryder","chase","marshall","skye","rubble","zuma","rocky"],
-  intro:"汪汪队出发！数一数，再派出正好那么多狗狗。"},
- {id:"bluey", name:"Bluey 的后院", bg:"bg_bluey", lead:"bluey", skill:"比多少",
+  intro:"汪汪队看数字出任务，一只都不能多、不能少！"},
+ {id:"bluey", name:"Bluey 的后院", bg:"bg_bluey", lead:"bluey", skill:"求差与平分",
   cast:["bluey","bingo","bandit","chilli"],
-  intro:"要公平才好玩！比一比，谁的多？"},
- {id:"hulu", name:"葫芦山", bg:"bg_hulu", lead:"hulu1", skill:"分一分",
+  intro:"谁多？多几个？能不能公平分？比一比！"},
+ {id:"hulu", name:"葫芦山", bg:"bg_hulu", lead:"hulu1", skill:"序数与分解",
   cast:["hulu1","hulu2","hulu3","hulu4","hulu5","hulu6","hulu7","yeye"],
-  intro:"葫芦娃要去救爷爷！听好要做什么哦。"},
- {id:"aveng", name:"复仇者大厦", bg:"bg_aveng", lead:"ironman", skill:"合起来",
+  intro:"数字山冒险！第几个？分成几和几？"},
+ {id:"aveng", name:"复仇者大厦", bg:"bg_aveng", lead:"ironman", skill:"加减算式",
   cast:["ironman","cap","thor","hulkman","widow","hawkeye","spider","spiderblack","blackpanther"],
-  intro:"英雄集结！两边合起来，一共几个？"},
- {id:"monkey", name:"花果山", bg:"bg_monkey", lead:"wukong", skill:"接着数",
+  intro:"英雄算式大作战！加一加，减一减！"},
+ {id:"monkey", name:"花果山", bg:"bg_monkey", lead:"wukong", skill:"数轴跳跳",
   cast:["wukong","tangseng","bajie","shaseng","bailongma"],
-  intro:"金箍棒变长搭座桥，师父要过河啦！"}
+  intro:"金箍棒数轴桥，跳着数，过河去！"}
 ];
 const W_BY_ID={}; WORLDS.forEach(w=>W_BY_ID[w.id]=w);
 const ORDER=WORLDS.map(w=>w.id);
@@ -531,20 +539,20 @@ const GOURDS=["gourd_r","gourd_o","gourd_y","gourd_g","gourd_c","gourd_b","gourd
 
 /* ========================= 进度（v2：含掌握证据） ========================= */
 const Store=(()=>{
-  const KEY="kidmath2.progress.v2";
+  const KEY="kidmath2.progress.v3";   // v3 课程重做，旧进度不迁移，全新开始
   // stars = 参与（陪着玩就有，给孩子看）；mast = 掌握（只由"新题+无提示"的首答累计，用于解锁）
   // hist  = 升/降级的滑动窗口，达成一次窗口就清空
   // recent= 近期正确率用的滚动历史，**永不清空** —— 两者混用会让全对的孩子永远算不出正确率
   const mkW=()=>({stars:0,lv:1,hist:[],recent:[],seen:0,tries:0,open:0,mast:0,wins:0,winAt:-1});
   // set = 家长设置：num 卡片显示数字（默认开），minlv 难度下限（对全部世界生效）
-  const def=()=>{const p={v:2,plays:0,sess:0,set:{num:1,minlv:1},w:{}};WORLDS.forEach(x=>p.w[x.id]=mkW());return p;};
+  const def=()=>{const p={v:3,plays:0,sess:0,set:{num:1,minlv:1},w:{}};WORLDS.forEach(x=>p.w[x.id]=mkW());return p;};
   let d=def();
   const num=(v,f)=>(typeof v==="number"&&isFinite(v))?v:f;
   function load(){
     try{
       const raw=localStorage.getItem(KEY); if(!raw) return;
       const o=JSON.parse(raw);
-      if(!o||typeof o!=="object"||o.v!==2||!o.w||typeof o.w!=="object") return;
+      if(!o||typeof o!=="object"||o.v!==3||!o.w||typeof o.w!=="object") return;
       const b=def(); b.plays=clamp(num(o.plays,0),0,1e6); b.sess=clamp(num(o.sess,0),0,1e6);
       if(o.set&&typeof o.set==="object"){
         b.set.num=num(o.set.num,1)?1:0;
@@ -1282,1056 +1290,1011 @@ function autoCount(ctx,objs,i,step,done){
 }
 
 /* ============================================================================
-   世界一 · 佩奇的泥坑 —— 瞬识 Subitizing
+   进阶数学 · 六个世界（v3 课程）
+   目标：加减运算、求差、单双数、平分、正反序数、数的合成分解、11~20、跳数、翻倍
+   每题契约不变：新题+无提示的首答记掌握证据；错两次演示揭示；纠错后同构复测
+   ============================================================================ */
+/* 0~20 中文数词：cnS 计数/序数用（"二"），cnQ 量词用（"两"） */
+function cnS(n){ n=clamp(n,0,20); return n<=10?CN_SEQ[n]:(n<20?("十"+CN_SEQ[n-10]):"二十"); }
+function cnQ(n){ n=clamp(n,0,20); return n<=10?CN_QTY[n]:(n<20?("十"+CN_SEQ[n-10]):"二十"); }
+/** 算式条：parts 里的 "□" 是空位；返回 {setHole} 用来把空位填上答案 */
+function eqBar(host,parts){
+  const bar=el("div","eqbar",host);
+  let hole=null;
+  parts.forEach(p=>{ const b=el("b",p==="□"?"hole":"",bar); b.textContent=p; if(p==="□"&&!hole) hole=b; });
+  return { bar, setHole(t){ if(hole){ hole.textContent=String(t); hole.classList.add("filled"); } } };
+}
+/** 通用四选一数字卡答题。
+    o={ans,lo,hi,onRight(card),rightSay,revealSay,remedy()} ；remedy 缺省=直接揭示 */
+function numAnswer(ctx,ui,st,failsBox,o){
+  ctx.answering(true);
+  const list=choices(o.ans,o.lo!=null?o.lo:1,o.hi!=null?o.hi:10,4);
+  const wrap=askCards(ui.L.bot,list,"num",(v,c)=>{
+    if(st.done||st.locked) return;
+    const ok=(v===o.ans); record(ctx,st,ok);
+    if(ok){
+      st.done=true; lockCards(wrap); c.classList.add("right"); ctx.answering(false);
+      if(o.rightSay) Speech.say(o.rightSay,{tag:"right"});
+      SFX.right();
+      ctx.T.after(o.rightWait||1600,()=>{ if(ctx.alive()) o.onRight(c); });
+    }else{
+      st.wrongs++; failsBox.n++; SFX.soft(); c.classList.add("wrong");
+      ctx.T.after(420,()=>c.classList.remove("wrong"));
+      lockCards(wrap); ctx.answering(false);
+      if(st.wrongs>=2||failsBox.n>=2){
+        st.done=true;
+        [].forEach.call(wrap.children,x=>{
+          if(+x.dataset.n===o.ans){ x.classList.add("right"); Finger.at(x,2300); } else x.classList.add("dim"); });
+        if(o.revealSay) Speech.say(o.revealSay,{tag:"reveal"});
+        ctx.T.after(2200,()=>{ if(ctx.alive()) o.onRight(wrap); });
+        return;
+      }
+      if(o.remedy) o.remedy(wrap); else{
+        // 缺省纠错：把正确卡亮出来讲一遍，然后换同构新题
+        st.locked=true;
+        if(o.revealSay) Speech.say(o.revealSay,{tag:"remedy"});
+        ctx.T.after(2400,()=>{ if(ctx.alive()&&o.retry) o.retry(); });
+      }
+    }
+  });
+  if(o.askText) ctx.ask(o.askText,wrap);
+  return wrap;
+}
+
+/* ============================================================================
+   世界一 · 佩奇的泥坑 —— 闪算：瞬识 → 加法 → 减法 → 缺失部分
    ============================================================================ */
 GAMES.peppa=ctx=>{
-  const T=ctx.T; let st=null,q=null,ui=null,shownAt=0,fails=0; const box={last:null};
+  const T=ctx.T; let st=null,q=null,ui=null; const box={last:null},fails={n:0};
 
   function spec(){
     const lv=ctx.level();
-    const cfg=lv===1?{lo:1,hi:3,flash:1500,qpat:"dice"}
-             :lv===2?{lo:2,hi:5,flash:1250,qpat:"dice"}
-             :lv===3?{lo:4,hi:6,flash:1050,qpat:"group"}
-             :       {lo:3,hi:6,flash:1150,qpat:"group"};
-    const n=rint(cfg.lo,cfg.hi);
-    // 答案卡排列必须与题目排列不同 —— 封死"图形匹配"通关
-    const apat=(ctx.symbols()&&lv>=4)?"num":pickAnswerPat(n,cfg.qpat);
-    return {n,cfg,apat};
+    if(lv===1){ const n=rint(4,7); return {kind:"flash",n,ans:n,flash:1000}; }
+    if(lv===2){ const a=rint(2,5),b=rint(1,Math.min(4,9-a)); return {kind:"add",a,b,ans:a+b,flash:1300}; }
+    if(lv===3){ const n=rint(5,9),k=rint(1,3); return {kind:"sub",n,k,ans:n-k,flash:1600}; }
+    const n=rint(5,9),a=rint(1,n-1); return {kind:"miss",n,a,ans:n-a,flash:1500};
   }
   function build(retry){
-    st=bindState(newState(retry)); q=setQ(fresh(spec,o=>o.n,box));
+    st=bindState(newState(retry)); q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.n||0)+","+(o.a||0)+","+(o.b||o.k||0),box),{world:"peppa",act:"card"}));
     const L=layout(ctx.root);
     const pig=sideCast(L.top,"l",["peppa"],34,true);
     sideCast(L.top,"r",["mummypig",{n:"george",sm:1}],28);
     const field=mkField(L.top,{t:26});
     ui={L,field,pig,blobs:[]};
-    onTap(pig,()=>{ if(busyState(st)) return; st.hinted=true; flash(); });   // 再看一次 → 记为已提示，不计掌握
-    ctx.ask(retry?"我们再来一次！看好啦，佩奇要跳泥坑！":"佩奇要跳泥坑啦！看好，溅起几个泥点？",pig);
-    T.after(1500,()=>{ if(ctx.alive()) flash(); });
-  }
-  function flash(){
-    if(!ctx.alive()) return;
-    ui.blobs.forEach(b=>b.remove()); ui.blobs=[];
-    ui.pig.classList.remove("bounce"); void ui.pig.offsetWidth; ui.pig.classList.add("bounce");
-    SFX.whoosh(); Bubble.show("看好！");
-    T.after(330,()=>{
-      if(!ctx.alive()) return;
-      fitObj(ui.field,q.n,q.cfg.qpat);
-      ui.blobs=place(ui.field,q.n,A.pr("mudblob"),dotPos(q.n,q.cfg.qpat));
-      ui.blobs.forEach((b,i)=>{ b.classList.add("pop"); b.style.animationDelay=(i*.02)+"s"; });
-      shownAt=Date.now();
-      T.after(q.cfg.flash,()=>{
-        if(!ctx.alive()) return;
-        ui.blobs.forEach(b=>{ b.style.opacity="0"; });
-        T.after(230,()=>{ if(ctx.alive()){ ui.blobs.forEach(b=>b.remove()); ui.blobs=[]; ask(); } });
-      });
-    });
-  }
-  function ask(){
-    Bubble.hide(); ctx.answering(true);
-    const list=choices(q.n,1,7,4);
-    const wrap=askCards(ui.L.bot,list,q.apat,(v,c)=>onPick(v,c,wrap));
-    ctx.ask("刚才有几个泥点呀？点一张卡片。",wrap);
-  }
-  function onPick(v,card,wrap){
-    if(st.done) return;
-    const ok=(v===q.n);
-    record(ctx,st,ok);
-    if(ok){
-      st.done=true; lockCards(wrap); card.classList.add("right"); ctx.answering(false);
-      Speech.say("对啦！"+cnQty(q.n)+"个泥点！",{tag:"right"});
-      // 确认性重现（不是纠错）：让孩子看到量与数词对应
-      fitObj(ui.field,q.n,q.cfg.qpat);
-      ui.blobs=place(ui.field,q.n,A.pr("mudblob"),dotPos(q.n,q.cfg.qpat));
-      autoCount(ctx,ui.blobs,0,430,()=>{ if(ctx.alive()) ctx.win(card); });
+    onTap(pig,()=>{ if(busyState(st)) return; st.hinted=true; show(); });   // 再看一次 → 不计掌握
+    if(q.kind==="flash"){
+      ctx.ask("看好啦！泥点闪一下就藏起来，数不过来就要用眼睛抓住它！",pig);
+      T.after(1400,show);
+    }else if(q.kind==="add"){
+      ui.eq=eqBar(L.top,[String(q.a),"+",String(q.b),"=","□"]);
+      ctx.ask("佩奇跳两次泥坑！先看"+cnQ(q.a)+"个，再来"+cnQ(q.b)+"个，一共溅了几个泥点？",pig);
+      T.after(1600,show);
+    }else if(q.kind==="sub"){
+      ui.eq=eqBar(L.top,[String(q.n),"−",String(q.k),"=","□"]);
+      ctx.ask("有"+cnQ(q.n)+"个泥点，雨水会冲掉"+cnQ(q.k)+"个，剩下几个？",pig);
+      T.after(1600,show);
     }else{
-      st.wrongs++; SFX.soft(); card.classList.add("wrong");
-      T.after(420,()=>card.classList.remove("wrong"));
-      fails++;
-      if(st.wrongs>=2||fails>=2){ reveal(wrap); return; }   // 一轮内最多错两次
-      lockCards(wrap); ctx.answering(false);
-      remediate();
+      ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.n)]);
+      ctx.ask("一共"+cnQ(q.n)+"个泥点，看得见的有"+cnQ(q.a)+"个，藏起来的有几个？",pig);
+      T.after(1600,show);
     }
   }
-  /** 瞬识专用纠错：按"组块"呈现，绝不退化成逐个数 */
-  function remediate(){
-    st.locked=true; const my=st;
-    const n=q.n, a=n<=3?n:(n<=5?n-2:3), b=n-a;
-    ui.blobs.forEach(x=>x.remove());
-    const posA=[],posB=[];
-    for(let i=0;i<a;i++) posA.push([18+ (i%2)*16, 30+Math.floor(i/2)*26]);
-    for(let i=0;i<b;i++) posB.push([64+ (i%2)*16, 30+Math.floor(i/2)*26]);
-    fitObj(ui.field,Math.max(a,b)*2+1,"dice");
-    const A1=place(ui.field,a,A.pr("mudblob"),posA);
-    Speech.say(b>0?("看，这边"+cnQty(a)+"个"):("看，"+cnQty(a)+"个"),{tag:"remedy"});
-    A1.forEach(x=>x.classList.add("pop"));
-    T.after(1400,()=>{
-      if(!ctx.alive()||st!==my) return;
-      if(b>0){
-        const B1=place(ui.field,b,A.pr("mudblob"),posB);
-        B1.forEach(x=>x.classList.add("pop"));
-        Speech.say("这边"+cnQty(b)+"个",{tag:"remedy"});
-        ui.blobs=A1.concat(B1);
-      }else ui.blobs=A1;
-      T.after(1400,()=>{
-        if(!ctx.alive()||st!==my) return;
-        Speech.say("合起来是"+cnQty(n)+"个！我们再看一次新的。",{tag:"remedy"});
-        T.after(1800,()=>{ if(ctx.alive()&&st===my) build(true); });    // 同构新题复测
+  function splash(n,posArr){
+    fitObj(ui.field,Math.max(n,4),"scatter");
+    return place(ui.field,n,A.pr("mudblob"),posArr||scatter(n));
+  }
+  function show(){
+    if(!ctx.alive()||busyState(st)) return;
+    ui.blobs.forEach(b=>b.remove()); ui.blobs=[];
+    ui.pig.classList.remove("bounce"); void ui.pig.offsetWidth; ui.pig.classList.add("bounce");
+    SFX.whoosh();
+    const my=st;
+    if(q.kind==="flash"){
+      T.after(320,()=>{ if(!ctx.alive()||st!==my) return;
+        ui.blobs=splash(q.n); ui.blobs.forEach(b=>b.classList.add("pop"));
+        T.after(q.flash,()=>{ if(!ctx.alive()||st!==my) return;
+          ui.blobs.forEach(b=>b.style.opacity="0");
+          T.after(260,()=>{ if(ctx.alive()&&st===my) ask("刚才有几个泥点？"); });
+        });
       });
+    }else if(q.kind==="add"){
+      T.after(320,()=>{ if(!ctx.alive()||st!==my) return;
+        const A1=place(ui.field,q.a,A.pr("mudblob"),scatter(q.a).map(p=>[p[0],p[1]*0.42+10]));
+        fitObj(ui.field,Math.max(q.ans,4),"scatter");
+        A1.forEach(b=>b.classList.add("pop"));
+        Speech.say(cnQ(q.a)+"个！",{tag:"g:peppa"});
+        T.after(q.flash,()=>{ if(!ctx.alive()||st!==my) return;
+          A1.forEach(b=>b.style.opacity=".35");
+          const B1=place(ui.field,q.b,A.pr("mudblob"),scatter(q.b).map(p=>[p[0],p[1]*0.42+55]));
+          B1.forEach(b=>{ b.classList.add("pop"); b.style.filter="hue-rotate(40deg)"; });
+          Speech.say("又来"+cnQ(q.b)+"个！",{tag:"g:peppa"});
+          ui.blobs=A1.concat(B1);
+          T.after(q.flash,()=>{ if(ctx.alive()&&st===my) ask(cnQ(q.a)+"加"+cnQ(q.b)+"等于几？"); });
+        });
+      });
+    }else if(q.kind==="sub"){
+      T.after(320,()=>{ if(!ctx.alive()||st!==my) return;
+        ui.blobs=splash(q.n); ui.blobs.forEach(b=>b.classList.add("pop"));
+        T.after(q.flash,()=>{ if(!ctx.alive()||st!==my) return;
+          for(let i=0;i<q.k;i++){ const b=ui.blobs[ui.blobs.length-1-i]; b.style.transition="opacity .5s,transform .5s"; b.style.opacity="0"; b.style.transform="translate(-50%,-50%) scale(.2)"; }
+          SFX.whoosh();
+          Speech.say("冲掉了"+cnQ(q.k)+"个！",{tag:"g:peppa"});
+          T.after(900,()=>{ if(ctx.alive()&&st===my) ask(cnQ(q.n)+"减"+cnQ(q.k)+"等于几？"); });
+        });
+      });
+    }else{ // miss：先闪总数，再只留 a 个
+      T.after(320,()=>{ if(!ctx.alive()||st!==my) return;
+        ui.blobs=splash(q.n); ui.blobs.forEach(b=>b.classList.add("pop"));
+        Speech.say("一共"+cnQ(q.n)+"个，记住哦！",{tag:"g:peppa"});
+        T.after(q.flash,()=>{ if(!ctx.alive()||st!==my) return;
+          ui.blobs.forEach((b,i)=>{ if(i>=q.a) b.style.opacity="0"; });
+          T.after(400,()=>{ if(ctx.alive()&&st===my) ask("藏起来几个？"); });
+        });
+      });
+    }
+  }
+  function ask(t){
+    numAnswer(ctx,ui,st,fails,{
+      ans:q.ans, lo:1, hi:10, askText:t+"点一张数字卡。",
+      rightSay:rightText(), revealSay:"是"+cnQ(q.ans)+"。"+rightText(),
+      retry:()=>build(true),
+      onRight:card=>{ if(ui.eq) ui.eq.setHole(q.ans); verify(card); }
     });
   }
-  function reveal(wrap){
-    lockCards(wrap); st.done=true; ctx.answering(false);
-    [].forEach.call(wrap.children,c=>{
-      if(+c.dataset.n===q.n){ c.classList.add("right"); Finger.at(c,2600); }
-      else c.classList.add("dim");
+  function rightText(){
+    if(q.kind==="flash") return "对啦！"+cnQ(q.n)+"个泥点！";
+    if(q.kind==="add")   return cnQ(q.a)+"加"+cnQ(q.b)+"等于"+cnQ(q.ans)+"！";
+    if(q.kind==="sub")   return cnQ(q.n)+"减"+cnQ(q.k)+"，剩下"+cnQ(q.ans)+"个！";
+    return cnQ(q.a)+"和"+cnQ(q.ans)+"合起来正好"+cnQ(q.n)+"！";
+  }
+  /** 确认性重现：把全部泥点亮出来数一遍（miss/sub 把藏的补回来对照） */
+  function verify(from){
+    const my=st;
+    ui.blobs.forEach(b=>{ b.style.opacity="1"; b.style.transform=""; });
+    if(!ui.blobs.length){ ui.blobs=splash(q.ans); }
+    autoCount(ctx,ui.blobs.slice(0,Math.min(ui.blobs.length,q.kind==="sub"?q.ans:ui.blobs.length)),0,380,()=>{
+      if(ctx.alive()&&st===my) ctx.win(from);
     });
-    Speech.say("是这张哦，"+cnQty(q.n)+"个！",{tag:"reveal"});
-    T.after(2100,()=>{ if(ctx.alive()) ctx.win(wrap); });
   }
   return {
-    start:()=>{ fails=0; build(false); }, next:()=>{ fails=0; build(false); },
-    repeat:()=>(ui&&ui.pig)?"佩奇跳泥坑，溅起几个泥点呀？":"",
+    start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
+    repeat:()=>{ if(!q) return "";
+      return q.kind==="flash"?"刚才有几个泥点？"
+        :q.kind==="add"?(cnQ(q.a)+"加"+cnQ(q.b)+"等于几？")
+        :q.kind==="sub"?(cnQ(q.n)+"减"+cnQ(q.k)+"等于几？")
+        :("一共"+cnQ(q.n)+"个，看得见"+cnQ(q.a)+"个，藏起来几个？"); },
     destroy:()=>{ ui=null; q=null; st=null; }
   };
 };
 
 /* ============================================================================
-   世界二 · 冒险湾 —— 一一对应 / 基数原则 / Give-N
+   世界二 · 冒险湾 —— 数字派遣：看数字派狗 → 补派缺口 → 归队减法 → 一对二倍数
    ============================================================================ */
 GAMES.paw=ctx=>{
-  const T=ctx.T; let st=null,q=null,ui=null,rt=0,fails=0; const box={last:null};
-  const DOGS=["chase","marshall","skye","rubble","zuma","rocky","chase"];
+  const T=ctx.T; let st=null,q=null,ui=null; const box={last:null},fails={n:0};
 
-  function spec(kind){
+  function spec(){
     const lv=ctx.level();
-    const cfg=lv===1?{lo:1,hi:3,pat:"row"}:lv===2?{lo:2,hi:5,pat:"row"}
-             :lv===3?{lo:3,hi:6,pat:"scatter"}:{lo:3,hi:6,pat:"scatter"};
-    return {n:rint(cfg.lo,cfg.hi),cfg,kind};
+    if(lv===1){ const n=rint(3,7); return {kind:"give",n,ans:n}; }
+    if(lv===2){ const n=rint(5,9),a=rint(1,n-2); return {kind:"more",n,a,ans:n-a}; }
+    if(lv===3){ const n=rint(5,9),k=rint(1,4); return {kind:"back",n,k,ans:n-k}; }
+    const d=rint(2,4); return {kind:"pairs",d,ans:d*2};
   }
-  function build(retry,forceKind){
-    st=bindState(newState(retry));
-    const lv=ctx.level();
-    let kind=forceKind;
-    if(!kind){ kind=(rt%2===0)?"count":"given"; if(lv>=4&&rt%3===2) kind="plus1"; }
-    q=setQ(fresh(()=>spec(kind),o=>o.kind+":"+o.n,box));
+  const DOGS=["chase","marshall","skye","rubble","zuma","rocky","chase","marshall","skye"];
+  function build(retry){
+    st=bindState(newState(retry)); q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.n||o.d)+","+(o.a||o.k||0),box),{world:"paw"}));
     const L=layout(ctx.root); ui={L};
-    sideCast(L.top,"l",["ryder"],32);
-    sideCast(L.top,"r",["marshall"],26);
-    if(kind==="given") buildGiven(L); else buildCount(L);
+    sideCast(L.top,"l",["ryder"],30);
+    if(q.kind==="give"||q.kind==="more") buildSend(L);
+    else if(q.kind==="back") buildBack(L);
+    else buildPairs(L);
   }
-
-  /* ---- 点数 + 基数 ---- */
-  function buildCount(L){
-    const field=mkField(L.top,{t:q.cfg.pat==="row"?38:26});
-    fitObj(field,q.n,q.cfg.pat==="row"?"row":"scatter");
-    const pos=q.cfg.pat==="row"?rowPos(q.n):scatter(q.n);
-    const objs=place(field,q.n,A.pr("turtle"),pos);
-    ui.field=field; ui.objs=objs; ui.counted=0;
-    objs.forEach((o,i)=>onTap(o,()=>tapTurtle(o)));
-    ctx.answering(true);
-    ctx.ask(st.isRetry?"我们再数一次新的！点一点小海龟，数一数。":"沙滩上有小海龟！用手点一点，数一数。",objs[0]);
-  }
-  function tapTurtle(o){
-    if(busyState(st)||o.classList.contains("counted")) return;
-    ui.counted++;
-    o.classList.add("counted"); setTag(o.querySelector(".tag"),ui.counted);
-    o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit");
-    SFX.count(ui.counted); numPop(o,ui.counted);
-    Speech.count(cnSeq(ui.counted),"child-count");       // 计数通道：不打断、不丢
-    if(ui.counted>=q.n) T.after(700,()=>{ if(ctx.alive()&&!st.done) askTotal(); });
-  }
-  function askTotal(){
-    ctx.answering(true);
-    const plus=(q.kind==="plus1");
-    const target=plus?q.n+1:q.n;
-    const apat=(ctx.symbols()&&ctx.level()>=4)?"num":pick(ANSWER_PATS.filter(p=>p!=="line"));
-    const list=choices(target,1,8,4);
-    const wrap=askCards(ui.L.bot,list,apat,(v,c)=>{
-      if(st.done) return;
-      const ok=(v===target); record(ctx,st,ok);
-      if(ok){
-        st.done=true; lockCards(wrap); c.classList.add("right"); ctx.answering(false);
-        Speech.say(plus?("对啦！再来一只就是"+cnQty(target)+"只！"):("对啦！一共"+cnQty(q.n)+"只！"),{tag:"right"});
-        T.after(1200,()=>{ if(ctx.alive()){ rt++; ctx.win(c); } });
-      }else{
-        st.wrongs++; SFX.soft(); c.classList.add("wrong");
-        T.after(420,()=>c.classList.remove("wrong"));
-        lockCards(wrap); fails++;
-        if(st.wrongs>=2||fails>=2){ revealCard(wrap,target); return; }
-        ctx.answering(false); remedyCardinal(plus);
-      }
-    });
-    ctx.ask(plus?"如果再来一只，一共几只呀？":"一共几只呀？点一张卡片。",wrap);
-  }
-  /** 基数专用纠错：重数一遍并强调"最后数到几，就是几只" */
-  function remedyCardinal(plus){
-    st.locked=true; const my=st;
-    ui.objs.forEach(o=>{ o.classList.remove("counted"); o.querySelector(".tag").textContent=""; });
-    Speech.say("我们一起再数一遍。",{tag:"remedy"});
-    T.after(900,()=>{
-      if(!ctx.alive()||st!==my) return;
-      autoCount(ctx,ui.objs,0,620,()=>{
-        if(!ctx.alive()||st!==my) return;
-        Speech.say("最后数到"+cnSeq(q.n)+"，就是"+cnQty(q.n)+"只！",{tag:"remedy"});
-        T.after(2400,()=>{ if(ctx.alive()&&st===my) build(true,plus?"plus1":"count"); });
+  /* 出发区 + 待命狗：点狗出发，点已出发的召回 */
+  function buildSend(L){
+    q.act="dogs";
+    const zone=mkField(L.top,{l:16,r:4,t:14,b:44}); zone.classList.add("dropzone2");
+    zone.style.cssText+=";border:4px dashed rgba(255,255,255,.65);border-radius:16px;background:rgba(0,0,0,.25)";
+    const home=mkField(L.top,{mat:false,l:16,r:4,t:62,b:6});
+    ui.zone=zone; ui.home=home; ui.sent=[];
+    const already=q.kind==="more"?q.a:0;
+    // 已经出发的 a 只（灰底，不可召回）
+    fitObj(zone,9,"row"); fitObj(home,9,"row");
+    const zp=rowFixed(9,9), hp=rowFixed(9,9);
+    ui.fixed=[];
+    for(let i=0;i<already;i++){
+      const o=el("div","cobj",zone); o.style.left=zp[i][0]+"%"; o.style.top="50%";
+      img(A.ch(DOGS[i]),"",o); el("div","tag",o); o.style.filter="saturate(.55)";
+      ui.fixed.push(o);
+    }
+    // 待命狗
+    ui.dogs=[];
+    const nHome=q.kind==="give"?9:9-already;
+    for(let i=0;i<nHome;i++){
+      const o=el("div","cobj",home); o.dataset.dog="1";
+      o.style.left=hp[i][0]+"%"; o.style.top="50%";
+      img(A.ch(DOGS[(i+already)%DOGS.length]),"",o); el("div","tag",o);
+      onTap(o,()=>{
+        if(busyState(st)) return;
+        if(o.dataset.out){ // 召回
+          o.dataset.out=""; o.style.left=o.dataset.hx+"%"; ui.sent.splice(ui.sent.indexOf(o),1);
+          o.style.top="50%"; SFX.tap(); relayout(); upd(); return;
+        }
+        if(already+ui.sent.length>=9) return;
+        o.dataset.out="1"; ui.sent.push(o); SFX.count(already+ui.sent.length);
+        Speech.count(cnS(already+ui.sent.length),"child-count");
+        numPop(o,already+ui.sent.length);
+        relayout(); upd();
       });
-    });
-  }
-  function revealCard(wrap,target){
-    st.done=true; ctx.answering(false);
-    [].forEach.call(wrap.children,c=>{
-      if(+c.dataset.n===target){ c.classList.add("right"); Finger.at(c,2400); } else c.classList.add("dim");
-    });
-    Speech.say("是这张哦！"+cnQty(target)+"个。",{tag:"reveal"});
-    T.after(2000,()=>{ if(ctx.alive()){ rt++; ctx.win(wrap); } });
-  }
-
-  /* ---- Give-N：看着数量卡，派出正好那么多狗 ---- */
-  function buildGiven(L){
-    // 任务卡固定在上方，绝不与出动区重叠
-    const holder=el("div","",L.top);
-    holder.style.cssText="position:absolute;left:50%;top:1%;transform:translateX(-50%);z-index:6;pointer-events:none";
-    const task=makeCard(q.n,pick(["dice","ring"])); task.style.pointerEvents="none";
-    holder.appendChild(task);
-    const zone=mkField(L.top,{t:44,b:3});
-    zone.style.display="flex"; zone.style.alignItems="center";
-    zone.style.justifyContent="center"; zone.style.flexWrap="wrap"; zone.style.gap="2%";
-    // 狗窝
-    const den=el("div","",L.bot);
-    den.style.cssText="display:flex;gap:clamp(3px,1vmin,10px);align-items:flex-end;justify-content:center;flex-wrap:wrap";
-    const sent=[];
-    ui.task=task; ui.zone=zone; ui.sent=sent; ui.dogs=[];
-    for(let i=0;i<6;i++){
-      const d=el("button","",den);
-      d.style.cssText="width:clamp(42px,7.6vmin,86px);height:clamp(42px,7.6vmin,86px);position:relative";
-      img(A.ch(DOGS[i]),"",d).style.cssText="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))";
-      ui.dogs.push(d);
-      onTap(d,()=>{ if(busyState(st)) return; sendDog(i); });
+      o.dataset.hx=hp[i][0];
+      ui.dogs.push(o);
     }
-    /** 派出第 i 只狗（孩子点击与"带着一起做"的演示共用同一条路径） */
-    function sendDog(i){
-      const d=ui.dogs[i]; if(!d||d.dataset.out) return false;
-      d.dataset.out="1"; d.style.opacity=".25";
-      const c=el("div","",zone);
-      c.style.cssText="width:clamp(40px,7.2vmin,80px);height:clamp(40px,7.2vmin,80px);position:relative";
-      img(A.ch(DOGS[i]),"",c).style.cssText="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))";
-      c.classList.add("pop");
-      sent.push({card:c,dog:d});
-      SFX.count(sent.length); numPop(c,sent.length); Speech.count(cnSeq(sent.length),"child-count");
-      onTap(c,()=>{ if(busyState(st)) return; recall(c); });
-      okBtn.disabled=false;
-      return true;
+    function relayout(){
+      ui.sent.forEach((o,i)=>{
+        const p=zp[already+i];
+        const zr=zone.getBoundingClientRect(), hr=home.getBoundingClientRect(), st2=L.top.getBoundingClientRect();
+        // 直接把狗挪进出发区坐标系：用绝对定位换父容器
+        if(o.parentNode!==zone){ zone.appendChild(o); }
+        o.style.left=p[0]+"%"; o.style.top="50%";
+      });
+      ui.dogs.forEach(o=>{ if(!o.dataset.out&&o.parentNode!==home){ home.appendChild(o); o.style.left=o.dataset.hx+"%"; o.style.top="50%"; } });
     }
-    function recall(c){
-      const i=sent.findIndex(x=>x.card===c); if(i<0) return;
-      sent[i].dog.dataset.out=""; sent[i].dog.style.opacity="1";
-      sent[i].card.remove(); sent.splice(i,1); SFX.tap();
-      okBtn.disabled=sent.length===0;
-    }
-    ui.sendDog=sendDog; ui.recall=recall;
-    const okBtn=bigBtn(L.bot,"好了！","green",()=>submit());
+    const okBtn=bigBtn(L.bot,"出发！","green",()=>submitSend());
     okBtn.disabled=true; ui.okBtn=okBtn;
-    ctx.ask(st.isRetry?"再来一次！看看卡片上有几个点，就派几只狗狗。"
-                      :"莱德说：看看卡片上有几个点，就派出正好几只狗狗！派好了按绿色按钮。",task);
+    function upd(){ okBtn.disabled=ui.sent.length===0; }
+    if(q.kind==="give"){
+      ui.eq=eqBar(L.top,["要",String(q.n),"只"]);
+      ctx.ask("看数字！这次任务要"+cnQ(q.n)+"只狗狗，点狗狗派它出发，多了点它回来。好了按绿色按钮。",home);
+    }else{
+      ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.n)]);
+      ctx.ask("任务要"+cnQ(q.n)+"只！已经出发了"+cnQ(q.a)+"只，还要再派几只？派好按绿色按钮。",home);
+    }
     ctx.answering(true);
   }
-  function submit(){
+  function submitSend(){
     if(st.done) return;
-    const got=ui.sent.length, ok=(got===q.n);
-    record(ctx,st,ok);
+    const ok=(ui.sent.length===q.ans); record(ctx,st,ok);
     if(ok){
-      st.done=true; ctx.answering(false); ui.okBtn.disabled=true;
-      Speech.say("正好够！"+cnQty(q.n)+"只狗狗，"+cnQty(q.n)+"个点！",{tag:"right"});
-      T.after(1400,()=>{ if(ctx.alive()){ rt++; ctx.win(ui.zone); } });
+      st.done=true; ui.okBtn.disabled=true; ctx.answering(false);
+      if(ui.eq&&q.kind==="more") ui.eq.setHole(q.ans);
+      Speech.say(q.kind==="give"?("正好"+cnQ(q.n)+"只，出发！")
+        :(cnQ(q.a)+"只加"+cnQ(q.ans)+"只，正好"+cnQ(q.n)+"只，出发！"),{tag:"right"});
+      SFX.right();
+      T.after(1800,()=>{ if(ctx.alive()) ctx.win(ui.zone); });
     }else{
-      st.wrongs++; SFX.soft(); ui.zone.classList.add("shake");
+      st.wrongs++; fails.n++; SFX.soft(); ui.zone.classList.add("shake");
       T.after(500,()=>ui.zone.classList.remove("shake"));
-      fails++;
-      if(st.wrongs>=2||fails>=2){ giveAnswer(); return; }
-      remedyGiveN(got);
+      ctx.answering(false);
+      if(st.wrongs>=2||fails.n>=2){ revealSend(); return; }
+      const got=ui.sent.length+(q.kind==="more"?q.a:0);
+      Speech.say("现在出发区有"+cnQ(got)+"只，任务要"+cnQ(q.n)+"只，再看看。",{tag:"remedy"});
+      ctx.answering(true);
     }
   }
-  /** Give-N 专用纠错：数出实际派了几只，与卡片点数并排比较，指出差多少 */
-  function remedyGiveN(got){
+  function revealSend(){
+    st.done=true; ctx.answering(false); ui.okBtn.disabled=true;
     st.locked=true; const my=st;
-    ctx.answering(false); ui.okBtn.disabled=true;
-    const cards=[].slice.call(ui.zone.children);
-    const objs=cards.map(c=>{ c.classList.add("cobj"); if(!c.querySelector(".tag")) el("div","tag",c); return c; });
-    Speech.say("我们数数你派了几只。",{tag:"remedy"});
-    T.after(900,()=>{
+    const target=q.ans;
+    const step=()=>{
       if(!ctx.alive()||st!==my) return;
-      autoCount(ctx,objs,0,560,()=>{
-        if(!ctx.alive()||st!==my) return;
-        const diff=q.n-got;
-        ui.task.classList.add("right");
-        Speech.say(diff>0?("你派了"+cnQty(got)+"只，卡片上有"+cnQty(q.n)+"个点，还差"+cnQty(diff)+"只。")
-                         :("你派了"+cnQty(got)+"只，卡片上只有"+cnQty(q.n)+"个点，多了"+cnQty(-diff)+"只。"),{tag:"remedy"});
-        T.after(3000,()=>{
-          if(!ctx.alive()||st!==my) return;
-          ui.task.classList.remove("right");
-          objs.forEach(o=>{ o.classList.remove("counted","cobj"); const t=o.querySelector(".tag"); if(t) t.textContent=""; });
-          build(true,"given");                   // 同构新题复测
+      if(ui.sent.length<target){
+        const o=ui.dogs.find(d=>!d.dataset.out);
+        if(o){ o.dataset.out="1"; ui.sent.push(o); ui.zone.appendChild(o);
+          o.style.left=rowFixed(9,9)[(q.kind==="more"?q.a:0)+ui.sent.length-1][0]+"%"; o.style.top="50%";
+          SFX.count(ui.sent.length); Speech.count(cnS(ui.sent.length),"auto-count"); }
+        T.after(600,step); return;
+      }
+      if(ui.sent.length>target){
+        const o=ui.sent.pop(); o.dataset.out=""; ui.home.appendChild(o);
+        o.style.left=o.dataset.hx+"%"; o.style.top="50%"; SFX.tap();
+        T.after(500,step); return;
+      }
+      Speech.say("这样就是"+cnQ(target)+"只啦！",{tag:"reveal"});
+      T.after(1500,()=>{ if(ctx.alive()) ctx.win(ui.zone); });
+    };
+    T.after(600,step);
+  }
+  /* L3 归队减法：n 只在外面，回来 k 只，外面还剩几只 */
+  function buildBack(L){
+    q.act="card";
+    const field=mkField(L.top,{l:16,r:4,t:16,b:40}); ui.field=field;
+    fitObj(field,q.n,"row");
+    ui.out=place(field,q.n,A.ch(DOGS[rnd(6)]),rowPos(q.n));
+    ui.eq=eqBar(L.top,[String(q.n),"−",String(q.k),"=","□"]);
+    ctx.ask(cnQ(q.n)+"只狗狗在外面执行任务，"+cnQ(q.k)+"只先回家了，外面还剩几只？",field);
+    const my=st;
+    T.after(2600,()=>{
+      if(!ctx.alive()||st!==my) return;
+      for(let i=0;i<q.k;i++){ const o=ui.out[q.n-1-i];
+        o.style.transition="transform .8s,opacity .8s"; o.style.transform="translate(-50%,-50%) translateY(70%) scale(.5)"; o.style.opacity="0"; }
+      SFX.whoosh();
+      T.after(1100,()=>{ if(!ctx.alive()||st!==my) return;
+        numAnswer(ctx,ui,st,fails,{
+          ans:q.ans,lo:0,hi:10,askText:"外面还剩几只？点数字卡。",
+          rightSay:cnQ(q.n)+"减"+cnQ(q.k)+"，还剩"+cnQ(q.ans)+"只！",
+          revealSay:"是"+cnQ(q.ans)+"只。"+cnQ(q.n)+"减"+cnQ(q.k)+"等于"+cnQ(q.ans)+"。",
+          retry:()=>build(true),
+          onRight:card=>{ ui.eq.setHole(q.ans);
+            autoCount(ctx,ui.out.slice(0,q.ans),0,380,()=>{ if(ctx.alive()) ctx.win(card); }); }
         });
       });
     });
   }
-  function giveAnswer(){
-    st.done=true; ctx.answering(false); ui.okBtn.disabled=true;
-    const need=q.n-ui.sent.length;
-    Speech.say("没关系，我们一起来：要"+cnQty(q.n)+"只。",{tag:"reveal"});
-    let k=0;
-    const step=()=>{
-      if(!ctx.alive()) return;
-      if(need>0&&k<need){
-        const idx=ui.dogs.findIndex(d=>!d.dataset.out);
-        if(idx>=0) ui.sendDog(idx);
-        k++; T.after(650,step); return;
+  /* L4 一对二倍数：每只狗救两只小海龟 */
+  function buildPairs(L){
+    q.act="card";
+    const field=mkField(L.top,{l:16,r:4,t:12,b:36}); ui.field=field;
+    const d=q.d;
+    fitObj(field,d*3,"row");
+    ui.turts=[];
+    const colW=84/d;
+    for(let i=0;i<d;i++){
+      const dog=el("div","cobj",field);
+      dog.style.left=(8+colW*(i+.5))+"%"; dog.style.top="26%";
+      img(A.ch(DOGS[i]),"",dog); el("div","tag",dog);
+      for(let j2=0;j2<2;j2++){
+        const t=el("div","cobj",field);
+        t.style.top="70%";
+        t.style.left=(8+colW*i+colW*(j2?0.68:0.32))+"%";
+        img(A.pr("turtle"),"",t); el("div","tag",t);
+        ui.turts.push(t);
       }
-      if(need<0&&k< -need){
-        const last=ui.sent.length?ui.sent[ui.sent.length-1].card:null;
-        if(last) ui.recall(last);
-        k++; T.after(650,step); return;
-      }
-      Speech.say("现在正好"+cnQty(q.n)+"只啦！",{tag:"reveal"});
-      T.after(1600,()=>{ if(ctx.alive()){ rt++; ctx.win(ui.zone); } });
-    };
-    T.after(1400,step);
+    }
+    ui.eq=eqBar(L.top,[String(d),"只狗","×","2","=","□"]);
+    ctx.ask("每只狗狗救两只小海龟！"+cnQ(d)+"只狗狗一共救几只海龟？两个两个数！",field);
+    const my=st;
+    T.after(2400,()=>{
+      if(!ctx.alive()||st!==my) return;
+      numAnswer(ctx,ui,st,fails,{
+        ans:q.ans,lo:2,hi:10,askText:"一共几只海龟？点数字卡。",
+        rightSay:"对啦！两个两个数："+Array.from({length:d},(x,i)=>cnS((i+1)*2)).join("、")+"！",
+        revealSay:"两个两个数："+Array.from({length:d},(x,i)=>cnS((i+1)*2)).join("、")+"，是"+cnQ(q.ans)+"只。",
+        retry:()=>build(true),
+        onRight:card=>{ ui.eq.setHole(q.ans);
+          let i=0; const step=()=>{
+            if(!ctx.alive()) return;
+            if(i>=d){ ctx.win(card); return; }
+            const a=ui.turts[i*2],b=ui.turts[i*2+1];
+            [a,b].forEach(o=>{ o.classList.add("counted","hit"); });
+            setTag(b.querySelector(".tag"),(i+1)*2);
+            SFX.count((i+1)*2); Speech.count(cnS((i+1)*2),"auto-count");
+            i++; T.after(700,step);
+          }; step(); }
+      });
+    });
   }
-
   return {
-    start:()=>{ rt=0; fails=0; build(false); }, next:()=>{ fails=0; build(false); },
+    start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
     repeat:()=>{ if(!q) return "";
-      if(q.kind==="given") return "看看卡片上有几个点，就派出正好几只狗狗。";
-      if(ui&&ui.objs&&ui.counted<q.n) return "点一点小海龟，数一数。";
-      return q.kind==="plus1"?"再来一只，一共几只呀？":"一共几只呀？点一张卡片。"; },
+      if(q.kind==="give") return "任务要"+cnQ(q.n)+"只狗狗，点狗狗派出去。";
+      if(q.kind==="more") return "要"+cnQ(q.n)+"只，已经有"+cnQ(q.a)+"只，还要派几只？";
+      if(q.kind==="back") return cnQ(q.n)+"只在外面，回来"+cnQ(q.k)+"只，还剩几只？";
+      return "每只狗救两只海龟，"+cnQ(q.d)+"只狗救几只？"; },
     destroy:()=>{ ui=null; q=null; st=null; }
   };
 };
 
 /* ============================================================================
-   世界三 · Bluey 的后院 —— 比较 / 数量守恒
+   世界三 · Bluey 的后院 —— 公平俱乐部：求差 → 补齐 → 单双数 → 平分
    ============================================================================ */
 GAMES.bluey=ctx=>{
-  const T=ctx.T; let st=null,q=null,ui=null,fails=0; const box={last:null};
+  const T=ctx.T; let st=null,q=null,ui=null; const box={last:null},fails={n:0};
 
   function spec(){
     const lv=ctx.level();
-    // lay: "fixed" 长度与数量成正比（知觉比较）；"fill" 两排等长（长度线索被抹掉）
-    if(lv===1){ const a=rint(1,5); let b=a; while(Math.abs(b-a)<2||b<1||b>6) b=rint(1,6);
-                return {a,b,mode:"cmp",spread:false,lay:"fixed"}; }
-    if(lv===2){ const a=rint(3,6); const b=a+(rnd(2)?1:-1);
-                return {a:clamp(a,1,7),b:clamp(b,1,7),mode:"cmp",spread:false,lay:"fill"}; }
-    if(lv===3){ const n=rint(3,6); return {a:n,b:n,mode:"cons",spread:true,lay:"spread"}; } // 守恒：等量、只改间距
-    const n=rint(3,6), miss=rint(1,3);
-    return {a:n,b:Math.max(1,n-miss),mode:"fix",spread:false,lay:"fixed"};
+    if(lv===1){ const a=rint(4,9); let b=a; while(b===a) b=clamp(a+pick([-3,-2,-1,1,2,3]),2,9);
+                return {kind:"diff",a,b,ans:Math.abs(a-b)}; }
+    if(lv===2){ const a=rint(5,9),b=a-rint(1,3); return {kind:"make",a,b,ans:a-b}; }
+    if(lv===3){ const n=rint(4,11); return {kind:"odd",n,ans:n%2===0?1:0}; }
+    const n=pick([6,8,10,12]); return {kind:"share",n,ans:n/2};
   }
-  /** 守恒题的两排：同一张图、同一尺寸，只有间距不同 */
-  function rowSpread(n,wide){
-    const span=wide?86:Math.min(46,n*11);
-    const start=wide?7:(50-span/2), st2=span/n;
-    const o=[]; for(let i=0;i<n;i++) o.push([start+st2*(i+.5),50]); return o;
+  function rows(L,a,b,item){
+    const rowA=mkField(L.top,{l:15,r:4,t:24,b:46});
+    const rowB=mkField(L.top,{l:15,r:4,t:60,b:10});
+    const most=Math.max(a,b);
+    fitObj(rowA,most,"row"); fitObj(rowB,most,"row");
+    faceAt(L.top,"bluey",22,30); faceAt(L.top,"bingo",58,30);
+    ui.A=place(rowA,a,item,rowFixed(a,most));
+    ui.B=place(rowB,b,item,rowFixed(b,most));
+    ui.rowA=rowA; ui.rowB=rowB;
   }
   function build(retry){
-    st=bindState(newState(retry)); q=setQ(fresh(spec,o=>o.mode+":"+o.a+","+o.b,box));
-    const layOf=(cnt,wide)=>q.lay==="spread"?rowSpread(cnt,wide)
-                            :q.lay==="fill"?rowPos(cnt)
-                            :rowFixed(cnt,Math.max(q.a,q.b)+(q.mode==="fix"?1:0));
+    st=bindState(newState(retry)); q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.a||o.n)+","+(o.b||0),box),{world:"bluey"}));
     const L=layout(ctx.root); ui={L};
-    const wideTop=q.spread?(rnd(2)===0):false;
-    // 两行几何完全相同 —— 比较/守恒的效度要求除间距外没有任何其它差异
-    faceAt(L.top,"bluey",28,32); faceAt(L.top,"bingo",62,32);
-    faceAt(L.top,q.mode==="cons"?"bandit":"chilli",1,20,true);
-    const rowA=mkField(L.top,{l:15,r:4,t:28,b:44});
-    const rowB=mkField(L.top,{l:15,r:4,t:62,b:10});
-    const item=q.mode==="fix"?A.pr("cookie"):pick([A.pr("cookie"),A.pr("icecream")]);
-    ui.item=item;
-    const most=Math.max(q.a,q.b)+(q.mode==="fix"?1:0);
-    fitObj(rowA,most,"row"); fitObj(rowB,most,"row");
-    ui.A=place(rowA,q.a,item,layOf(q.a,wideTop));
-    ui.B=place(rowB,q.b,item,layOf(q.b,!wideTop));
-    ui.rowA=rowA; ui.rowB=rowB;
-    if(q.mode==="fix") buildFix(L); else askWho(L);
+    const item=pick([A.pr("cookie"),A.pr("icecream")]); ui.item=item;
+    if(q.kind==="diff") buildDiff(L,item);
+    else if(q.kind==="make") buildMake(L,item);
+    else if(q.kind==="odd") buildOdd(L,item);
+    else buildShare(L,item);
   }
-  /** 谁的多：三个大目标 —— Bluey / 一样多 / Bingo */
-  function askWho(L){
-    ctx.answering(true);
-    const bot=L.bot; bot.textContent="";
-    const wrap=el("div","cards",bot);
-    const mk=(key,label,build2)=>{
-      const c=el("div","card",wrap); build2(c);
-      const t=el("div","",c);
-      t.style.cssText="position:absolute;left:0;right:0;bottom:4%;text-align:center;font-weight:900;color:#2a1f4d;font-size:clamp(11px,2vmin,18px)";
-      t.textContent=label;
-      onTap(c,()=>{ if(st.done) return; pick2(key,c,wrap); });
-      return c;
-    };
-    mk("a","Bluey 多",c=>{ const h=el("div","",c);
-      h.style.cssText="position:absolute;inset:6% 6% 24%;display:flex;align-items:center;justify-content:center";
-      img(A.ch("bluey"),"",h).style.cssText="height:100%;width:auto"; });
-    mk("same","一样多",c=>{
-      const w=el("div","dotwrap",c);
-      [[26,34],[50,34],[74,34],[26,66],[50,66],[74,66]].forEach(p=>{
-        const d=el("div","dot",w); d.style.left=p[0]+"%"; d.style.top=p[1]+"%"; d.style.background="#3fa9f5"; });
-      const eq=el("div","",c);
-      eq.style.cssText="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56%;height:3px;background:#2a1f4d;box-shadow:0 7px 0 #2a1f4d";
-    });
-    mk("b","Bingo 多",c=>{ const h=el("div","",c);
-      h.style.cssText="position:absolute;inset:6% 6% 24%;display:flex;align-items:center;justify-content:center";
-      img(A.ch("bingo"),"",h).style.cssText="height:100%;width:auto"; });
-    ui.wrap=wrap;
-    ctx.ask(st.isRetry?"再看看这一次：上面是 Bluey 的，下面是 Bingo 的，谁的多呀？"
-        :(q.mode==="cons"?"爸爸把饼干摆得不一样啦！上面一排是 Bluey 的，下面一排是 Bingo 的。谁的多呀？还是一样多？"
-        :"上面一排是 Bluey 的，下面一排是 Bingo 的。谁的多呀？点下面的卡片告诉我。"),
-            wrap);
-  }
-  function truth(){ return q.a>q.b?"a":(q.a<q.b?"b":"same"); }
-  function pick2(key,card,wrap){
-    const ok=(key===truth());
-    record(ctx,st,ok);
-    if(ok){
-      st.done=true; lockCards(wrap); card.classList.add("right"); ctx.answering(false);
-      Speech.say(key==="same"?"对啦！一样多！":"对啦！",{tag:"right"});
-      T.after(500,()=>{ if(ctx.alive()) verify(()=>ctx.win(card)); });
-    }else{
-      st.wrongs++; SFX.soft(); card.classList.add("wrong");
-      T.after(420,()=>card.classList.remove("wrong"));
-      lockCards(wrap); ctx.answering(false);
-      fails++;
-      if(st.wrongs>=2||fails>=2){ verify(()=>{ revealWho(wrap); }); return; }
-      handPair();
-    }
-  }
-  /** 自动一一对应验证（答对后的确认） */
-  function verify(done){
-    st.locked=true; const my=st;
-    Link.clear();
-    const n=Math.min(q.a,q.b); let i=0;
-    const step=()=>{
+  /* L1 求差：谁多？多几个 */
+  function buildDiff(L,item){
+    q.act="card";
+    rows(L,q.a,q.b,item);
+    const moreName=q.a>q.b?"Bluey":"Bingo";
+    ctx.ask("上面一排是 Bluey 的，下面一排是 Bingo 的。"+moreName+"的多 —— 多几个呢？",ui.rowA);
+    const my=st;
+    T.after(2800,()=>{
       if(!ctx.alive()||st!==my) return;
-      if(i>=n){
-        const extra=q.a>q.b?ui.A.slice(n):(q.b>q.a?ui.B.slice(n):[]);
-        extra.forEach(x=>x.classList.add("tapme"));
-        Speech.say(q.a===q.b?"你看，正好一个对一个，一样多！"
-          :((q.a>q.b?"Bluey":"Bingo")+"多出来"+cnQty(Math.abs(q.a-q.b))+"个！"),{tag:"verify"});
-        T.after(1900,()=>{ if(st!==my) return; st.locked=false;
-          Link.clear(); extra.forEach(x=>x.classList.remove("tapme")); if(done) done(); });
-        return;
-      }
-      Link.line(ui.A[i],ui.B[i],"#fff"); SFX.tap(); i++;
-      T.after(300,step);
-    };
-    step();
-  }
-  /** 守恒专用纠错：孩子亲手一一配对，自己发现结果 */
-  function handPair(){
-    st.locked=false;                      // 这一步要孩子亲手配对，必须可点
-    Link.clear();
-    let selA=null, pairs=0;
-    const maxP=Math.min(q.a,q.b);
-    ui.A.forEach(o=>{ o.classList.add("tapme"); onTap(o,()=>{
-      if(o.dataset.p) return; if(selA) selA.classList.remove("counted");
-      selA=o; o.classList.add("counted"); o.querySelector(".tag").textContent="?"; SFX.tap(); }); });
-    ui.B.forEach(o=>onTap(o,()=>{
-      if(!selA||o.dataset.p) return;
-      o.dataset.p=selA.dataset.p="1";
-      Link.line(selA,o,"#ffd75e");
-      selA.querySelector(".tag").textContent=""; selA.classList.remove("tapme","counted");
-      selA=null; pairs++; SFX.count(pairs);
-      if(pairs>=maxP) T.after(800,()=>{ if(ctx.alive()) pairDone(); });
-    }));
-    ctx.ask("我们一个一个配对看看！先点上面一个，再点下面一个。",ui.A[0]);
-  }
-  function pairDone(){
-    st.locked=true; const my=st;
-    const left=ui.A.filter(o=>!o.dataset.p), right=ui.B.filter(o=>!o.dataset.p);
-    left.concat(right).forEach(o=>o.classList.add("tapme"));
-    Speech.say(q.a===q.b?"每一个都配上对啦 —— 一样多！"
-      :("还有"+cnQty(left.length+right.length)+"个没配上，"+(left.length?"Bluey":"Bingo")+"多！"),{tag:"remedy"});
-    T.after(2600,()=>{
-      if(!ctx.alive()||st!==my) return;
-      Link.clear(); build(true);            // 换新排列的同构题复测
+      numAnswer(ctx,ui,st,fails,{
+        ans:q.ans,lo:1,hi:6,askText:moreName+"多几个？点数字卡。",
+        rightSay:"对啦！"+moreName+"多"+cnQ(q.ans)+"个！",
+        revealSay:moreName+"多"+cnQ(q.ans)+"个。",
+        retry:()=>build(true),
+        onRight:card=>{
+          // 一一配对演示，多出来的闪一闪
+          const n=Math.min(q.a,q.b); Link.clear();
+          let i=0; const step=()=>{
+            if(!ctx.alive()) return;
+            if(i>=n){
+              const extra=(q.a>q.b?ui.A.slice(n):ui.B.slice(n));
+              extra.forEach(x=>x.classList.add("tapme"));
+              Speech.say("配对以后，多出来的就是这"+cnQ(q.ans)+"个！",{tag:"verify"});
+              T.after(1900,()=>{ if(ctx.alive()){ Link.clear(); ctx.win(card); } });
+              return;
+            }
+            Link.line(ui.A[i],ui.B[i],"#fff"); SFX.tap(); i++; T.after(280,step);
+          }; step();
+        }
+      });
     });
   }
-  function revealWho(wrap){
-    st.done=true;
-    const t=truth();
-    [].forEach.call(wrap.children,(c,i)=>{
-      const key=["a","same","b"][i];
-      if(key===t){ c.classList.add("right"); Finger.at(c,2400); } else c.classList.add("dim");
-    });
-    T.after(2000,()=>{ if(ctx.alive()) ctx.win(wrap); });
-  }
-  /** L4：补齐到一样多 */
-  function buildFix(L){
-    ctx.answering(true);
-    const need=q.a-q.b;
+  /* L2 补齐一样多 */
+  function buildMake(L,item){
+    q.act="basket";
+    rows(L,q.a,q.b,item);
     const basket=el("button","",L.bot);
+    basket.dataset.basket="1";
     basket.style.cssText="width:clamp(64px,11vmin,120px);height:clamp(64px,11vmin,120px);position:relative";
     img(A.pr("basket"),"",basket).style.cssText="width:100%;height:100%;object-fit:contain";
     let added=0;
     onTap(basket,()=>{
       if(busyState(st)||q.b+added>=9) return;
       added++;
-      const o=el("div","cobj pop",ui.rowB); o.style.left="0%"; o.style.top="50%";
+      const o=el("div","cobj pop",ui.rowB);
       img(ui.item,"",o); el("div","tag",o);
-      ui.B.push(o);
-      relayoutB();
-      SFX.count(q.b+added); Speech.count(cnSeq(q.b+added),"child-count");
-      onTap(o,()=>{ if(busyState(st)) return; const i=ui.B.indexOf(o); if(i<q.b) return;
-        o.remove(); ui.B.splice(i,1); added--; relayoutB(); SFX.tap(); okBtn.disabled=added===0; });
+      ui.B.push(o); relayout();
+      SFX.count(q.b+added); Speech.count(cnS(q.b+added),"child-count");
       okBtn.disabled=false;
     });
-    function relayoutB(){
-      const pos=rowFixed(ui.B.length,Math.max(q.a,q.b)+1);
+    function relayout(){
+      const pos=rowFixed(ui.B.length,Math.max(q.a,ui.B.length));
+      const pa=rowFixed(q.a,Math.max(q.a,ui.B.length));
       ui.B.forEach((o,i)=>{ o.style.left=pos[i][0]+"%"; o.style.top="50%"; });
+      ui.A.forEach((o,i)=>{ o.style.left=pa[i][0]+"%"; });
     }
-    const okBtn=bigBtn(L.bot,"好了！","green",()=>{
+    const okBtn=bigBtn(L.bot,"公平了！","green",()=>{
       if(st.done) return;
       const ok=(ui.B.length===q.a); record(ctx,st,ok);
       if(ok){
         st.done=true; okBtn.disabled=true; ctx.answering(false);
-        Speech.say("公平啦！两边都是"+cnQty(q.a)+"个！",{tag:"right"});
-        T.after(400,()=>{ if(ctx.alive()) verify(()=>ctx.win(basket)); });
+        Speech.say("公平啦！两边都是"+cnQ(q.a)+"个 —— 你加了"+cnQ(q.ans)+"个！",{tag:"right"});
+        SFX.right();
+        T.after(1900,()=>{ if(ctx.alive()) ctx.win(basket); });
       }else{
-        st.wrongs++; SFX.soft(); ui.rowB.classList.add("shake");
+        st.wrongs++; fails.n++; SFX.soft(); ui.rowB.classList.add("shake");
         T.after(500,()=>ui.rowB.classList.remove("shake"));
-        okBtn.disabled=true; ctx.answering(false);
-        fails++;
-        if(st.wrongs>=2||fails>=2){ verify(()=>{ st.done=true; T.after(300,()=>ctx.win(basket)); }); return; }
-        verify(()=>{ if(ctx.alive()) build(true); });
+        if(st.wrongs>=2||fails.n>=2){
+          st.done=true; st.locked=true; const my=st;
+          const step=()=>{
+            if(!ctx.alive()||st!==my) return;
+            if(ui.B.length<q.a){ const o=el("div","cobj pop",ui.rowB); img(ui.item,"",o); el("div","tag",o); ui.B.push(o); relayout(); SFX.count(ui.B.length); Speech.count(cnS(ui.B.length),"auto-count"); T.after(600,step); return; }
+            Speech.say("现在两边都是"+cnQ(q.a)+"个，公平啦！",{tag:"reveal"});
+            T.after(1600,()=>{ if(ctx.alive()) ctx.win(basket); });
+          };
+          T.after(500,step);
+          return;
+        }
+        Speech.say("还不一样多哦，比一比，Bingo 还差几个？",{tag:"remedy"});
       }
     });
     okBtn.disabled=true;
-    ctx.ask("Bingo 的饼干少啦！点篮子，给她加到和 Bluey 一样多。加好了按绿色按钮。",basket);
+    ui.eq=eqBar(L.top,[String(q.b),"+","□","=",String(q.a)]);
+    ctx.ask("Bluey 有"+cnQ(q.a)+"个，Bingo 只有"+cnQ(q.b)+"个。点篮子给 Bingo 加，加到一样多，好了按绿色按钮！",basket);
+    ctx.answering(true);
+  }
+  /* L3 单双数：能不能公平分给两个人 */
+  function buildOdd(L,item){
+    q.act="card";
+    const field=mkField(L.top,{l:15,r:4,t:16,b:36}); ui.field=field;
+    fitObj(field,q.n,"scatter");
+    ui.items=place(field,q.n,item,scatter(q.n));
+    faceAt(L.top,"bluey",20,28); faceAt(L.top,"bingo",56,28,true);
+    ctx.ask(cnQ(q.n)+"块好吃的，分给 Bluey 和 Bingo 两个人，每人一样多 —— 能不能正好分完？",field);
+    ctx.answering(true);
+    const wrap=el("div","cards",L.bot);
+    const mk=(key,label)=>{
+      const c=el("div","card",wrap); c.dataset.n=key;
+      const t=el("div","num",c); t.textContent=label; t.style.fontSize="clamp(17px,3.6vmin,34px)";
+      onTap(c,()=>{ if(c.dataset.off) return; pickOdd(key,c,wrap); });
+      return c;
+    };
+    mk(1,"能！正好分完"); mk(0,"不能，多一块");
+    ui.wrap=wrap;
+  }
+  function pickOdd(v,card,wrap){
+    if(st.done) return;
+    const ok=(v===q.ans); record(ctx,st,ok);
+    lockCards(wrap);
+    if(ok){ st.done=true; card.classList.add("right"); ctx.answering(false); SFX.right(); }
+    else{
+      st.wrongs++; fails.n++; SFX.soft(); card.classList.add("wrong"); ctx.answering(false);
+      [].forEach.call(wrap.children,x=>{ if(+x.dataset.n===q.ans) x.classList.add("right"); });
+      st.done=true;
+    }
+    // 无论对错都演示配对：这是单双数概念的建立
+    st.locked=true; const my=st;
+    const pairs=Math.floor(q.n/2);
+    let i=0; Link.clear();
+    const pos=rowFixed(q.n,q.n);
+    ui.items.forEach((o,idx)=>{ o.style.left=pos[idx][0]+"%"; o.style.top=(idx%2===0?"36%":"64%"); });
+    const step=()=>{
+      if(!ctx.alive()||st!==my) return;
+      if(i>=pairs){
+        if(q.n%2===1){ const last=ui.items[q.n-1]; last.classList.add("tapme");
+          Speech.say(cnQ(q.n)+"是单数！两个两个分，最后多出来一块，不能公平分。",{tag:"verify"});
+        }else{
+          Speech.say(cnQ(q.n)+"是双数！两个两个分，正好分完，公平！",{tag:"verify"});
+        }
+        T.after(2400,()=>{ if(ctx.alive()&&st===my){ Link.clear();
+          if(ok) ctx.win(card); else build(true); } });
+        return;
+      }
+      Link.line(ui.items[i*2],ui.items[i*2+1],"#ffd75e"); SFX.count(i+1); i++; T.after(430,step);
+    };
+    T.after(600,step);
+  }
+  /* L4 平分：每人几块 */
+  function buildShare(L,item){
+    q.act="card";
+    const field=mkField(L.top,{l:15,r:4,t:14,b:38}); ui.field=field;
+    fitObj(field,q.n,"scatter");
+    ui.items=place(field,q.n,item,scatter(q.n));
+    faceAt(L.top,"bluey",20,28); faceAt(L.top,"bingo",56,28,true);
+    ui.eq=eqBar(L.top,[String(q.n),"分成两份","=","□","+","□"]);
+    ctx.ask(cnQ(q.n)+"块点心平分给 Bluey 和 Bingo，每人分到几块？",field);
+    const my=st;
+    T.after(2600,()=>{
+      if(!ctx.alive()||st!==my) return;
+      numAnswer(ctx,ui,st,fails,{
+        ans:q.ans,lo:1,hi:8,askText:"每人几块？点数字卡。",
+        rightSay:"对啦！"+cnQ(q.n)+"平分就是每人"+cnQ(q.ans)+"块！",
+        revealSay:"每人"+cnQ(q.ans)+"块："+cnQ(q.ans)+"加"+cnQ(q.ans)+"正好是"+cnQ(q.n)+"。",
+        retry:()=>build(true),
+        onRight:card=>{
+          // 发牌演示：一人一块轮流发
+          st.locked=true; const my2=st;
+          let i=0;
+          const step=()=>{
+            if(!ctx.alive()||st!==my2) return;
+            if(i>=q.n){
+              Speech.say("Bluey "+cnQ(q.ans)+"块，Bingo "+cnQ(q.ans)+"块，一样多！",{tag:"verify"});
+              T.after(1900,()=>{ if(ctx.alive()) ctx.win(card); });
+              return;
+            }
+            const o=ui.items[i];
+            o.style.transition="left .45s,top .45s";
+            o.style.left=(i%2===0?18:64)+ (Math.floor(i/2)*7) +"%";
+            o.style.top=(i%2===0?"32%":"66%");
+            SFX.count(Math.floor(i/2)+1);
+            i++; T.after(380,step);
+          }; step();
+        }
+      });
+    });
   }
   return {
-    start:()=>{ fails=0; build(false); }, next:()=>{ fails=0; build(false); },
-    repeat:()=>(q&&q.mode==="fix")?"点篮子，给 Bingo 加到一样多。":"上面是 Bluey 的，下面是 Bingo 的，谁的多呀？",
+    start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
+    repeat:()=>{ if(!q) return "";
+      if(q.kind==="diff") return "谁多？多几个？";
+      if(q.kind==="make") return "点篮子给 Bingo 加到和 Bluey 一样多。";
+      if(q.kind==="odd") return cnQ(q.n)+"块能不能公平分给两个人？";
+      return cnQ(q.n)+"块平分给两个人，每人几块？"; },
     destroy:()=>{ Link.clear(); ui=null; q=null; st=null; }
   };
 };
 
 /* ============================================================================
-   世界四 · 葫芦山 —— 序数 / 部分-整体（缺失加数）
+   世界四 · 葫芦山 —— 序数与分解：正数第几个 → 倒数第几个 → 补到整数 → 分成两份
    ============================================================================ */
 GAMES.hulu=ctx=>{
-  const T=ctx.T; let st=null,q=null,ui=null,rt=0,fails=0; const box={last:null};
+  const T=ctx.T; let st=null,q=null,ui=null; const box={last:null},fails={n:0};
 
+  function spec(){
+    const lv=ctx.level();
+    if(lv===1){ const t=rint(2,7); return {kind:"ordL",total:7,t,ans:t}; }
+    if(lv===2){ const t=rint(1,6); return {kind:"ordR",total:7,t,ans:8-t}; }
+    if(lv===3){ const N=rint(6,10),a=rint(2,N-2); return {kind:"miss",N,a,ans:N-a}; }
+    const N=rint(5,10),x=rint(1,N-1); return {kind:"bond",N,x,ans:N-x};
+  }
   function build(retry,forceKind){
     st=bindState(newState(retry));
-    const lv=ctx.level();
-    let kind=forceKind||(lv<=2?"ord":(lv===3?((rt%2===0)?"explore":"missing"):"missing"));
+    q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.t||o.N)+","+(o.a||o.x||0),box),{world:"hulu"}));
+    if(forceKind) q.kind=forceKind;
     const L=layout(ctx.root); ui={L};
-    sideCast(L.top,"l",["yeye"],kind==="ord"?30:20);
-    if(kind==="ord") buildOrd(L,lv); else if(kind==="explore") buildExplore(L,lv); else buildMissing(L,lv);
+    sideCast(L.top,"l",["yeye"],22);
+    if(q.kind==="ordL"||q.kind==="ordR") buildOrd(L);
+    else if(q.kind==="miss") buildMiss(L);
+    else buildBond(L);
   }
-
-  /* ---- 序数：第几个（颜色每轮打乱，杜绝"记颜色"） ---- */
-  function buildOrd(L,lv){
-    const total=lv===1?4:6;
-    const mk=()=>({kind:"ord",total,target:rint(1,lv===1?3:total),cols:shuffle(GOURDS).slice(0,total)});
-    q=setQ(fresh(mk,o=>"ord:"+o.target,box));
-    const target=q.target, cols=q.cols;
-    const field=mkField(L.top,{mat:false,l:10,r:4,t:12,b:38});
+  /* 正/倒序数 */
+  function buildOrd(L){
+    q.act="gourd";
+    const total=q.total, fromR=q.kind==="ordR";
+    const cols=shuffle(GOURDS).slice(0,total);
+    const field=mkField(L.top,{mat:false,l:12,r:4,t:14,b:36});
     fitObj(field,total,"row");
-    const pos=rowPos(total).map(p=>[p[0],62]);
-
+    const pos=rowPos(total).map(p=>[p[0],60]);
     const gs=[];
     for(let i=0;i<total;i++){
-      const o=el("div","cobj",field);
+      const o=el("div","cobj",field); o.dataset.g=String(i+1);
       o.style.left=pos[i][0]+"%"; o.style.top=pos[i][1]+"%";
-      img(A.pr(cols[i]),"",o); el("div","tag",o); el("div","hang",o);
-      gs.push(o);
-      onTap(o,()=>tapG(i,o,gs));
+      img(A.pr(cols[i]),"",o); el("div","tag",o);
+      gs.push(o); onTap(o,()=>tapG(i,o,gs));
     }
-    ui.gs=gs; ui.field=field;
-    field.dataset.glowall="1";                       // 提示时整排一起亮，绝不指某一个
-    taskCard(L.top,q.target,"ordinal","yeye");       // 画出"第几个"，不再只靠语音
+    ui.gs=gs; ui.field=field; field.dataset.glowall="1";
+    // 方向箭头：从哪边开始数
+    const arw=el("div","",field);
+    arw.style.cssText="position:absolute;top:18%;"+(fromR?"right:2%":"left:2%")+";font-weight:900;color:#ffd75e;"+
+      "font-size:clamp(18px,4vmin,38px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
+    arw.textContent=fromR?"← 从这边数":"从这边数 →";
     ctx.answering(true);
-    ctx.ask((st.isRetry?"再来一次！":"")+"爷爷说：该第"+cnSeq(q.target)+"个葫芦娃出来啦！点一点第"+cnSeq(q.target)+"个葫芦。",field);
+    ctx.ask((st.isRetry?"再来一次！":"")+(fromR
+      ?("这次反过来，从右边开始数！点一点从右边数第"+cnS(q.t)+"个葫芦。")
+      :("从左边开始数，点一点第"+cnS(q.t)+"个葫芦。")),field);
   }
   function tapG(i,o,gs){
     if(busyState(st)) return;
-    const ok=(i+1===q.target); record(ctx,st,ok);
+    const ok=(i+1===q.ans); record(ctx,st,ok);
     if(ok){
       st.done=true; ctx.answering(false);
       o.classList.add("bounce"); SFX.right();
       T.after(300,()=>{
         if(!ctx.alive()) return;
-        o.querySelector("img").src=A.ch(HULU_COLORS[q.target-1]);
+        o.querySelector("img").src=A.ch(HULU_COLORS[(q.t-1)%7]);
         o.classList.add("pop");
-        Speech.say("对啦！第"+cnSeq(q.target)+"个！",{tag:"right"});
-        T.after(1300,()=>{ if(ctx.alive()){ rt++; ctx.win(o); } });
+        Speech.say("对啦！从"+(q.kind==="ordR"?"右":"左")+"边数第"+cnS(q.t)+"个！",{tag:"right"});
+        T.after(1400,()=>{ if(ctx.alive()) ctx.win(o); });
       });
     }else{
-      st.wrongs++; SFX.soft(); o.classList.add("shake");
+      st.wrongs++; fails.n++; SFX.soft(); o.classList.add("shake");
       T.after(500,()=>o.classList.remove("shake"));
-      fails++;
-      if(st.wrongs>=2||fails>=2){ ordReveal(gs); return; }
-      ctx.answering(false); ordRemedy(gs);
+      ctx.answering(false);
+      if(st.wrongs>=2||fails.n>=2){ ordReveal(gs); return; }
+      ordRemedy(gs);
     }
   }
-  /** 序数专用纠错：从左到右逐个报"第几个"，停在目标 */
   function ordRemedy(gs){
-    st.locked=true; const my=st;          // 演示期间葫芦不可点，旧回调也不能改新题
-    Speech.say("我们从左边开始数：",{tag:"remedy"});
+    st.locked=true; const my=st;
+    const fromR=q.kind==="ordR";
+    Speech.say("我们从"+(fromR?"右":"左")+"边开始数：",{tag:"remedy"});
     let i=0;
+    const idx=k=>fromR?(gs.length-1-k):k;
     const step=()=>{
       if(!ctx.alive()||st!==my) return;
-      if(i>=q.target){
-        gs[q.target-1].classList.add("tapme");
-        Speech.say("这个就是第"+cnSeq(q.target)+"个。我们再试一个新的。",{tag:"remedy"});
-        T.after(2600,()=>{ if(ctx.alive()&&st===my){ gs[q.target-1].classList.remove("tapme"); build(true,"ord"); } });
+      if(i>=q.t){
+        gs[q.ans-1].classList.add("tapme");
+        Speech.say("这个就是第"+cnS(q.t)+"个。再试一个新的！",{tag:"remedy"});
+        T.after(2400,()=>{ if(ctx.alive()&&st===my){ gs[q.ans-1].classList.remove("tapme"); build(true,q.kind); } });
         return;
       }
-      const o=gs[i]; o.classList.add("counted"); o.querySelector(".tag").textContent="第"+cnSeq(i+1);
+      const o=gs[idx(i)]; o.classList.add("counted");
+      o.querySelector(".tag").textContent="第"+cnS(i+1);
       o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit");
-      SFX.count(i+1); Speech.count("第"+cnSeq(i+1),"auto-count");
-      i++; T.after(760,step);
+      SFX.count(i+1); Speech.count("第"+cnS(i+1),"auto-count");
+      i++; T.after(720,step);
     };
-    T.after(800,step);
+    T.after(700,step);
   }
   function ordReveal(gs){
     st.done=true; ctx.answering(false);
-    gs.forEach((o,i)=>{ if(i+1===q.target){ o.classList.add("tapme"); Finger.at(o,2400); } else o.classList.add("dimmed"); });
-    Speech.say("是这个哦，第"+cnSeq(q.target)+"个。",{tag:"reveal"});
-    T.after(2100,()=>{ if(ctx.alive()){ rt++; ctx.win(gs[q.target-1]); } });
+    gs.forEach((o,i)=>{ if(i+1===q.ans){ o.classList.add("tapme"); Finger.at(o,2400); } else o.classList.add("dim"); });
+    Speech.say("是这个哦，从"+(q.kind==="ordR"?"右":"左")+"边数第"+cnS(q.t)+"个。",{tag:"reveal"});
+    T.after(2100,()=>{ if(ctx.alive()) ctx.win(gs[q.ans-1]); });
   }
-
-  /* ---- 两条路的公共布局 ---- */
-  function buildPaths(L,N,already){
-    const field=mkField(L.top,{mat:false,l:16,r:6,t:54,b:5});
+  /* L3 补到整数：a + □ = N，点右边山顶派葫芦娃 */
+  function buildMiss(L){
+    q.act="zone";
+    const field=mkField(L.top,{mat:false,l:14,r:6,t:50,b:5});
     const wrap=el("div","",field);
     wrap.style.cssText="position:absolute;inset:0;display:flex;gap:3%";
     const zl=el("button","dropzone",wrap), zr=el("button","dropzone",wrap);
+    zr.dataset.zone="r";
     const hl=el("div","zhead",zl), hr=el("div","zhead",zr);
     img(A.ch("shejing"),"",hl); img(A.ch("xiezijing"),"",hr);
     const sl=el("div","slot",zl), sr=el("div","slot",zr);
-    ui.zl=zl; ui.zr=zr; ui.sl=sl; ui.sr=sr; ui.field=field;
-    ui.left=[]; ui.right=[];
-    for(let i=0;i<(already||0);i++){ const im=img(A.ch(HULU_COLORS[i%7]),"",sl); ui.left.push(im); }
-    return {zl,zr,sl,sr};
-  }
-  function addTo(side){
-    const arr=side==="l"?ui.left:ui.right, slot=side==="l"?ui.sl:ui.sr;
-    const im=img(A.ch(HULU_COLORS[(ui.left.length+ui.right.length)%7]),"",slot);
-    im.classList.add("pop"); arr.push(im);
-    SFX.count(arr.length); Speech.count(cnSeq(arr.length),"child-count");
-  }
-  function popFrom(side){
-    const arr=side==="l"?ui.left:ui.right;
-    if(!arr.length) return; const im=arr.pop(); im.remove(); SFX.tap();
-  }
-  /** 底部小条：待命的葫芦娃 / 目标格 */
-  function strip(bot){
-    const d=el("div","",bot);
-    d.style.cssText="display:flex;gap:clamp(2px,.7vmin,6px);align-items:center;"+
-      "padding:clamp(4px,1vmin,10px) clamp(6px,1.4vmin,14px);border-radius:99px;background:rgba(0,0,0,.4)";
-    return d;
-  }
-
-  /* ---- 自由探索分解（不计掌握，探索"合起来还是那么多"） ---- */
-  function buildExplore(L,lv){
-    const N=rint(4,5); q=setQ({kind:"explore",N});
-    buildPaths(L,N,0);
-    let pool=N;
-    const bar=strip(L.bot), chips=[];
-    for(let i=0;i<N;i++){
-      const c=el("div","",bar);
-      c.style.cssText="width:clamp(26px,5vmin,54px);height:clamp(26px,5vmin,54px);transition:opacity .2s";
-      img(A.ch(HULU_COLORS[i%7]),"",c).style.cssText="width:100%;height:100%;object-fit:contain";
-      chips.push(c);
-    }
-    const upd=()=>{
-      chips.forEach((c,i)=>c.style.opacity=i<pool?"1":".18");
-      okBtn.disabled=!(pool===0&&ui.left.length>0&&ui.right.length>0);
-    };
-    onTap(ui.zl,()=>{ if(busyState(st)||pool<=0) return; pool--; addTo("l"); upd(); });
-    onTap(ui.zr,()=>{ if(busyState(st)||pool<=0) return; pool--; addTo("r"); upd(); });
-    onTap(ui.sl,()=>{ if(busyState(st)||!ui.left.length) return; popFrom("l"); pool++; upd(); });
-    onTap(ui.sr,()=>{ if(busyState(st)||!ui.right.length) return; popFrom("r"); pool++; upd(); });
+    ui.zl=zl; ui.zr=zr; ui.sl=sl; ui.sr=sr; ui.left=[]; ui.right=[];
+    for(let i=0;i<q.a;i++){ const im=img(A.ch(HULU_COLORS[i%7]),"",sl); ui.left.push(im); }
+    ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.N)]);
+    onTap(zr,()=>{ if(busyState(st)||ui.right.length>=8) return;
+      const im=img(A.ch(HULU_COLORS[(q.a+ui.right.length)%7]),"",sr);
+      im.classList.add("pop"); ui.right.push(im);
+      SFX.count(ui.right.length); Speech.count(cnS(ui.right.length),"child-count");
+      okBtn.disabled=ui.right.length===0; });
+    onTap(sr,()=>{ if(busyState(st)||!ui.right.length) return;
+      ui.right.pop().remove(); SFX.tap(); okBtn.disabled=ui.right.length===0; });
     const okBtn=bigBtn(L.bot,"出发！","green",()=>{
       if(st.done) return;
-      st.done=true; okBtn.disabled=true;
-      const a=ui.left.length,b=ui.right.length;
-      Speech.say("左边"+cnQty(a)+"个，右边"+cnQty(b)+"个 —— 合起来还是"+cnQty(N)+"个！",{tag:"right"});
-      SFX.right();
-      T.after(2400,()=>{ if(ctx.alive()){ rt++; ctx.win(ui.zl); } });
-    });
-    okBtn.disabled=true; upd();
-    ctx.answering(true);
-    ctx.ask("要"+cnQty(N)+"个葫芦娃去救爷爷！把他们分到两条路：点左边或者点右边，两边都要有人。分好了按绿色的出发按钮！",ui.zl);
-  }
-
-  /* ---- 缺失加数（唯一答案，计掌握） ---- */
-  function buildMissing(L,lv){
-    const mk=()=>{ const N=lv>=4?rint(5,6):rint(4,5), a=rint(1,N-1); return {kind:"missing",N,a,need:N-a}; };
-    const qq=fresh(mk,o=>"miss:"+o.N+","+o.a,box); q=setQ(qq);
-    const N=qq.N, a=qq.a;
-    buildPaths(L,N,a);
-    const bar=strip(L.bot);
-    ui.slots=[];
-    for(let i=0;i<N;i++){
-      const sl2=el("div","",bar);
-      sl2.style.cssText="width:clamp(24px,4.6vmin,48px);height:clamp(24px,4.6vmin,48px);border-radius:8px;"+
-        "border:3px solid rgba(255,255,255,.9);transition:background .2s;background:"+
-        (i<a?"#6fbf4a":"rgba(0,0,0,.35)");
-      ui.slots.push(sl2);
-    }
-    const upd=()=>{
-      ui.slots.forEach((x,i)=>{ x.style.background=i<a?"#6fbf4a":(i<a+ui.right.length?"#ffd75e":"rgba(0,0,0,.35)"); });
-      okBtn.disabled=ui.right.length===0;
-    };
-    onTap(ui.zr,()=>{ if(busyState(st)||ui.right.length>=7) return; addTo("r"); upd(); });
-    onTap(ui.sr,()=>{ if(busyState(st)||!ui.right.length) return; popFrom("r"); upd(); });
-    const okBtn=bigBtn(L.bot,"出发！","green",()=>submit());
-    okBtn.disabled=true; ui.okBtn=okBtn;
-    ctx.answering(true);
-    ctx.ask((st.isRetry?"再来一次！":"")+"一共要"+cnQty(N)+"个葫芦娃！左边已经有"+cnQty(a)+"个了，右边还要几个？点右边派人，好了按绿色按钮。",ui.zr);
-    function submit(){
-      if(st.done) return;
-      const ok=(ui.right.length===q.need); record(ctx,st,ok);
+      const ok=(ui.right.length===q.ans); record(ctx,st,ok);
       if(ok){
         st.done=true; okBtn.disabled=true; ctx.answering(false);
-        Speech.say("对啦！"+cnQty(a)+"个和"+cnQty(q.need)+"个，合起来正好"+cnQty(N)+"个！",{tag:"right"});
+        ui.eq.setHole(q.ans);
+        Speech.say(cnQ(q.a)+"加"+cnQ(q.ans)+"，正好"+cnQ(q.N)+"个，出发！",{tag:"right"});
         SFX.right();
-        T.after(2000,()=>{ if(ctx.alive()){ rt++; ctx.win(ui.zr); } });
+        T.after(1900,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
       }else{
-        st.wrongs++; SFX.soft(); ui.zr.classList.add("shake");
+        st.wrongs++; fails.n++; SFX.soft(); ui.zr.classList.add("shake");
         T.after(500,()=>ui.zr.classList.remove("shake"));
-        okBtn.disabled=true; ctx.answering(false);
-        fails++;
-        if(st.wrongs>=2||fails>=2){ missReveal(); return; }
-        missRemedy();
-      }
-    }
-  }
-  /** 部分-整体专用纠错：已有部分保持不动，只闪烁"还差的空位" */
-  function missRemedy(){
-    st.locked=true; const my=st;
-    ui.right.forEach(im=>im.remove()); ui.right=[];
-    ui.slots.forEach((x,i)=>{ x.style.background=i<q.a?"#6fbf4a":"rgba(0,0,0,.35)"; });
-    Speech.say("看，一共要"+cnQty(q.N)+"格。山洞已经有"+cnQty(q.a)+"个了。",{tag:"remedy"});
-    T.after(1400,()=>{
-      if(!ctx.alive()||st!==my) return;
-      let k=0;
-      const blink=()=>{
-        if(!ctx.alive()||st!==my) return;
-        if(k>=q.need){
-          Speech.say("还差"+cnQty(q.need)+"个。我们再试一个新的！",{tag:"remedy"});
-          T.after(2000,()=>{ if(ctx.alive()&&st===my) build(true,"missing"); });
+        if(st.wrongs>=2||fails.n>=2){
+          st.done=true; st.locked=true; const my=st;
+          while(ui.right.length>q.ans) ui.right.pop().remove();
+          const step=()=>{
+            if(!ctx.alive()||st!==my) return;
+            if(ui.right.length<q.ans){
+              const im=img(A.ch(HULU_COLORS[(q.a+ui.right.length)%7]),"",ui.sr);
+              im.classList.add("pop"); ui.right.push(im);
+              SFX.count(ui.right.length); Speech.count(cnS(ui.right.length),"auto-count");
+              T.after(600,step); return;
+            }
+            ui.eq.setHole(q.ans);
+            Speech.say("还差的就是"+cnQ(q.ans)+"个："+cnQ(q.a)+"加"+cnQ(q.ans)+"等于"+cnQ(q.N)+"。",{tag:"reveal"});
+            T.after(2000,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
+          };
+          T.after(600,step);
           return;
         }
-        ui.slots[q.a+k].style.background="#ffd75e";
-        SFX.count(k+1); Speech.count(cnSeq(k+1),"auto-count");
-        k++; T.after(600,blink);
-      };
-      blink();
+        Speech.say("一共要"+cnQ(q.N)+"个，左边已经有"+cnQ(q.a)+"个了，再想想右边要几个。",{tag:"remedy"});
+      }
+    });
+    okBtn.disabled=true; ui.okBtn=okBtn;
+    ctx.answering(true);
+    ctx.ask("一共要"+cnQ(q.N)+"个葫芦娃！左边已经有"+cnQ(q.a)+"个，右边还要几个？点右边派人，好了按绿色按钮。",zr);
+  }
+  /* L4 数的分解：N 分成 x 和几 */
+  function buildBond(L){
+    q.act="card";
+    const field=mkField(L.top,{l:14,r:6,t:14,b:40}); ui.field=field;
+    fitObj(field,q.N,"row");
+    const pos=rowFixed(q.N,q.N);
+    ui.gs=[];
+    for(let i=0;i<q.N;i++){
+      const o=el("div","cobj",field);
+      o.style.left=pos[i][0]+"%"; o.style.top="50%";
+      img(A.ch(HULU_COLORS[i%7]),"",o); el("div","tag",o);
+      ui.gs.push(o);
+    }
+    ui.eq=eqBar(L.top,[String(q.N),"=",String(q.x),"+","□"]);
+    ctx.ask(cnQ(q.N)+"个葫芦娃分两队！一队"+cnQ(q.x)+"个，另一队几个？",field);
+    const my=st;
+    T.after(2400,()=>{
+      if(!ctx.alive()||st!==my) return;
+      numAnswer(ctx,ui,st,fails,{
+        ans:q.ans,lo:1,hi:9,askText:"另一队几个？点数字卡。",
+        rightSay:"对啦！"+cnQ(q.N)+"可以分成"+cnQ(q.x)+"和"+cnQ(q.ans)+"！",
+        revealSay:cnQ(q.N)+"分成"+cnQ(q.x)+"和"+cnQ(q.ans)+"："+cnQ(q.x)+"加"+cnQ(q.ans)+"等于"+cnQ(q.N)+"。",
+        retry:()=>build(true,"bond"),
+        onRight:card=>{
+          ui.eq.setHole(q.ans);
+          st.locked=true; const my2=st;
+          ui.gs.forEach((o,i)=>{
+            o.style.transition="left .5s,top .5s";
+            T.after(i*140,()=>{ if(!ctx.alive()||st!==my2) return;
+              if(i<q.x){ o.style.top="36%"; o.style.left=(10+i*9)+"%"; }
+              else { o.style.top="66%"; o.style.left=(10+(i-q.x)*9)+"%"; }
+              SFX.tap(); });
+          });
+          T.after(q.N*140+800,()=>{
+            if(!ctx.alive()||st!==my2) return;
+            Speech.say("一队"+cnQ(q.x)+"个，一队"+cnQ(q.ans)+"个！",{tag:"verify"});
+            T.after(1500,()=>{ if(ctx.alive()) ctx.win(card); });
+          });
+        }
+      });
     });
   }
-  function missReveal(){
-    st.done=true; ctx.answering(false); ui.okBtn.disabled=true;
-    ui.right.forEach(im=>im.remove()); ui.right=[];
-    let k=0;
-    const step=()=>{
-      if(!ctx.alive()) return;
-      if(k>=q.need){
-        Speech.say("要"+cnQty(q.need)+"个才够！",{tag:"reveal"});
-        T.after(1800,()=>{ if(ctx.alive()){ rt++; ctx.win(ui.zr); } });
-        return;
-      }
-      addTo("r"); ui.slots[q.a+k].style.background="#ffd75e"; k++; T.after(700,step);
-    };
-    T.after(1200,step);
-  }
-
   return {
-    start:()=>{ rt=0; fails=0; build(false); }, next:()=>{ fails=0; build(false); },
+    start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
     repeat:()=>{ if(!q) return "";
-      return q.kind==="ord"?("点一点第"+cnSeq(q.target)+"个葫芦。")
-        :q.kind==="missing"?("山洞有"+cnQty(q.a)+"个，一共要"+cnQty(q.N)+"个，山顶还要几个？")
-        :"两条路都要有人，你来分！"; },
+      if(q.kind==="ordL") return "从左边数第"+cnS(q.t)+"个葫芦，点一点它。";
+      if(q.kind==="ordR") return "从右边数第"+cnS(q.t)+"个葫芦，点一点它。";
+      if(q.kind==="miss") return "一共要"+cnQ(q.N)+"个，已经有"+cnQ(q.a)+"个，右边还要几个？";
+      return cnQ(q.N)+"分成"+cnQ(q.x)+"和几？"; },
     destroy:()=>{ ui=null; q=null; st=null; }
   };
 };
 
 /* ============================================================================
-   世界五 · 复仇者大厦 —— 合并加法(count-all / count-on) + 一一对应
+   世界五 · 复仇者大厦 —— 算式大战：加法 → 减法 → 缺失加数 → 十几（10+n）
    ============================================================================ */
 GAMES.aveng=ctx=>{
-  const T=ctx.T; let st=null,q=null,ui=null,rt=0,fails=0; const box={last:null};
+  const T=ctx.T; let st=null,q=null,ui=null; const box={last:null},fails={n:0};
   const HEROES=["ironman","cap","thor","hulkman","widow","hawkeye","spider","spiderblack","blackpanther"];
 
-  function build(retry,forceKind){
-    st=bindState(newState(retry));
+  function spec(){
     const lv=ctx.level();
-    let kind=forceKind||((lv>=2&&rt%3===1)?"pair":"add");
+    if(lv===1){ const a=rint(2,5),b=rint(1,Math.min(4,9-a)); return {kind:"add",a,b,ans:a+b}; }
+    if(lv===2){ const n=rint(5,9),k=rint(1,4); return {kind:"sub",n,k,ans:n-k}; }
+    if(lv===3){ const n=rint(6,10),a=rint(2,n-2); return {kind:"missA",n,a,ans:n-a}; }
+    const b=rint(1,9); return {kind:"teen",b,ans:10+b};
+  }
+  function build(retry){
+    st=bindState(newState(retry)); q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.a||o.n||o.b)+","+(o.b||o.k||0),box),{world:"aveng",act:"card"}));
     const L=layout(ctx.root); ui={L};
-    if(kind==="pair") buildPair(L,lv); else buildAdd(L,lv);
+    const field=mkField(L.top,{l:4,r:4,t:14,b:6}); ui.field=field;
+    if(q.kind==="add") buildAdd(L,field);
+    else if(q.kind==="sub") buildSub(L,field);
+    else if(q.kind==="missA") buildMissA(L,field);
+    else buildTeen(L,field);
   }
-
-  /* ---- 合并加法 ---- */
-  function buildAdd(L,lv){
-    const cap=lv===1?5:lv===2?6:8;
-    const mk=()=>{ const a=rint(1,Math.min(4,cap-1)); const b=rint(1,Math.min(4,cap-a));
-                   return {kind:"add",a,b,n:a+b,lv}; };
-    const qq=fresh(mk,o=>"add:"+o.a+","+o.b,box); q=setQ(qq);
-    const a=qq.a, b=qq.b;
-    const field=mkField(L.top,{l:4,r:4,t:14,b:4}); ui.field=field;
-    fitObj(field,Math.max(q.n,4),"row");
-    const jet=el("div","",field);
-    jet.style.cssText="position:absolute;left:2%;top:3%;width:clamp(36px,6.4vmin,74px);pointer-events:none";
-    img(A.pr("quinjet"),"",jet).style.cssText="width:100%;height:auto";
-    const por=el("div","",field);
-    por.style.cssText="position:absolute;right:2%;top:3%;width:clamp(36px,6.4vmin,74px);pointer-events:none";
-    img(A.pr("portal"),"",por).style.cssText="width:100%;height:auto";
+  function heroRow(field,n,names,y,xs){
+    const out=[];
+    for(let i=0;i<n;i++){
+      const o=el("div","cobj",field);
+      o.style.left=xs[i][0]+"%"; o.style.top=(y!=null?y:xs[i][1])+"%";
+      img(A.ch(names[i%names.length]),"",o); el("div","tag",o);
+      out.push(o);
+    }
+    return out;
+  }
+  function buildAdd(L,field){
     const names=shuffle(HEROES);
-    ui.A=[]; ui.B=[];
+    fitObj(field,Math.max(q.ans,5),"row");
     const posA=[],posB=[];
-    for(let i=0;i<a;i++) posA.push([14+(i%2)*15, 44+Math.floor(i/2)*25]);
-    for(let i=0;i<b;i++) posB.push([71+(i%2)*15, 44+Math.floor(i/2)*25]);
-    for(let i=0;i<a;i++){ const o=el("div","cobj",field);
-      o.style.left=posA[i][0]+"%"; o.style.top=posA[i][1]+"%";
-      img(A.ch(names[i]),"",o); el("div","tag",o); o.style.opacity="0"; ui.A.push(o); }
-    for(let i=0;i<b;i++){ const o=el("div","cobj",field);
-      o.style.left=posB[i][0]+"%"; o.style.top=posB[i][1]+"%";
-      img(A.ch(names[(i+a)%HEROES.length]),"",o); el("div","tag",o); o.style.opacity="0"; ui.B.push(o); }
-    let k=0;
-    const drop=()=>{
+    for(let i=0;i<q.a;i++) posA.push([13+(i%3)*13, 36+Math.floor(i/3)*26]);
+    for(let i=0;i<q.b;i++) posB.push([65+(i%3)*13, 36+Math.floor(i/3)*26]);
+    ui.A=heroRow(field,q.a,names,null,posA);
+    ui.B=heroRow(field,q.b,names.slice(q.a),null,posB);
+    ui.A.concat(ui.B).forEach(o=>{ o.style.opacity="0"; });
+    ui.eq=eqBar(L.top,[String(q.a),"+",String(q.b),"=","□"]);
+    let k=0; const all=ui.A.concat(ui.B);
+    const dropIn=()=>{
       if(!ctx.alive()) return;
-      const all=ui.A.concat(ui.B);
-      if(k>=all.length){ afterDrop(); return; }
+      if(k>=all.length){ askAns(cnQ(q.a)+"加"+cnQ(q.b)+"等于几？"); return; }
       all[k].style.opacity="1"; all[k].classList.add("pop"); SFX.tap(); k++;
-      T.after(260,drop);
+      T.after(220,dropIn);
     };
-    T.after(900,drop);
-    function afterDrop(){
-      // L3+ count-on：给左队一个"已经有 a 个"的整体标记
-      if(lv>=3){
-        const badge=makeCard(a,"dice");
-        badge.style.cssText="position:absolute;left:1%;top:30%;width:clamp(42px,7vmin,74px);height:clamp(42px,7vmin,74px);z-index:6;pointer-events:none";
-        field.appendChild(badge); ui.badge=badge;
-      }
-      const btn=bigBtn(L.bot,"集结！","",()=>assemble(btn));
-      ui.btn=btn;
-      ctx.answering(true);
-      ctx.ask(lv>=3?("这边已经有"+cnQty(a)+"个英雄啦！按黄色按钮，让他们集合。")
-                   :"英雄要集结啦！按黄色按钮，让他们合到一起。",btn);
-    }
+    ctx.ask("左边"+cnQ(q.a)+"个英雄，右边"+cnQ(q.b)+"个英雄，一共几个？",field);
+    T.after(1800,dropIn);
   }
-  function assemble(btn){
-    if(st.assembled) return; st.assembled=true;
-    btn.disabled=true; SFX.whoosh();
-    const all=ui.A.concat(ui.B), pos=rowPos(q.n);
-    all.forEach((o,i)=>{ o.style.transition="left .6s cubic-bezier(.3,1,.4,1),top .6s cubic-bezier(.3,1,.4,1)";
-      o.style.left=pos[i][0]+"%"; o.style.top="58%"; });
-    if(ui.badge){ ui.badge.style.transition="left .6s,top .6s"; ui.badge.style.left="2%"; ui.badge.style.top="58%"; }
-    T.after(750,()=>{
-      if(!ctx.alive()) return;
-      ui.merged=all; ui.counted=0;
-      const startFrom=(q.lv>=3)?q.a:0;
-      ui.startFrom=startFrom;
-      if(startFrom>0){
-        for(let i=0;i<startFrom;i++){ const o=all[i];
-          o.classList.add("counted"); setTag(o.querySelector(".tag"),i+1); o.style.pointerEvents="none"; }
-        ui.counted=startFrom;
-      }
-      all.forEach((o,i)=>{ if(i>=startFrom) onTap(o,()=>tapHero(o)); });
-      ctx.answering(true);
-      ctx.ask(startFrom>0?("已经有"+cnQty(startFrom)+"个啦，接着数下去！点一点后面的英雄。")
-                          :"一起数一数！点一点每一个英雄。",all[startFrom]);
-    });
-  }
-  function tapHero(o){
-    if(busyState(st)||o.classList.contains("counted")) return;
-    ui.counted++;
-    o.classList.add("counted"); setTag(o.querySelector(".tag"),ui.counted);
-    o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit");
-    SFX.count(ui.counted); numPop(o,ui.counted); Speech.count(cnSeq(ui.counted),"child-count");
-    if(ui.counted>=q.n) T.after(700,()=>{ if(ctx.alive()&&!st.done) askTotal(); });
-  }
-  function askTotal(){
-    ctx.answering(true);
-    const apat=(ctx.symbols()&&ctx.level()>=4)?"num":pick(ANSWER_PATS.filter(p=>p!=="line"));
-    const list=choices(q.n,1,10,4);
-    const wrap=askCards(ui.L.bot,list,apat,(v,c)=>{
-      if(st.done) return;
-      const ok=(v===q.n); record(ctx,st,ok);
-      if(ok){
-        st.done=true; lockCards(wrap); c.classList.add("right"); ctx.answering(false);
-        Speech.say(cnQty(q.a)+"个和"+cnQty(q.b)+"个，合起来一共"+cnQty(q.n)+"个！",{tag:"right"});
-        T.after(1800,()=>{ if(ctx.alive()){ rt++; ctx.win(c); } });
-      }else{
-        st.wrongs++; SFX.soft(); c.classList.add("wrong");
-        T.after(420,()=>c.classList.remove("wrong"));
-        lockCards(wrap); fails++;
-        if(st.wrongs>=2||fails>=2){
-          st.done=true; ctx.answering(false);
-          [].forEach.call(wrap.children,x=>{ if(+x.dataset.n===q.n){x.classList.add("right");Finger.at(x,2300);} else x.classList.add("dim"); });
-          Speech.say("是这张，一共"+cnQty(q.n)+"个！",{tag:"reveal"});
-          T.after(2100,()=>{ if(ctx.alive()){ rt++; ctx.win(wrap); } });
-          return;
-        }
-        ctx.answering(false); remedyAdd();
-      }
-    });
-    ctx.ask("一共几个英雄呀？点一张卡片。",wrap);
-  }
-  /** 合并专用纠错：拆回两堆再合一次，重新点数 */
-  function remedyAdd(){
-    st.locked=true; const my=st;          // 演示期间英雄不可点，旧回调也不能改新题
-    const all=ui.merged, posA=[],posB=[];
-    for(let i=0;i<q.a;i++) posA.push([12+(i%2)*14, 34+Math.floor(i/2)*24]);
-    for(let i=0;i<q.b;i++) posB.push([74+(i%2)*14, 34+Math.floor(i/2)*24]);
-    all.forEach((o,i)=>{ o.classList.remove("counted"); o.querySelector(".tag").textContent="";
-      const p=i<q.a?posA[i]:posB[i-q.a]; o.style.left=p[0]+"%"; o.style.top=p[1]+"%"; });
-    Speech.say("我们再看一次：这边"+cnQty(q.a)+"个，那边"+cnQty(q.b)+"个。",{tag:"remedy"});
-    T.after(2000,()=>{
-      if(!ctx.alive()||st!==my) return;
-      const pos=rowPos(q.n);
-      all.forEach((o,i)=>{ o.style.left=pos[i][0]+"%"; o.style.top="58%"; });
-      SFX.whoosh();
-      T.after(800,()=>{
-        if(!ctx.alive()||st!==my) return;
-        autoCount(ctx,all,0,560,()=>{
-          if(!ctx.alive()||st!==my) return;
-          Speech.say("合起来一共"+cnQty(q.n)+"个！我们再来一次新的。",{tag:"remedy"});
-          T.after(2600,()=>{ if(ctx.alive()&&st===my) build(true,"add"); });
-        });
-      });
-    });
-  }
-
-  /* ---- 一一对应：够不够 ---- */
-  function buildPair(L,lv){
-    const mk=()=>{ const n2=rint(2,5), m2=clamp(n2+pick([-1,0,1]),1,6);
-                   return {kind:"pair",n:n2,m:m2,truth:m2<n2?"less":(m2>n2?"more":"same")}; };
-    const qq=fresh(mk,o=>"pair:"+o.n+","+o.m,box); q=setQ(qq);
-    const n=qq.n, m=qq.m;
-    const field=mkField(L.top,{l:4,r:4,t:10,b:4}); ui.field=field;
-    fitObj(field,Math.max(n,m),"row");
+  function buildSub(L,field){
     const names=shuffle(HEROES);
-    ui.H=[]; ui.G=[];
-    const hp=rowPos(m).map(p=>[p[0],30]), gp=rowPos(n).map(p=>[p[0],74]);
-    for(let i=0;i<m;i++){ const o=el("div","cobj",field);
-      o.style.left=hp[i][0]+"%"; o.style.top=hp[i][1]+"%";
-      img(A.ch(names[i%HEROES.length]),"",o); el("div","tag",o); ui.H.push(o); }
-    for(let i=0;i<n;i++){ const o=el("div","cobj",field);
-      o.style.left=gp[i][0]+"%"; o.style.top=gp[i][1]+"%";
-      img(A.pr("goon"),"",o); el("div","tag",o); ui.G.push(o); }
-    let sel=null,pairs=0;
-    const maxP=Math.min(n,m);
-    ui.H.forEach(o=>onTap(o,()=>{
-      if(st.done||o.dataset.p) return;
-      if(sel) sel.classList.remove("counted");
-      sel=o; o.classList.add("counted"); o.querySelector(".tag").textContent="?"; SFX.tap();
-    }));
-    ui.G.forEach(o=>onTap(o,()=>{
-      if(st.done||!sel||o.dataset.p) return;
-      o.dataset.p=sel.dataset.p="1";
-      Link.line(sel,o,"#fff");
-      sel.querySelector(".tag").textContent=""; sel.classList.remove("counted"); sel.classList.add("dimmed");
-      o.classList.add("dimmed"); sel=null; pairs++; SFX.count(pairs);
-      if(pairs>=maxP) T.after(800,()=>{ if(ctx.alive()&&!st.done) askEnough(); });
-    }));
-    ctx.answering(true);
-    ctx.ask((st.isRetry?"再来一次！":"")+"每个英雄抓一个坏蛋！先点一个英雄，再点一个坏蛋。",ui.H[0]);
-  }
-  function askEnough(){
-    const bot=ui.L.bot; bot.textContent="";
-    const wrap=el("div","cards",bot);
-    const mk=(key,label,hi)=>{
-      const c=el("div","card",wrap);
-      const w=el("div","dotwrap",c);
-      const top=hi==="more"?4:3, bot2=hi==="less"?4:3;
-      for(let i=0;i<top;i++){ const d=el("div","dot",w); d.style.left=(20+i*20)+"%"; d.style.top="28%"; d.style.background="#2f8fe0"; }
-      for(let i=0;i<bot2;i++){ const d=el("div","dot",w); d.style.left=(20+i*20)+"%"; d.style.top="62%"; d.style.background="#7a6f99"; }
-      const t=el("div","",c);
-      t.style.cssText="position:absolute;left:0;right:0;bottom:3%;text-align:center;font-weight:900;color:#2a1f4d;font-size:clamp(11px,2vmin,18px)";
-      t.textContent=label;
-      onTap(c,()=>{ if(st.done) return; judge(key,c,wrap); });
-    };
-    mk("less","英雄不够","less"); mk("same","正好","same"); mk("more","英雄多了","more");
-    ctx.answering(true);
-    ctx.ask("英雄够不够呀？",wrap);
-  }
-  function judge(key,card,wrap){
-    const ok=(key===q.truth); record(ctx,st,ok);
-    if(ok){
-      st.done=true; lockCards(wrap); card.classList.add("right"); ctx.answering(false);
-      Speech.say(q.truth==="same"?"对啦！正好一个对一个！":(q.truth==="less"?"对啦！英雄不够，还差坏蛋没人抓。":"对啦！英雄多出来了。"),{tag:"right"});
-      T.after(1700,()=>{ if(ctx.alive()){ rt++; ctx.win(card); } });
-    }else{
-      st.wrongs++; SFX.soft(); card.classList.add("wrong");
-      T.after(420,()=>card.classList.remove("wrong"));
-      lockCards(wrap); ctx.answering(false); fails++;
-      if(st.wrongs>=2||fails>=2){
-        st.done=true;
-        [].forEach.call(wrap.children,(x,i)=>{ const k=["less","same","more"][i];
-          if(k===q.truth){x.classList.add("right");Finger.at(x,2300);} else x.classList.add("dim"); });
-        T.after(2100,()=>{ if(ctx.alive()){ rt++; ctx.win(wrap); } });
-        return;
+    fitObj(field,q.n,"row");
+    ui.A=heroRow(field,q.n,names,52,rowPos(q.n));
+    const por=el("div","",field);
+    por.style.cssText="position:absolute;right:1%;top:6%;width:clamp(40px,7vmin,80px);pointer-events:none";
+    img(A.pr("portal"),"",por).style.cssText="width:100%;height:auto";
+    ui.eq=eqBar(L.top,[String(q.n),"−",String(q.k),"=","□"]);
+    ctx.ask(cnQ(q.n)+"个英雄在大厦里，"+cnQ(q.k)+"个要穿过传送门去别的任务，还剩几个？",field);
+    const my=st;
+    T.after(2800,()=>{
+      if(!ctx.alive()||st!==my) return;
+      for(let i=0;i<q.k;i++){
+        const o=ui.A[q.n-1-i];
+        o.style.transition="left .8s,top .8s,opacity .8s,transform .8s";
+        o.style.left="92%"; o.style.top="12%"; o.style.opacity="0"; o.style.transform="translate(-50%,-50%) scale(.3)";
       }
-      // 一一对应专用纠错：把没配上的高亮出来
-      const leftH=ui.H.filter(o=>!o.dataset.p), leftG=ui.G.filter(o=>!o.dataset.p);
-      leftH.concat(leftG).forEach(o=>{ o.classList.remove("dimmed"); o.classList.add("tapme"); });
-      Speech.say(leftG.length?("你看，还有"+cnQty(leftG.length)+"个坏蛋没人抓 —— 英雄不够。")
-        :leftH.length?("你看，还有"+cnQty(leftH.length)+"个英雄没事做 —— 英雄多了。")
-        :"你看，每一个都配上对了 —— 正好。",{tag:"remedy"});
-      const myp=st; st.locked=true;
-      T.after(3000,()=>{ if(ctx.alive()&&st===myp){ Link.clear(); build(true,"pair"); } });
-    }
+      SFX.whoosh();
+      T.after(1100,()=>{ if(ctx.alive()&&st===my) askAns(cnQ(q.n)+"减"+cnQ(q.k)+"等于几？"); });
+    });
   }
-
+  function buildMissA(L,field){
+    const names=shuffle(HEROES);
+    fitObj(field,q.n,"row");
+    ui.A=heroRow(field,q.a,names,52,rowPos(q.n).slice(0,q.a));
+    const por=el("div","",field);
+    por.style.cssText="position:absolute;right:1%;top:6%;width:clamp(40px,7vmin,80px);pointer-events:none";
+    img(A.pr("portal"),"",por).style.cssText="width:100%;height:auto";
+    ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.n)]);
+    ctx.ask("这次任务要"+cnQ(q.n)+"个英雄！现在只有"+cnQ(q.a)+"个，传送门还要送来几个？",field);
+    const my=st;
+    T.after(2600,()=>{ if(ctx.alive()&&st===my) askAns("还要来几个英雄？"); });
+  }
+  function buildTeen(L,field){
+    // 10 个坏蛋一整排（一个"十"），加 b 个英雄 —— 十几就是 10 加几
+    fitObj(field,10,"row");
+    const gp=rowPos(10);
+    ui.G=[];
+    for(let i=0;i<10;i++){
+      const o=el("div","cobj",field);
+      o.style.left=gp[i][0]+"%"; o.style.top="32%";
+      img(A.pr("goon"),"",o); el("div","tag",o);
+      ui.G.push(o);
+    }
+    const names=shuffle(HEROES);
+    ui.A=heroRow(field,q.b,names,74,rowPos(Math.max(q.b,5)).slice(0,q.b));
+    ui.eq=eqBar(L.top,["10","+",String(q.b),"=","□"]);
+    ctx.ask("上面整整一排是十个坏蛋！下面还有"+cnQ(q.b)+"个英雄。十加"+cnQ(q.b)+"，一共是多少？",field);
+    const my=st;
+    T.after(3000,()=>{ if(ctx.alive()&&st===my) askAns("十加"+cnQ(q.b)+"是多少？"); });
+  }
+  function askAns(t){
+    const hi=q.kind==="teen"?19:10, lo=q.kind==="teen"?11:0;
+    numAnswer(ctx,ui,st,fails,{
+      ans:q.ans,lo,hi,askText:t+"点数字卡。",
+      rightSay:rightText(), revealSay:"是"+String(q.ans)+"，"+rightText(),
+      retry:()=>build(true),
+      onRight:card=>{
+        ui.eq.setHole(q.ans);
+        if(q.kind==="missA"){
+          // 传送门把缺的英雄送进来验证
+          st.locked=true; const my=st;
+          const names=shuffle(HEROES).slice(3);
+          const pos=rowPos(q.n).slice(q.a);
+          let i=0;
+          const step=()=>{
+            if(!ctx.alive()||st!==my) return;
+            if(i>=q.ans){ Speech.say("现在正好"+cnQ(q.n)+"个英雄，集合完毕！",{tag:"verify"});
+              T.after(1500,()=>{ if(ctx.alive()) ctx.win(card); }); return; }
+            const o=el("div","cobj pop",ui.field);
+            o.style.left=pos[i][0]+"%"; o.style.top="52%";
+            img(A.ch(names[i%names.length]),"",o); el("div","tag",o);
+            SFX.count(q.a+i+1); Speech.count(cnS(q.a+i+1),"auto-count");
+            i++; T.after(560,step);
+          }; T.after(500,step);
+        }else if(q.kind==="teen"){
+          st.locked=true; const my=st;
+          Speech.say("十个再数"+cnQ(q.b)+"个："+Array.from({length:q.b},(x,i)=>cnS(10+i+1)).join("、")+"！",{tag:"verify"});
+          ui.A.forEach((o,i)=>{ T.after(400+i*430,()=>{ if(!ctx.alive()||st!==my) return;
+            o.classList.add("counted","hit"); setTag(o.querySelector(".tag"),10+i+1); SFX.count(10+i+1); }); });
+          T.after(700+q.b*430+900,()=>{ if(ctx.alive()&&st===my) ctx.win(card); });
+        }else{
+          const objs=(q.kind==="sub")?ui.A.slice(0,q.ans):ui.A.concat(ui.B||[]);
+          autoCount(ctx,objs,0,360,()=>{ if(ctx.alive()) ctx.win(card); });
+        }
+      }
+    });
+  }
+  function rightText(){
+    if(q.kind==="add")  return cnQ(q.a)+"加"+cnQ(q.b)+"等于"+cnQ(q.ans)+"！";
+    if(q.kind==="sub")  return cnQ(q.n)+"减"+cnQ(q.k)+"等于"+cnQ(q.ans)+"！";
+    if(q.kind==="missA")return cnQ(q.a)+"加"+cnQ(q.ans)+"等于"+cnQ(q.n)+"！";
+    return "十加"+cnQ(q.b)+"就是"+cnQ(q.ans)+"！";
+  }
   return {
-    start:()=>{ rt=0; fails=0; build(false); }, next:()=>{ fails=0; build(false); },
+    start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
     repeat:()=>{ if(!q) return "";
-      if(q.kind==="pair") return "先点一个英雄，再点一个坏蛋。";
-      if(!st||!st.assembled) return "按黄色按钮，让两边的英雄合到一起。";
-      if(ui&&ui.merged&&ui.counted<q.n) return "点一点每一个英雄，数一数。";
-      return "一共几个英雄呀？点一张卡片。"; },
-    destroy:()=>{ Link.clear(); ui=null; q=null; st=null; }
+      if(q.kind==="add") return cnQ(q.a)+"加"+cnQ(q.b)+"等于几？";
+      if(q.kind==="sub") return cnQ(q.n)+"减"+cnQ(q.k)+"等于几？";
+      if(q.kind==="missA") return cnQ(q.a)+"加几等于"+cnQ(q.n)+"？";
+      return "十加"+cnQ(q.b)+"是多少？"; },
+    destroy:()=>{ ui=null; q=null; st=null; }
   };
 };
 
 /* ============================================================================
-   世界六 · 花果山 —— 数轴 / 接着数 Count-On / 缺失加数
+   世界六 · 花果山 —— 数轴桥：接着数 → 两个两个跳 → 翻倍 → 冲过十
    ============================================================================ */
 GAMES.monkey=ctx=>{
-  const T=ctx.T; let st=null,q=null,ui=null,fails=0,posWrong=0; const box={last:null};
-  const CELLS=8, X0=13, XW=56;   // 数轴左起点与总宽(%)，右侧留给对岸师徒
+  const T=ctx.T; let st=null,q=null,ui=null,posWrong=0; const box={last:null},fails={n:0};
+  const CELLS=12, X0=11, XW=62;
 
-  function build(retry){
-    st=bindState(newState(retry)); posWrong=0;
+  function spec(){
     const lv=ctx.level();
-    const mk=()=>{
-      let pre=0,need=0,mode="grow";
-      if(lv===1){ pre=0; need=rint(1,3); }
-      else if(lv===2){ pre=rint(1,3); need=rint(1,3); }
-      else { pre=rint(1,4); need=rint(2,4); mode="reach"; }
-      return {pre,need,target:pre+need,lv,mode};
-    };
-    q=setQ(fresh(mk,o=>o.pre+","+o.need,box));
+    if(lv===1){ const pre=rint(2,5),need=rint(2,4); return {kind:"reach",pre,need,target:pre+need,ans:need}; }
+    if(lv===2){ const j=rint(2,4); return {kind:"skip2",pre:0,jumps:j,target:j*2,ans:j}; }
+    if(lv===3){ const p=rint(2,5); return {kind:"double",pre:p,target:p*2,ans:p*2}; }
+    const pre=rint(8,9),need=rint(Math.max(2,11-pre),Math.min(4,12-pre));   // 保证 target 11~12，必跨十
+    return {kind:"over10",pre,need,target:pre+need,ans:need};
+  }
+  function build(retry,forceKind){
+    st=bindState(newState(retry)); posWrong=0;
+    q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.pre||0)+","+(o.target),box),{world:"monkey"}));
+    if(forceKind) q.kind=forceKind;
     const L=layout(ctx.root); ui={L,len:0};
     const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
-
-    // 石墩 = 数轴刻度
     fitObj(field,CELLS+2,"row");
     const pos=[],stones=[];
     for(let i=0;i<CELLS;i++) pos.push([X0+(XW/CELLS)*(i+.5),66]);
     for(let i=0;i<CELLS;i++){
-      const o=el("div","cobj",field);
+      const o=el("div","cobj",field); o.dataset.stone=String(i);
       o.style.left=pos[i][0]+"%"; o.style.top=pos[i][1]+"%";
       img(A.pr("stone"),"",o); el("div","tag",o); o.style.zIndex="6";
-      if(ctx.symbols()&&lv>=4){ const n=el("div","",o);
-        n.style.cssText="position:absolute;left:50%;bottom:-34%;transform:translateX(-50%);font-weight:900;color:#fff;font-size:calc(var(--obj)*.34);text-shadow:0 2px 0 rgba(0,0,0,.55)";
-        n.textContent=String(i+1); }
+      const n=el("div","",o);
+      n.style.cssText="position:absolute;left:50%;bottom:-38%;transform:translateX(-50%);font-weight:900;color:#fff;font-size:calc(var(--obj)*.34);text-shadow:0 2px 0 rgba(0,0,0,.55)";
+      n.textContent=String(i+1);
       stones.push(o);
       onTap(o,()=>tapStone(i));
     }
     ui.stones=stones; ui.pos=pos;
-    // 金箍棒（背景平铺 + 棒头）
     const staff=el("div","",field);
     staff.style.cssText="position:absolute;left:"+X0+"%;top:58%;height:clamp(14px,2.6vmin,26px);"+
       "width:0;background:url("+A.pr("gubang_seg")+") repeat-x center/auto 100%;transition:width .3s cubic-bezier(.3,1.3,.5,1);z-index:5";
@@ -2339,63 +2302,98 @@ GAMES.monkey=ctx=>{
     tip.style.cssText="position:absolute;top:56%;height:clamp(18px,3.2vmin,32px);width:clamp(12px,2.2vmin,22px);"+
       "background:url("+A.pr("gubang_tip")+") no-repeat center/contain;transition:left .3s cubic-bezier(.3,1.3,.5,1);z-index:6;opacity:0";
     ui.staff=staff; ui.tip=tip; ui.x0=X0; ui.cw=XW/CELLS;
-    // 岸边角色
     const wk=el("div","",field);
-    wk.style.cssText="position:absolute;left:0;bottom:4%;height:30%;max-width:13%;z-index:7;pointer-events:none;display:flex;align-items:flex-end;justify-content:center";
+    wk.style.cssText="position:absolute;left:0;bottom:4%;height:30%;max-width:12%;z-index:7;pointer-events:none;display:flex;align-items:flex-end;justify-content:center";
     img(A.ch("wukong"),"",wk).style.cssText="width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))";
-    const far=el("div","side r fitw",field);
-    far.style.cssText="position:absolute;right:0;bottom:28%;width:26%;height:24%;z-index:7;pointer-events:none;display:flex;align-items:flex-end;gap:1px";
+    const far=el("div","",field);
+    far.style.cssText="position:absolute;right:0;bottom:28%;width:22%;height:22%;z-index:7;pointer-events:none;display:flex;align-items:flex-end;gap:1px";
     ["tangseng","bajie","shaseng","bailongma"].forEach(c=>
       img(A.ch(c),"",far).style.cssText="flex:1 1 0;min-width:0;width:100%;height:auto;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))");
     ui.far=far;
-    // 目标旗（L3+ 明示要到第几个石墩）
-    if(q.mode==="reach"){
-      const flag=el("div","",field);
-      flag.style.cssText="position:absolute;left:"+pos[q.target-1][0]+"%;top:56%;transform:translate(-50%,-50%);pointer-events:none;"+
-        "width:clamp(22px,4vmin,40px);height:clamp(22px,4vmin,40px);border-radius:50%;background:#ffd75e;"+
-        "box-shadow:0 0 0 4px #fff,0 0 18px #ffd75e;z-index:8";
-      ui.flag=flag;
+    // 目标旗
+    const flag=el("div","",field);
+    flag.style.cssText="position:absolute;left:"+pos[q.target-1][0]+"%;top:56%;transform:translate(-50%,-50%);pointer-events:none;"+
+      "width:clamp(22px,4vmin,40px);height:clamp(22px,4vmin,40px);border-radius:50%;background:#ffd75e;"+
+      "box-shadow:0 0 0 4px #fff,0 0 18px #ffd75e;z-index:8";
+    ui.flag=flag;
+
+    if(q.kind==="skip2"){
+      const jump=bigBtn(L.bot,"跳两格！","",()=>{
+        if(busyState(st)||st.asking) return;
+        if(ui.len+2>CELLS) return;
+        ui.len=Math.min(CELLS,ui.len+2); render();   // 一跳两格，只报双数
+        SFX.count(ui.len); numPop(ui.stones[ui.len-1],ui.len);
+        Speech.count(cnS(ui.len),"child-count");
+        ui.jumpN=(ui.jumpN||0)+1;
+      });
+      jump.dataset.jump="1"; ui.jumpBtn=jump;
     }
     const okBtn=bigBtn(L.bot,"过河！","green",()=>submit());
     okBtn.disabled=true; ui.okBtn=okBtn;
-    // reach 模式的目标由亮着的石墩表示；grow 模式的"变长几格"原来只在语音里 → 补任务卡
-    if(q.mode!=="reach") ui.task=taskCard(L.top,q.need,"count","wukong");
     ctx.answering(true);
 
-    if(q.pre>0){
-      st.locked=true; const my=st;          // 预置动画期间禁止抢点，否则长度会被孩子提前改掉
-      Speech.say("悟空先把金箍棒变长"+cnQty(q.pre)+"格！",{tag:"g:monkey"});
-      let k=0;
-      const pre=()=>{
-        if(!ctx.alive()||st!==my) return;
-        if(k>=q.pre){ T.after(500,()=>{ if(ctx.alive()&&st===my){ st.locked=false; askNow(); } }); return; }
-        grow(true); k++; T.after(680,pre);
-      };
-      T.after(1200,pre);
-    }else T.after(1200,askNow);
-
-    function askNow(){
+    const startAsk=()=>{
       if(!ctx.alive()) return;
-      const t=q.mode==="reach"
-        ? ("桥要正好搭到亮着的那个石墩！现在有"+cnQty(q.pre)+"格，接着往前点，好了按绿色按钮。")
-        : (q.pre>0 ? ("已经有"+cnQty(q.pre)+"格啦！再变长"+cnQty(q.need)+"格，好了按绿色按钮。")
-                   : ("把金箍棒变长"+cnQty(q.need)+"格！点石墩，好了按绿色按钮。"));
-      ctx.ask(t,()=>ui.stones[Math.min(ui.len,CELLS-1)]);
-      ui.stones[Math.min(ui.len,CELLS-1)].classList.add("tapme");
-    }
+      if(q.kind==="reach")
+        ctx.ask("桥已经有"+cnQ(q.pre)+"格，要正好搭到亮着的"+cnS(q.target)+"号石墩！接着往前点，好了按绿色按钮。",()=>ui.stones[Math.min(ui.len,CELLS-1)]);
+      else if(q.kind==="skip2")
+        ctx.ask("这次一跳就是两格！按'跳两格'按钮，跳到亮着的"+cnS(q.target)+"号石墩，好了按绿色按钮。",ui.jumpBtn);
+      else if(q.kind==="double")
+        ctx.ask("金箍棒有"+cnQ(q.pre)+"格。悟空喊：变两倍长！两倍是几格？先点数字卡告诉我！",()=>ui.stones[q.pre-1]);
+      else
+        ctx.ask("桥已经"+cnQ(q.pre)+"格啦，再加"+cnQ(q.need)+"格冲过十号石墩！接着点，好了按绿色按钮。",()=>ui.stones[Math.min(ui.len,CELLS-1)]);
+      if(q.kind!=="double") ui.stones[Math.min(ui.len,CELLS-1)].classList.add("tapme");
+    };
+
+    if(q.pre>0&&q.kind!=="double"){
+      st.locked=true; const my=st;
+      Speech.say("悟空先把金箍棒变长"+cnQ(q.pre)+"格！",{tag:"g:monkey"});
+      let k=0;
+      const preStep=()=>{
+        if(!ctx.alive()||st!==my) return;
+        if(k>=q.pre){ T.after(400,()=>{ if(ctx.alive()&&st===my){ st.locked=false; startAsk(); } }); return; }
+        grow(true); k++; T.after(560,preStep);
+      };
+      T.after(1200,preStep);
+    }else if(q.kind==="double"){
+      st.locked=true; const my=st;
+      let k=0;
+      const preStep=()=>{
+        if(!ctx.alive()||st!==my) return;
+        if(k>=q.pre){ T.after(400,()=>{ if(ctx.alive()&&st===my){ st.locked=false; startAsk(); askDouble(); } }); return; }
+        grow(true); k++; T.after(560,preStep);
+      };
+      T.after(1200,preStep);
+    }else T.after(1200,startAsk);
   }
-  function grow(silentCount){
+  function askDouble(){
+    st.asking=true;
+    numAnswer(ctx,ui,st,fails,{
+      ans:q.ans,lo:2,hi:12,askText:"",
+      rightSay:cnQ(q.pre)+"的两倍就是"+cnQ(q.ans)+"！"+cnQ(q.pre)+"加"+cnQ(q.pre)+"等于"+cnQ(q.ans)+"！",
+      revealSay:cnQ(q.pre)+"加"+cnQ(q.pre)+"等于"+cnQ(q.ans)+"，两倍就是"+cnQ(q.ans)+"格。",
+      retry:()=>build(true,"double"),
+      onRight:card=>{
+        st.locked=true; const my=st;
+        const step=()=>{
+          if(!ctx.alive()||st!==my) return;
+          if(ui.len>=q.target){ Speech.say("变！正好"+cnQ(q.target)+"格！",{tag:"verify"}); T.after(1100,cross); return; }
+          grow(true); T.after(480,step);
+        };
+        T.after(400,step);
+      }
+    });
+  }
+  function grow(auto){
     if(ui.len>=CELLS) return;
     ui.len++;
     render();
     SFX.count(ui.len); numPop(ui.stones[ui.len-1],ui.len);
-    Speech.count(cnSeq(ui.len),silentCount?"auto-count":"child-count");
+    Speech.count(cnS(ui.len),auto?"auto-count":"child-count");
   }
-  function shrinkTo(k){
-    if(k<0||k===ui.len) return;
-    ui.len=k; render(); SFX.tap();
-  }
+  function shrinkTo(k){ if(k<0||k===ui.len) return; ui.len=k; render(); SFX.tap(); }
   function render(){
+    window.__len=ui.len;
     ui.staff.style.width=(ui.cw*ui.len)+"%";
     ui.tip.style.opacity=ui.len>0?"1":"0";
     ui.tip.style.left=(ui.x0+ui.cw*ui.len)+"%";
@@ -2405,144 +2403,54 @@ GAMES.monkey=ctx=>{
       if(i<ui.len) setTag(t,i+1); else { t.className="tag"; t.textContent=""; }
       o.classList.remove("tapme");
     });
-    if(ui.len<CELLS) ui.stones[ui.len].classList.add("tapme");
-    if(ui.okBtn) ui.okBtn.disabled=(ui.len<=q.pre);
+    if(ui.len<CELLS&&q&&q.kind!=="skip2"&&q.kind!=="double") ui.stones[ui.len].classList.add("tapme");
+    if(ui.okBtn) ui.okBtn.disabled=(ui.len<=(q.pre||0));
   }
   function tapStone(i){
-    if(busyState(st)||st.asking) return;
-    if(i<ui.len){ if(i+1>=q.pre) shrinkTo(i+1); return; }   // 点已铺的格子 → 缩回（不能缩掉预置部分）
-    if(i>ui.len) return;                                     // 只能一格一格前进 —— 强制真的在数
+    if(busyState(st)||st.asking||q.kind==="skip2"||q.kind==="double") return;
+    if(i<ui.len){ if(i+1>=q.pre) shrinkTo(i+1); return; }
+    if(i>ui.len) return;
     grow(false);
   }
   function submit(){
     if(st.done||st.asking) return;
-    /* L3/L4：先把桥点到亮着的石墩（这是操作，不计证据），
-       再答"你一共加了几格"（这才是缺失加数，证据记在这一题） */
-    if(q.mode==="reach"){
-      if(ui.len!==q.target){
-        SFX.soft(); ui.staff.classList.add("shake");
-        T.after(500,()=>ui.staff.classList.remove("shake"));
-        posWrong++;
-        if(posWrong>=2){ autoFix(); return; }
-        Speech.say("桥还没有正好搭到亮着的那个石墩，再看看。",{tag:"g:monkey"});
-        return;
-      }
-      askHowMany(); return;
-    }
-    const ok=(ui.len===q.target); record(ctx,st,ok);
-    if(ok){
-      st.done=true; ui.okBtn.disabled=true; ctx.answering(false);
-      ui.stones.forEach(o=>o.classList.remove("tapme"));
-      Speech.say(q.pre>0?(cnQty(q.pre)+"格再加"+cnQty(q.need)+"格，一共"+cnQty(q.target)+"格，正好！")
-                        :("正好"+cnQty(q.target)+"格！"),{tag:"right"});
-      SFX.right(); cross();
-    }else{
-      st.wrongs++; SFX.soft(); ui.staff.classList.add("shake");
+    if(ui.len!==q.target){
+      SFX.soft(); ui.staff.classList.add("shake");
       T.after(500,()=>ui.staff.classList.remove("shake"));
-      ui.okBtn.disabled=true; ctx.answering(false);
-      fails++;
-      if(st.wrongs>=2||fails>=2){ reveal(); return; }
-      remedy();
+      posWrong++;
+      if(posWrong>=2){ autoFix(); return; }
+      Speech.say("桥还没有正好搭到亮着的石墩，看看现在是几格。",{tag:"g:monkey"});
+      return;
     }
+    askHowMany();
   }
-  /** 位置连着两次不对 —— 带着孩子把桥放到位，再进入提问 */
   function autoFix(){
-    markAssisted();                        // 系统代为摆正 → 本题不计掌握
+    markAssisted();
     st.asking=true; ui.okBtn.disabled=true; ctx.answering(false);
     ui.stones.forEach(o=>o.classList.remove("tapme"));
     const step=()=>{
       if(!ctx.alive()) return;
-      if(ui.len<q.target){ grow(true); T.after(620,step); return; }
-      if(ui.len>q.target){ shrinkTo(ui.len-1); T.after(520,step); return; }
+      if(ui.len<q.target){ grow(true); T.after(520,step); return; }
+      if(ui.len>q.target){ shrinkTo(ui.len-1); T.after(440,step); return; }
       Speech.say("好啦，正好搭到啦！",{tag:"g:monkey"});
-      T.after(1200,()=>{ if(ctx.alive()){ st.asking=false; askHowMany(); } });
+      T.after(1100,()=>{ if(ctx.alive()){ st.asking=false; askHowMany(); } });
     };
-    T.after(700,step);
+    T.after(600,step);
   }
-  /** 缺失加数的真正判定：从起点接着数，一共加了几格？ */
   function askHowMany(){
-    st.asking=true;
-    ui.okBtn.disabled=true;
+    st.asking=true; ui.okBtn.disabled=true;
     ui.stones.forEach(o=>o.classList.remove("tapme"));
-    ctx.answering(true);
-    const apat=(ctx.symbols()&&ctx.level()>=4)?"num":pick(["dice","ring","line"]);
-    const list=choices(q.need,1,8,4);
-    const wrap=askCards(ui.L.bot,list,apat,(v,c)=>{
-      if(st.done) return;
-      const ok=(v===q.need); record(ctx,st,ok);
-      if(ok){
-        st.done=true; lockCards(wrap); c.classList.add("right"); ctx.answering(false);
-        Speech.say("对啦！从"+cnSeq(q.pre)+"接着数"+cnQty(q.need)+"格，正好到"+cnSeq(q.target)+"！",{tag:"right"});
-        SFX.right();
-        T.after(1700,cross);
-      }else{
-        st.wrongs++; fails++; SFX.soft(); c.classList.add("wrong");
-        T.after(420,()=>c.classList.remove("wrong"));
-        lockCards(wrap); ctx.answering(false);
-        if(st.wrongs>=2||fails>=2){
-          st.done=true;
-          [].forEach.call(wrap.children,x=>{
-            if(+x.dataset.n===q.need){ x.classList.add("right"); Finger.at(x,2300); } else x.classList.add("dim"); });
-          Speech.say("是这张，加了"+cnQty(q.need)+"格！",{tag:"reveal"});
-          T.after(2100,cross);
-          return;
-        }
-        remedyCountOn();
-      }
+    const isSkip=q.kind==="skip2";
+    const t=isSkip?"你按了几次'跳两格'？":(q.kind==="over10"?("从"+cnS(q.pre)+"到"+cnS(q.target)+"，你加了几格？"):"你一共加了几格？");
+    numAnswer(ctx,ui,st,fails,{
+      ans:q.ans,lo:1,hi:isSkip?6:8,askText:t+"点数字卡。",
+      rightSay:isSkip?("对啦！跳了"+cnQ(q.ans)+"次，两个两个数："+Array.from({length:q.jumps},(x,i)=>cnS((i+1)*2)).join("、")+"！")
+        :(q.kind==="over10"?("对啦！"+cnQ(q.pre)+"加"+cnQ(q.ans)+"，冲过十，到"+cnS(q.target)+"啦！")
+        :("对啦！从"+cnS(q.pre)+"接着数"+cnQ(q.ans)+"格，正好到"+cnS(q.target)+"！")),
+      revealSay:isSkip?("跳了"+cnQ(q.ans)+"次。"):("加了"+cnQ(q.ans)+"格："+cnQ(q.pre)+"加"+cnQ(q.ans)+"等于"+cnQ(q.target)+"。"),
+      retry:()=>{ build(true,q.kind); },
+      onRight:()=>cross()
     });
-    ctx.ask("你一共加了几格呀？点一张卡片。",wrap);
-  }
-  /** 接着数专用纠错：已有的那几格保持不动，只把"新增的"重新逐格点亮报数 */
-  function remedyCountOn(){
-    st.asking=true; st.locked=true; const my=st;
-    shrinkTo(q.pre);
-    Speech.say("已经有的"+cnQty(q.pre)+"格不用再数，我们从"+cnSeq(q.pre)+"接着数。",{tag:"remedy"});
-    T.after(1900,()=>{
-      if(!ctx.alive()||st!==my) return;
-      let k=0;
-      const step=()=>{
-        if(!ctx.alive()||st!==my) return;
-        if(k>=q.need){
-          Speech.say("一共加了"+cnQty(q.need)+"格。我们再试一个新的！",{tag:"remedy"});
-          T.after(1900,()=>{ if(ctx.alive()&&st===my) build(true); });
-          return;
-        }
-        grow(true); k++; T.after(680,step);
-      };
-      step();
-    });
-  }
-  /** 接着数专用纠错：已有部分保持不动，只把新增部分逐格演示 */
-  function remedy(){
-    st.locked=true; const my=st;          // 演示期间石墩不可点
-    shrinkTo(q.pre);
-    Speech.say(q.pre>0?("已经有的"+cnQty(q.pre)+"格不用再数啦，我们从"+cnSeq(q.pre)+"接着数。")
-                      :"我们一格一格数。",{tag:"remedy"});
-    T.after(2200,()=>{
-      if(!ctx.alive()||st!==my) return;
-      let k=0;
-      const step=()=>{
-        if(!ctx.alive()||st!==my) return;
-        if(k>=q.need){
-          Speech.say("看，就是这样。我们再试一个新的！",{tag:"remedy"});
-          T.after(1900,()=>{ if(ctx.alive()&&st===my) build(true); });
-          return;
-        }
-        grow(true); k++; T.after(760,step);
-      };
-      step();
-    });
-  }
-  function reveal(){
-    st.done=true; st.asking=true; ctx.answering(false); ui.okBtn.disabled=true;
-    shrinkTo(q.pre);
-    let k=0;
-    const step=()=>{
-      if(!ctx.alive()) return;
-      if(k>=q.need){ Speech.say("正好"+cnQty(q.target)+"格！",{tag:"reveal"}); T.after(1200,cross); return; }
-      grow(true); k++; T.after(700,step);
-    };
-    T.after(1200,step);
   }
   function cross(){
     ui.stones.forEach(o=>o.classList.remove("tapme"));
@@ -2556,15 +2464,16 @@ GAMES.monkey=ctx=>{
     T.after(1900,()=>{ if(ctx.alive()) ctx.win(ui.staff); });
   }
   return {
-    start:()=>{ fails=0; build(false); }, next:()=>{ fails=0; build(false); },
+    start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
     repeat:()=>{ if(!q) return "";
-      if(st&&st.asking) return "你一共加了几格呀？点一张卡片。";
-      return q.mode==="reach"?"桥要搭到亮着的那个石墩，接着往前点。"
-        :(q.pre>0?("已经有"+cnQty(q.pre)+"格，再变长"+cnQty(q.need)+"格。")
-                 :("把金箍棒变长"+cnQty(q.need)+"格。")); },
+      if(q.kind==="reach") return "接着点石墩，搭到亮着的"+cnS(q.target)+"号。";
+      if(q.kind==="skip2") return "按'跳两格'跳到"+cnS(q.target)+"号石墩。";
+      if(q.kind==="double") return cnQ(q.pre)+"格的两倍是几格？";
+      return "接着点，冲过十号，到"+cnS(q.target)+"号。"; },
     destroy:()=>{ ui=null; q=null; st=null; }
   };
 };
+
 
 /* ========================= 主控 ========================= */
 const App=(()=>{

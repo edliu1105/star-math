@@ -152,31 +152,20 @@ def start(page):
     page.wait_for_selector("#map.on", timeout=5000)
 
 
-def unlock_all(page):
-    """把进度直接写成全解锁 + 指定难度，便于逐级走查"""
-    page.evaluate("""(lv)=>{
-      const d={v:2,plays:0,w:{}};
-      ["peppa","paw","bluey","hulu","aveng","monkey"].forEach(id=>{
-        d.w[id]={stars:5,lv:lv,hist:[],seen:1,tries:20,open:1};
-      });
-      localStorage.setItem("kidmath2.progress.v2", JSON.stringify(d));
-    }""", 1)
+def unlock_all(page, lv=1):
+    """把进度直接写成全解锁 + 指定难度，便于逐级走查（v3 存档）"""
+    set_level(page, lv, stars=0)
 
 
-def set_level(page, lv, stars=5, symbols=None):
-    """写入一份"已解锁 + 已有掌握证据"的进度。
-    symbols=None 时按 lv 推断：lv>=3 就让符号门也满足，否则 L4 全流程永远进不去
-    "符号已解锁"的那些分支（codex 4-2 指出的盲区）。"""
-    if symbols is None:
-        symbols = lv >= 3
-    page.evaluate("""([lv,stars,sym])=>{
-      const d={v:2,plays:9,sess:5,w:{}};
+def set_level(page, lv, stars=0, symbols=None):
+    """写入一份 v3 存档：全解锁 + 指定难度。symbols 参数保留签名兼容（v3 数字默认开）。"""
+    page.evaluate("""([lv,stars])=>{
+      const d={v:3,plays:0,sess:0,set:{num:1,minlv:lv},w:{}};
       ["peppa","paw","bluey","hulu","aveng","monkey"].forEach(id=>{
-        d.w[id]={stars:stars,lv:lv,hist:[1,1,1,1,1,1,1,1],seen:1,tries:20,open:1,
-                 mast:(sym?12:8),wins:2,winAt:4};
+        d.w[id]={stars:stars,lv:lv,hist:[],recent:[],seen:1,tries:0,open:1,mast:0,wins:0,winAt:-1};
       });
-      localStorage.setItem("kidmath2.progress.v2", JSON.stringify(d));
-    }""", [lv, stars, bool(symbols)])
+      localStorage.setItem("kidmath2.progress.v3", JSON.stringify(d));
+    }""", [lv, stars])
 
 
 def enter_world(page, wid):
@@ -195,20 +184,67 @@ def wait_q(page, pred, timeout=12000):
 
 # ---------------------------------------------------------------- 单轮求解器
 def solve_round(page, wid, deliberately_wrong=False):
-    """把当前这一轮玩到通过（或故意答错一次）。返回 True 表示这一轮结束。"""
-    if wid == "peppa":
-        return solve_peppa(page, deliberately_wrong)
-    if wid == "paw":
-        return solve_paw(page, deliberately_wrong)
-    if wid == "bluey":
-        return solve_bluey(page, deliberately_wrong)
-    if wid == "hulu":
-        return solve_hulu(page, deliberately_wrong)
-    if wid == "aveng":
-        return solve_aveng(page, deliberately_wrong)
-    if wid == "monkey":
-        return solve_monkey(page, deliberately_wrong)
-    return False
+    """v3 课程通用解题器：读 window.__q 按 kind 作答。返回 True 表示已作答。"""
+    qo = page.evaluate("window.__q")
+    if not qo:
+        return False
+    k = qo.get("kind")
+    ans = qo.get("ans")
+
+    def card(n):
+        sel = '.cards .card[data-n="%s"]' % n
+        page.wait_for_selector(sel, timeout=30000, state="attached")
+        page.wait_for_timeout(300)
+        page.click(sel, force=True)
+
+    if k in ("give", "more"):
+        for _ in range(int(ans)):
+            page.click('.cobj[data-dog]:not([data-out="1"])', force=True)
+            page.wait_for_timeout(240)
+        page.click(".bigbtn.green", force=True)
+        return True
+    if k == "make":
+        for _ in range(int(ans)):
+            page.click("[data-basket]", force=True)
+            page.wait_for_timeout(240)
+        page.click(".bigbtn.green", force=True)
+        return True
+    if k in ("ordL", "ordR"):
+        page.wait_for_timeout(600)
+        page.click('.cobj[data-g="%d"]' % ans, force=True)
+        return True
+    if k == "miss" and qo.get("world") == "hulu":
+        for _ in range(int(ans)):
+            page.click('[data-zone="r"]', force=True)
+            page.wait_for_timeout(220)
+        page.click(".bigbtn.green", force=True)
+        return True
+    if k in ("reach", "over10"):
+        page.wait_for_function("window.__len >= %d" % qo["pre"], timeout=25000)
+        page.wait_for_timeout(1200)
+        t0 = time.time()
+        while page.evaluate("window.__len") < qo["target"] and time.time() - t0 < 20:
+            ln = page.evaluate("window.__len")
+            page.click('.cobj[data-stone="%d"]' % ln, force=True)
+            page.wait_for_timeout(280)
+        page.click(".bigbtn.green", force=True)
+        card(ans)
+        return True
+    if k == "skip2":
+        page.wait_for_timeout(1500)
+        for _ in range(int(qo["jumps"])):
+            page.click("[data-jump]", force=True)
+            page.wait_for_timeout(300)
+        page.click(".bigbtn.green", force=True)
+        card(ans)
+        return True
+    if k == "double":
+        page.wait_for_function("window.__len >= %d" % qo["pre"], timeout=25000)
+        card(ans)
+        return True
+    # 其余全部是数字卡作答：flash/add/sub/miss/back/pairs/diff/share/odd/bond/teen/missA
+    card(ans)
+    return True
 
 
 def click_card_with(page, n, wrong=False):
