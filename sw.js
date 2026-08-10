@@ -3,7 +3,7 @@
      - 页面/脚本/manifest：网络优先 + 2.5s 超时 → 回落缓存（改 bug 后刷新一次就能拿到新版）
      - assets/*：缓存优先（离线可玩、加载快）
    缓存版本化，activate 时清理旧版本。 */
-const VER   = "v3.2.0";
+const VER   = "v4.0.0";
 const SHELL = "shell-" + VER;
 const MEDIA = "media-" + VER;
 const NET_TIMEOUT = 2500;

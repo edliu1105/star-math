@@ -213,6 +213,96 @@ canvas{display:block}
 .eqbar b.hole{color:#ffd75e;background:rgba(255,255,255,.13);border-radius:10px;padding:0 .16em;
   border:3px dashed rgba(255,215,94,.85)}
 .eqbar b.hole.filled{border-style:solid;background:rgba(255,215,94,.25)}
+/* ===== 关卡招牌动画工具库 ===== */
+.lvltag{position:absolute;left:1.5%;top:2%;z-index:10;background:rgba(20,14,50,.75);color:#ffd75e;
+  font-weight:900;font-size:clamp(12px,2.2vmin,20px);padding:.35em .8em;border-radius:99px;
+  box-shadow:0 3px 10px rgba(0,0,0,.35);pointer-events:none}
+@keyframes camflash{0%{opacity:0}12%{opacity:.95}100%{opacity:0}}
+.camflash{position:absolute;inset:0;background:#fff;z-index:30;pointer-events:none;animation:camflash .55s ease-out forwards}
+.polaroid{position:absolute;right:2%;top:10%;width:22%;aspect-ratio:1/1.16;background:#fff;border-radius:8px;
+  box-shadow:0 8px 22px rgba(0,0,0,.4);z-index:9;padding:6% 6% 18%;pointer-events:none;transform:rotate(4deg)}
+.polaroid .ph{position:relative;width:100%;height:100%;background:#efe9da;border-radius:4px;overflow:hidden}
+.polaroid .ph b{position:absolute;width:16%;aspect-ratio:1;border-radius:50%;background:#a4906f;transform:translate(-50%,-50%)}
+.polaroid.ghost .ph b{opacity:.28}
+@keyframes raindrop{0%{transform:translateY(-8vh)}100%{transform:translateY(64vh)}}
+.rainwrap{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:hidden}
+.rainwrap i{position:absolute;top:0;width:3px;height:5.5vh;border-radius:3px;background:linear-gradient(#9fd6ff00,#9fd6ffee);
+  animation:raindrop 1s linear infinite}
+/* 跷跷板 */
+.seesaw{position:absolute;left:16%;right:6%;bottom:2%;height:17%;z-index:9;pointer-events:none}
+.seesaw .plank{position:absolute;left:6%;right:6%;top:34%;height:12%;border-radius:99px;background:#c98d4b;
+  box-shadow:0 3px 8px rgba(0,0,0,.35);transition:transform .7s cubic-bezier(.3,1.2,.4,1);transform-origin:50% 50%}
+.seesaw .ful{position:absolute;left:50%;bottom:0;width:0;height:0;transform:translateX(-50%);
+  border-left:2.2vmin solid transparent;border-right:2.2vmin solid transparent;border-bottom:5vmin solid #8a5a2b}
+.seesaw .pan{position:absolute;top:-330%;width:20%;height:400%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px}
+.seesaw .pan.l{left:2%}.seesaw .pan.r{right:2%}
+.seesaw .pan b{color:#fff;font-weight:900;font-size:clamp(13px,2.6vmin,24px);text-shadow:0 2px 0 rgba(0,0,0,.55)}
+.seesaw .pan .stack{width:56%;border-radius:8px 8px 4px 4px;transition:height .35s;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+.seesaw .pan.l .stack{background:#3fa9f5}.seesaw .pan.r .stack{background:#ff8a3d}
+/* 剪影空位 */
+.slotghost{position:absolute;border:3px dashed rgba(255,255,255,.75);border-radius:14px;background:rgba(0,0,0,.22)}
+.slotghost img{width:100%;height:100%;object-fit:contain;filter:brightness(0) opacity(.32)}
+.slotghost.fill{border-style:solid;border-color:#37d67a;background:rgba(55,214,122,.18)}
+.slotghost.fill img{filter:none}
+@keyframes slotpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,215,94,0)}50%{box-shadow:0 0 0 6px rgba(255,215,94,.55)}}
+.slotghost.want{animation:slotpulse 1.2s ease-in-out infinite}
+/* 警报 */
+@keyframes alarmring{0%{box-shadow:0 0 0 0 rgba(255,70,60,.8)}100%{box-shadow:0 0 0 4vmin rgba(255,70,60,0)}}
+.alarm{position:absolute;left:50%;top:14%;transform:translateX(-50%);z-index:10;width:clamp(70px,13vmin,140px);
+  aspect-ratio:1;border-radius:50%;background:#e2453f;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:900;font-size:clamp(34px,7vmin,72px);animation:alarmring 1.1s ease-out infinite;pointer-events:none}
+/* 点名板 */
+.rollcall{position:absolute;right:1.5%;top:9%;width:20%;z-index:9;background:rgba(255,255,255,.94);border-radius:12px;
+  padding:2%;display:grid;grid-template-columns:repeat(3,1fr);gap:4%;box-shadow:0 5px 14px rgba(0,0,0,.35);pointer-events:none}
+.rollcall .rc{position:relative;aspect-ratio:1;border-radius:8px;background:#eee6ff;overflow:hidden}
+.rollcall .rc img{width:100%;height:100%;object-fit:contain}
+.rollcall .rc.gone::after{content:"";position:absolute;inset:12%;
+  background:linear-gradient(45deg,transparent 42%,#e2453f 42%,#e2453f 58%,transparent 58%),
+             linear-gradient(-45deg,transparent 42%,#e2453f 42%,#e2453f 58%,transparent 58%)}
+/* 2/4/6/8 阶梯表 */
+.ladder{position:absolute;right:1.5%;top:9%;width:11%;z-index:9;display:flex;flex-direction:column-reverse;gap:5%;pointer-events:none}
+.ladder i{display:flex;align-items:center;justify-content:center;aspect-ratio:1.7;border-radius:10px;
+  background:rgba(255,255,255,.35);color:#fff;font-weight:900;font-size:clamp(14px,2.8vmin,26px);
+  border:3px solid rgba(255,255,255,.6);font-style:normal;text-shadow:0 2px 0 rgba(0,0,0,.4);transition:all .3s}
+.ladder i.on{background:#ffd75e;color:#4a2c00;border-color:#fff;transform:scale(1.08)}
+/* 藤蔓 */
+.vine{position:absolute;left:8%;right:4%;top:13%;height:7%;z-index:5;pointer-events:none;
+  background:repeating-linear-gradient(90deg,#3f7d2e 0 14px,#4f9a3a 14px 28px);border-radius:99px;
+  box-shadow:0 4px 0 rgba(0,0,0,.25) inset,0 4px 10px rgba(0,0,0,.3)}
+@keyframes sway{0%,100%{transform:rotate(2.6deg)}50%{transform:rotate(-2.6deg)}}
+.hang{transform-origin:50% -12%;animation:sway 2.6s ease-in-out infinite}
+.hangline{position:absolute;left:50%;top:-42%;width:4px;height:42%;background:#6a4a23;transform:translateX(-50%)}
+/* 聚光灯 */
+.spotlight{position:absolute;width:26%;aspect-ratio:1;border-radius:50%;z-index:8;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,240,160,.55) 0%,rgba(255,240,160,.18) 55%,transparent 72%);
+  transform:translate(-50%,-50%);animation:tapme 1.4s ease-in-out infinite}
+/* 传送门旋转 / 吸入 */
+@keyframes portalspin{0%{transform:rotate(0) scale(1)}100%{transform:rotate(360deg) scale(1)}}
+.portalspin{animation:portalspin 2.4s linear infinite}
+@keyframes suckin{0%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(.12) rotate(300deg)}}
+/* 昆式机飞越 */
+@keyframes flyby{0%{left:-14%}100%{left:104%}}
+.flyby{position:absolute;top:5%;width:clamp(60px,11vmin,120px);z-index:9;pointer-events:none;animation:flyby 2.6s ease-in-out forwards}
+.flyby img{width:100%;height:auto}
+/* 悟空骑棒尖 */
+@keyframes riderhop{0%,100%{transform:translate(-50%,-100%)}45%{transform:translate(-50%,-158%)}}
+.rider{position:absolute;z-index:8;width:clamp(34px,6.4vmin,70px);pointer-events:none;
+  transform:translate(-50%,-100%);transition:left .3s cubic-bezier(.3,1.3,.5,1)}
+.rider img{width:100%;height:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}
+.rider.hop{animation:riderhop .5s ease-out}
+/* 金门（十号石墩） */
+@keyframes gateflash{0%,100%{box-shadow:0 0 0 3px #ffd75e,0 0 14px #ffd75e}50%{box-shadow:0 0 0 8px #fff,0 0 30px #ffd75e}}
+.tengate{position:absolute;transform:translate(-50%,-50%);width:clamp(30px,5.6vmin,58px);aspect-ratio:.62;z-index:7;
+  border:5px solid #ffd75e;border-bottom:none;border-radius:99px 99px 0 0;pointer-events:none;
+  box-shadow:0 0 0 3px rgba(255,215,94,.4),0 0 14px rgba(255,215,94,.5)}
+.tengate.flash{animation:gateflash .6s ease-in-out 3}
+/* 烟雾分身 */
+@keyframes poof{0%{opacity:.9;transform:translate(-50%,-50%) scale(.3)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.7)}}
+.poof{position:absolute;width:16%;aspect-ratio:1;border-radius:50%;z-index:9;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,255,255,.95) 0%,rgba(255,255,255,.4) 55%,transparent 75%);animation:poof .7s ease-out forwards}
+/* 全息缺口 */
+@keyframes holo{0%,100%{opacity:.45}50%{opacity:.8}}
+.holo{animation:holo 1.6s ease-in-out infinite}
 /* 十格阵 */
 .tfwrap{position:absolute;z-index:9;display:flex;gap:2%;pointer-events:none}
 .tf{flex:1 1 0;display:grid;grid-template-columns:repeat(5,1fr);gap:5%;padding:5%;
@@ -525,7 +615,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "3.2.0";
+const VERSION = "4.0.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -1422,6 +1512,53 @@ function barModel(host,maxN,nameA,nameB){
   }
   return { el:w, set, flashDiff(){ w.classList.add("showdiff"); } };
 }
+/** 关卡铭牌：让每一关的身份一眼可见 */
+function lvlTag(host,lv,name){ const d=el("div","lvltag",host); d.textContent="第"+lv+"级 · "+name; return d; }
+/** 跷跷板：多的一边压下去；等重时水平 */
+function seesaw(host,maxN){
+  const w=el("div","seesaw",host);
+  const plank=el("div","plank",w); el("div","ful",w);
+  const mk=cls=>{ const p=el("div","pan "+cls,plank); const b=el("b","",p); const s=el("div","stack",p); return {b,s}; };
+  const L2=mk("l"), R2=mk("r");
+  function set(a,b){
+    L2.b.textContent=a; R2.b.textContent=b;
+    L2.s.style.height=Math.max(6,a/maxN*62)+"%"; R2.s.style.height=Math.max(6,b/maxN*62)+"%";
+    plank.style.transform="rotate("+clamp((b-a)*3.2,-13,13)+"deg)";
+  }
+  return { el:w, set };
+}
+/** 雨幕 */
+function mkRain(host,n){
+  const w=el("div","rainwrap",host);
+  for(let i=0;i<(n||14);i++){ const d=el("i","",w);
+    d.style.left=(3+rnd(94))+"%";
+    d.style.animationDelay=(rnd(10)/10)+"s";
+    d.style.animationDuration=(0.7+rnd(6)/10)+"s"; }
+  return w;
+}
+/** 拍立得快照：记录点阵图样的"残影" */
+function polaroid(host,n,pat){
+  const w=el("div","polaroid ghost",host);
+  const ph=el("div","ph",w);
+  dotPos(n,pat||"dice").forEach(p=>{ const b=el("b","",ph); b.style.left=p[0]+"%"; b.style.top=p[1]+"%"; });
+  return w;
+}
+/** 任务警报数字 */
+function alarmNum(host,n){ const d=el("div","alarm",host); d.textContent=String(n); return d; }
+/** 点名板 */
+function rollcall(host,names){
+  const w=el("div","rollcall",host);
+  const cells=names.map(nm=>{ const c=el("div","rc",w); img(A.ch(nm),"",c); return c; });
+  return { el:w, gone:i=>{ if(cells[i]) cells[i].classList.add("gone"); } };
+}
+/** 跳数阶梯表（2/4/6/8…） */
+function ladder(host,steps){
+  const w=el("div","ladder",host);
+  const cells=steps.map(v=>{ const i2=el("i","",w); i2.textContent=String(v); return i2; });
+  return { el:w, on:k=>cells.forEach((c,i)=>c.classList.toggle("on",i<k)) };
+}
+/** 聚光灯 */
+function spotAt(host,x,y){ const d=el("div","spotlight",host); d.style.left=x+"%"; d.style.top=y+"%"; return d; }
 /** 页面节奏跟着语音走：至少等 minMs，之后还要等话说完才继续（9 秒兜底防死锁） */
 function afterSay(T,minMs,fn){
   const t0=Date.now();
@@ -1475,7 +1612,7 @@ GAMES.peppa=ctx=>{
 
   function spec(){
     const lv=ctx.level();
-    if(lv===1){ const n=rint(4,7); return {kind:"flash",n,ans:n,flash:1000}; }
+    if(lv===1){ const n=rint(4,7); return {kind:"flash",n,ans:n,flash:1000,pat:pick(["dice","ring","group"])}; }
     if(lv===2){ const a=rint(2,5),b=rint(1,Math.min(4,9-a)); return {kind:"add",a,b,ans:a+b,flash:1300}; }
     if(lv===3){ const n=rint(5,9),k=rint(1,3); return {kind:"sub",n,k,ans:n-k,flash:1600}; }
     const n=rint(5,9),a=rint(1,n-1); return {kind:"miss",n,a,ans:n-a,flash:1500};
@@ -1489,16 +1626,20 @@ GAMES.peppa=ctx=>{
     ui={L,field,pig,blobs:[]};
     onTap(pig,()=>{ if(busyState(st)) return; st.hinted=true; Speech.cut(); show(); });   // 再看一次 → 不计掌握
     if(q.kind==="flash"){
-      ctx.ask("看好啦！泥点闪一下就藏起来，数不过来就要用眼睛抓住它！",pig);
+      lvlTag(L.top,1,"泥点快照");
+      ctx.ask("咔嚓！泥点像拍照一样闪一下就藏起来，用眼睛抓住它！",pig);
     }else if(q.kind==="add"){
-      ui.eq=eqBar(L.top,[String(q.a),"+",String(q.b),"=","□"]);
+      lvlTag(L.top,2,"跳两次");
+      ui.eq=eqBar(L.top,[String(q.a),"+","□","=","□"]);
       ctx.ask("佩奇跳两次泥坑！先看"+cnQ(q.a)+"个，再来"+cnQ(q.b)+"个，一共溅了几个泥点？",pig);
     }else if(q.kind==="sub"){
+      lvlTag(L.top,3,"雨水来了");
       ui.eq=eqBar(L.top,[String(q.n),"−",String(q.k),"=","□"]);
-      ctx.ask("有"+cnQ(q.n)+"个泥点，雨水会冲掉"+cnQ(q.k)+"个，剩下几个？",pig);
+      ctx.ask("有"+cnQ(q.n)+"个泥点，大雨要冲掉"+cnQ(q.k)+"个，剩下几个？",pig);
     }else{
+      lvlTag(L.top,4,"泥点捉迷藏");
       ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.n)]);
-      ctx.ask("一共"+cnQ(q.n)+"个泥点，看得见的有"+cnQ(q.a)+"个，藏起来的有几个？",pig);
+      ctx.ask("一共"+cnQ(q.n)+"个泥点，篮子要扣住一部分！看得见"+cnQ(q.a)+"个，扣住了几个？",pig);
     }
     afterSay(T,800,show);                 // 指令说完才开始闪，孩子不会漏看
   }
@@ -1514,10 +1655,16 @@ GAMES.peppa=ctx=>{
     const my=st;
     if(q.kind==="flash"){
       T.after(320,()=>{ if(!ctx.alive()||st!==my) return;
-        ui.blobs=splash(q.n); ui.blobs.forEach(b=>b.classList.add("pop"));
+        // 结构化点阵（骰子/环形/组块）—— 瞬识练的是"看形知数"
+        fitObj(ui.field,q.n,"");
+        ui.blobs=place(ui.field,q.n,A.pr("mudblob"),dotPos(q.n,q.pat));
+        ui.blobs.forEach(b=>b.classList.add("pop"));
         T.after(q.flash,()=>{ if(!ctx.alive()||st!==my) return;
+          const fl=el("div","camflash",ui.L.top); T.after(650,()=>fl.remove());   // 快门闪光
+          SFX.whoosh();
           ui.blobs.forEach(b=>b.style.opacity="0");
-          T.after(260,()=>{ if(ctx.alive()&&st===my) ask("刚才有几个泥点？"); });
+          ui.pol=polaroid(ui.L.top,q.n,q.pat);                                    // 拍立得残影
+          T.after(360,()=>{ if(ctx.alive()&&st===my) ask("照片里有几个泥点？"); });
         });
       });
     }else if(q.kind==="add"){
@@ -1528,8 +1675,10 @@ GAMES.peppa=ctx=>{
         Speech.say(cnQ(q.a)+"个！",{tag:"g:peppa"});
         afterSay(T,q.flash,()=>{ if(!ctx.alive()||st!==my) return;
           A1.forEach(b=>b.style.opacity=".35");
+          ui.pig.classList.remove("bounce"); void ui.pig.offsetWidth; ui.pig.classList.add("bounce");  // 第二跳
           const B1=place(ui.field,q.b,A.pr("mudblob"),scatter(q.b).map(p=>[p[0],p[1]*0.42+55]));
           B1.forEach(b=>{ b.classList.add("pop"); b.style.filter="hue-rotate(40deg)"; });
+          if(ui.eq){ ui.eq.bar.remove(); ui.eq=eqBar(ui.L.top,[String(q.a),"+",String(q.b),"=","□"]); }  // 算式跟着事件长出来
           Speech.say("又来"+cnQ(q.b)+"个！",{tag:"g:peppa"});
           ui.blobs=A1.concat(B1);
           afterSay(T,q.flash,()=>{ if(ctx.alive()&&st===my) ask(cnQ(q.a)+"加"+cnQ(q.b)+"等于几？"); });
@@ -1539,19 +1688,41 @@ GAMES.peppa=ctx=>{
       T.after(320,()=>{ if(!ctx.alive()||st!==my) return;
         ui.blobs=splash(q.n); ui.blobs.forEach(b=>b.classList.add("pop"));
         T.after(q.flash,()=>{ if(!ctx.alive()||st!==my) return;
-          for(let i=0;i<q.k;i++){ const b=ui.blobs[ui.blobs.length-1-i]; b.style.transition="opacity .5s,transform .5s"; b.style.opacity="0"; b.style.transform="translate(-50%,-50%) scale(.2)"; }
+          ui.rain=mkRain(ui.L.top);                                    // 大雨落下
           SFX.whoosh();
-          Speech.say("冲掉了"+cnQ(q.k)+"个！",{tag:"g:peppa"});
-          afterSay(T,900,()=>{ if(ctx.alive()&&st===my) ask(cnQ(q.n)+"减"+cnQ(q.k)+"等于几？"); });
+          T.after(800,()=>{ if(!ctx.alive()||st!==my) return;
+            for(let i=0;i<q.k;i++){ const b=ui.blobs[ui.blobs.length-1-i];
+              b.style.transition="opacity .7s,transform .7s";
+              b.style.opacity="0"; b.style.transform="translate(-50%,-50%) translateY(80%) scale(.3)"; }  // 被雨水冲走
+            Speech.say("哗啦啦！冲掉了"+cnQ(q.k)+"个！",{tag:"g:peppa"});
+            afterSay(T,900,()=>{ if(!ctx.alive()||st!==my) return;
+              if(ui.rain){ ui.rain.remove(); ui.rain=null; }           // 雨停了再提问
+              ask(cnQ(q.n)+"减"+cnQ(q.k)+"等于几？");
+            });
+          });
         });
       });
-    }else{ // miss：先闪总数，再只留 a 个
+    }else{ // miss：一排泥点，篮子扣住后面一段 —— 隐藏的部分有了实体
       T.after(320,()=>{ if(!ctx.alive()||st!==my) return;
-        ui.blobs=splash(q.n); ui.blobs.forEach(b=>b.classList.add("pop"));
+        fitObj(ui.field,q.n,"row");
+        ui.blobs=place(ui.field,q.n,A.pr("mudblob"),rowFixed(q.n,q.n));
+        ui.blobs.forEach(b=>b.classList.add("pop"));
         Speech.say("一共"+cnQ(q.n)+"个，记住哦！",{tag:"g:peppa"});
         afterSay(T,q.flash,()=>{ if(!ctx.alive()||st!==my) return;
-          ui.blobs.forEach((b,i)=>{ if(i>=q.a) b.style.opacity="0"; });
-          T.after(400,()=>{ if(ctx.alive()&&st===my) ask("藏起来几个？"); });
+          // 篮子从天而降，扣住后面 (n-a) 个
+          const pos=rowFixed(q.n,q.n);
+          const midX=(pos[q.a][0]+pos[q.n-1][0])/2;
+          const bk=el("div","",ui.field);
+          bk.style.cssText="position:absolute;left:"+midX+"%;top:-40%;transform:translate(-50%,-50%);z-index:8;"+
+            "width:calc(var(--obj)*"+((q.n-q.a)*1.15+0.5).toFixed(2)+");transition:top .55s cubic-bezier(.4,1.4,.5,1);pointer-events:none";
+          img(A.pr("basket"),"",bk).style.cssText="width:100%;height:auto";
+          ui.basket=bk;
+          requestAnimationFrame(()=>requestAnimationFrame(()=>{ bk.style.top="50%"; }));
+          SFX.whoosh();
+          T.after(600,()=>{ if(!ctx.alive()||st!==my) return;
+            ui.blobs.forEach((b,i)=>{ if(i>=q.a) b.style.opacity="0"; });
+            T.after(300,()=>{ if(ctx.alive()&&st===my) ask("篮子扣住了几个？"); });
+          });
         });
       });
     }
@@ -1573,14 +1744,20 @@ GAMES.peppa=ctx=>{
   /** 确认性重现：数一遍，同一个数同时出现在 实物、十格阵/分合图、算式 三个地方 */
   function verify(from){
     const my=st;
+    if(q.kind==="flash"&&ui.pol) ui.pol.classList.remove("ghost");   // 残影显影：答案揭晓
     if(q.kind==="miss"){
       const pw=partWhole(ui.L.top,"right:2%;top:12%");
       pw.setN(q.n); pw.setA(q.a); pw.setB(q.ans);
+      if(ui.basket){                                    // 篮子飞走，藏着的泥点重见天日
+        ui.basket.style.transition="top .6s ease-in,transform .6s,opacity .6s";
+        ui.basket.style.top="-50%"; ui.basket.style.transform="translate(-50%,-50%) rotate(-24deg)"; ui.basket.style.opacity="0";
+        SFX.whoosh();
+      }
       ui.blobs.forEach(b=>{ b.style.opacity="1"; b.style.transform=""; });
       autoCount(ctx,ui.blobs,0,360,()=>{ if(ctx.alive()&&st===my) ctx.win(from); });
       return;
     }
-    const tf=tenFrame(ui.L.top,10,"right:2%;top:12%;width:22%");
+    const tf=tenFrame(ui.L.top,10,"left:2%;top:12%;width:22%");   // 右侧留给拍立得
     if(q.kind==="sub"){
       tf.setAll(q.n,"f");                     // 满 n 格 → 划掉 k 格 → 数剩下的
       ui.blobs.forEach((b,i)=>{ if(i<q.ans){ b.style.opacity="1"; b.style.transform=""; } });
@@ -1628,9 +1805,10 @@ GAMES.paw=ctx=>{
     st=bindState(newState(retry)); q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.n||o.d)+","+(o.a||o.k||0),box),{world:"paw"}));
     const L=layout(ctx.root); ui={L};
     sideCast(L.top,"l",["ryder"],30);
-    if(q.kind==="give"||q.kind==="more") buildSend(L);
-    else if(q.kind==="back") buildBack(L);
-    else buildPairs(L);
+    if(q.kind==="give"){ lvlTag(L.top,1,"数字警报"); buildSend(L); }
+    else if(q.kind==="more"){ lvlTag(L.top,2,"补队缺口"); buildSend(L); }
+    else if(q.kind==="back"){ lvlTag(L.top,3,"归队点名"); buildBack(L); }
+    else { lvlTag(L.top,4,"海龟双救"); buildPairs(L); }
   }
   /* 出发区 + 待命狗：点狗出发，点已出发的召回 */
   function buildSend(L){
@@ -1648,6 +1826,16 @@ GAMES.paw=ctx=>{
       const o=el("div","cobj",zone); o.style.left=zp[i][0]+"%"; o.style.top="50%";
       img(A.ch(DOGS[i]),"",o); el("div","tag",o); o.style.filter="saturate(.55)";
       ui.fixed.push(o);
+    }
+    // L2：缺的位置画成虚线剪影空位 —— "还差几个"变成看得见的空缺
+    if(q.kind==="more"){
+      ui.slots=[];
+      for(let i=already;i<q.n;i++){
+        const s2=el("div","slotghost want",zone);
+        s2.style.cssText+=";position:absolute;left:"+zp[i][0]+"%;top:50%;transform:translate(-50%,-50%);width:var(--obj);aspect-ratio:1";
+        img(A.ch(DOGS[i%DOGS.length]),"",s2);
+        ui.slots.push(s2);
+      }
     }
     // 待命狗
     ui.dogs=[];
@@ -1680,13 +1868,18 @@ GAMES.paw=ctx=>{
         o.style.left=p[0]+"%"; o.style.top="50%";
       });
       ui.dogs.forEach(o=>{ if(!o.dataset.out&&o.parentNode!==home){ home.appendChild(o); o.style.left=o.dataset.hx+"%"; o.style.top="50%"; } });
+      if(ui.slots) ui.slots.forEach((s2,i)=>{
+        s2.classList.toggle("fill",i<ui.sent.length);
+        s2.classList.toggle("want",i>=ui.sent.length);
+      });
     }
     const okBtn=bigBtn(L.bot,"出发！","green",()=>submitSend());
     okBtn.disabled=true; ui.okBtn=okBtn;
     function upd(){ okBtn.disabled=ui.sent.length===0; }
     if(q.kind==="give"){
-      ui.eq=eqBar(L.top,["要",String(q.n),"只"]);
-      ctx.ask("看数字！这次任务要"+cnQ(q.n)+"只狗狗，点狗狗派它出发，多了点它回来。好了按绿色按钮。",home);
+      ui.alarm=alarmNum(L.top,q.n);       // 红色警报数字，一直脉冲
+      SFX.whoosh();
+      ctx.ask("任务警报！要"+cnQ(q.n)+"只狗狗，点狗狗派它出发，多了点它回来。好了按绿色按钮。",home);
     }else{
       ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.n)]);
       ctx.ask("任务要"+cnQ(q.n)+"只！已经出发了"+cnQ(q.a)+"只，还要再派几只？派好按绿色按钮。",home);
@@ -1736,21 +1929,35 @@ GAMES.paw=ctx=>{
     };
     T.after(600,step);
   }
-  /* L3 归队减法：n 只在外面，回来 k 只，外面还剩几只 */
+  /* L3 归队点名：n 只在外面，回来 k 只跑回家门，点名板同步划叉 */
   function buildBack(L){
     q.act="card";
-    const field=mkField(L.top,{l:16,r:4,t:16,b:40}); ui.field=field;
+    const field=mkField(L.top,{l:16,r:24,t:16,b:40}); ui.field=field;
     fitObj(field,q.n,"row");
-    ui.out=place(field,q.n,A.ch(DOGS[rnd(6)]),rowPos(q.n));
+    const names=Array.from({length:q.n},(x,i)=>DOGS[i%6]);
+    ui.out=[];
+    rowPos(q.n).forEach((p,i)=>{
+      const o=el("div","cobj",field);
+      o.style.left=p[0]+"%"; o.style.top=p[1]+"%";
+      img(A.ch(names[i]),"",o); el("div","tag",o);
+      ui.out.push(o);
+    });
+    ui.rc=rollcall(L.top,names);                       // 点名板：每只狗一张脸
     ui.eq=eqBar(L.top,[String(q.n),"−",String(q.k),"=","□"]);
-    ctx.ask(cnQ(q.n)+"只狗狗在外面执行任务，"+cnQ(q.k)+"只先回家了，外面还剩几只？",field);
+    ctx.ask(cnQ(q.n)+"只狗狗在外面执行任务，"+cnQ(q.k)+"只先跑回家，点名板上划掉它们！外面还剩几只？",field);
     const my=st;
     afterSay(T,1000,()=>{
       if(!ctx.alive()||st!==my) return;
-      for(let i=0;i<q.k;i++){ const o=ui.out[q.n-1-i];
-        o.style.transition="transform .8s,opacity .8s"; o.style.transform="translate(-50%,-50%) translateY(70%) scale(.5)"; o.style.opacity="0"; }
+      for(let i=0;i<q.k;i++){ const idx=q.n-1-i, o=ui.out[idx];
+        T.after(i*420,()=>{ if(!ctx.alive()||st!==my) return;
+          o.style.transition="left .8s ease-in,transform .8s,opacity .8s";
+          o.style.left="-12%"; o.style.transform="translate(-50%,-50%) scaleX(-1)";  // 转身跑回家
+          o.style.opacity="0";
+          ui.rc.gone(idx); SFX.tap();                   // 点名板划叉
+        });
+      }
       SFX.whoosh();
-      T.after(1100,()=>{ if(!ctx.alive()||st!==my) return;
+      T.after(q.k*420+900,()=>{ if(!ctx.alive()||st!==my) return;
         numAnswer(ctx,ui,st,fails,{
           ans:q.ans,lo:0,hi:10,askText:"外面还剩几只？点数字卡。",
           rightSay:cnQ(q.n)+"减"+cnQ(q.k)+"，还剩"+cnQ(q.ans)+"只！",
@@ -1785,6 +1992,7 @@ GAMES.paw=ctx=>{
     ui.eq=eqBar(L.top,[String(d),"只狗","×","2","=","□"]);
     const parts=[]; for(let i=0;i<d;i++){ parts.push("2"); if(i<d-1) parts.push("+"); } parts.push("=","□");
     ui.eq2=eqBar(L.top,parts,12);           // 倍数 = 连加：两条算式同时看
+    ui.lad=ladder(L.top,Array.from({length:d},(x,i)=>(i+1)*2));   // 2/4/6/8 阶梯表
     ctx.ask("每只狗狗救两只小海龟！"+cnQ(d)+"只狗狗一共救几只海龟？两个两个数！",field);
     const my=st;
     afterSay(T,1000,()=>{
@@ -1801,6 +2009,7 @@ GAMES.paw=ctx=>{
             const a=ui.turts[i*2],b=ui.turts[i*2+1];
             [a,b].forEach(o=>{ o.classList.add("counted","hit"); });
             setTag(b.querySelector(".tag"),(i+1)*2);
+            ui.lad.on(i+1);                              // 阶梯表亮一级：2→4→6→8
             SFX.count((i+1)*2); Speech.count(cnS((i+1)*2),"auto-count");
             i++; T.after(700,step);
           }; step(); }
@@ -1833,8 +2042,8 @@ GAMES.bluey=ctx=>{
     const n=pick([6,8,10,12]); return {kind:"share",n,ans:n/2};
   }
   function rows(L,a,b,item){
-    const rowA=mkField(L.top,{l:15,r:4,t:24,b:46});
-    const rowB=mkField(L.top,{l:15,r:4,t:60,b:10});
+    const rowA=mkField(L.top,{l:15,r:4,t:20,b:52});
+    const rowB=mkField(L.top,{l:15,r:4,t:54,b:24});   // 底部让位给跷跷板
     const most=Math.max(a,b);
     fitObj(rowA,most,"row"); fitObj(rowB,most,"row");
     faceAt(L.top,"bluey",22,30); faceAt(L.top,"bingo",58,30);
@@ -1851,13 +2060,17 @@ GAMES.bluey=ctx=>{
     else if(q.kind==="odd") buildOdd(L,item);
     else buildShare(L,item);
   }
-  /* L1 求差：谁多？多几个 */
+  /* L1 求差：跷跷板对决 —— 多的一边把板压下去 */
   function buildDiff(L,item){
     q.act="card";
+    lvlTag(L.top,1,"跷跷板对决");
     rows(L,q.a,q.b,item);
-    ui.bm=barModel(L.top,10,"Bluey","Bingo"); ui.bm.set(q.a,q.b);   // 条形图：长度即数量
+    ui.ss=seesaw(L.top,10);
+    ui.ss.set(0,0);
+    T.after(700,()=>{ if(ctx.alive()) ui.ss.set(q.a,q.b); });   // 稍等再倾斜，孩子看得见"压下去"
+    SFX.whoosh();
     const moreName=q.a>q.b?"Bluey":"Bingo";
-    ctx.ask("上面一排是 Bluey 的，下面一排是 Bingo 的。"+moreName+"的多 —— 多几个呢？",ui.rowA);
+    ctx.ask("上面一排是 Bluey 的，下面一排是 Bingo 的。看跷跷板！多的一边沉下去了 —— "+moreName+"多几个呢？",ui.rowA);
     const my=st;
     afterSay(T,1200,()=>{
       if(!ctx.alive()||st!==my) return;
@@ -1874,8 +2087,7 @@ GAMES.bluey=ctx=>{
             if(i>=n){
               const extra=(q.a>q.b?ui.A.slice(n):ui.B.slice(n));
               extra.forEach(x=>x.classList.add("tapme"));
-              ui.bm.flashDiff();            // 条形图上把"差"那一段圈出来
-              Speech.say("配对以后，多出来的就是这"+cnQ(q.ans)+"个！条上多出来的那段也是"+cnQ(q.ans)+"！",{tag:"verify"});
+              Speech.say("配对以后，多出来的就是这"+cnQ(q.ans)+"个 —— 就是它们把跷跷板压下去的！",{tag:"verify"});
               afterSay(T,1000,()=>{ if(ctx.alive()){ Link.clear(); ctx.win(card); } });
               return;
             }
@@ -1885,11 +2097,12 @@ GAMES.bluey=ctx=>{
       });
     });
   }
-  /* L2 补齐一样多 */
+  /* L2 补到平衡：每加一个，跷跷板就回正一点 */
   function buildMake(L,item){
     q.act="basket";
+    lvlTag(L.top,2,"补到平衡");
     rows(L,q.a,q.b,item);
-    ui.bm=barModel(L.top,10,"Bluey","Bingo"); ui.bm.set(q.a,q.b);   // 条形图跟着实时长
+    ui.ss=seesaw(L.top,10); ui.ss.set(q.a,q.b);
     const basket=el("button","",L.bot);
     basket.dataset.basket="1";
     basket.style.cssText="width:clamp(64px,11vmin,120px);height:clamp(64px,11vmin,120px);position:relative";
@@ -1900,7 +2113,7 @@ GAMES.bluey=ctx=>{
       added++;
       const o=el("div","cobj pop",ui.rowB);
       img(ui.item,"",o); el("div","tag",o);
-      ui.B.push(o); relayout(); ui.bm.set(q.a,ui.B.length);
+      ui.B.push(o); relayout(); ui.ss.set(q.a,ui.B.length);   // 板子一点点回正
       SFX.count(q.b+added); Speech.count(cnS(q.b+added),"child-count");
       okBtn.disabled=false;
     });
@@ -1915,7 +2128,8 @@ GAMES.bluey=ctx=>{
       const ok=(ui.B.length===q.a); record(ctx,st,ok);
       if(ok){
         st.done=true; okBtn.disabled=true; ctx.answering(false);
-        Speech.say("公平啦！两边都是"+cnQ(q.a)+"个 —— 你加了"+cnQ(q.ans)+"个！",{tag:"right",interrupt:true});
+        confetti(14);                                   // 跷跷板放平的一刻
+        Speech.say("看！跷跷板放平啦 —— 两边都是"+cnQ(q.a)+"个，你加了"+cnQ(q.ans)+"个！",{tag:"right",interrupt:true});
         SFX.right();
         afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(basket); });
       }else{
@@ -1925,7 +2139,7 @@ GAMES.bluey=ctx=>{
           st.done=true; st.locked=true; const my=st;
           const step=()=>{
             if(!ctx.alive()||st!==my) return;
-            if(ui.B.length<q.a){ const o=el("div","cobj pop",ui.rowB); img(ui.item,"",o); el("div","tag",o); ui.B.push(o); relayout(); ui.bm.set(q.a,ui.B.length); SFX.count(ui.B.length); Speech.count(cnS(ui.B.length),"auto-count"); T.after(600,step); return; }
+            if(ui.B.length<q.a){ const o=el("div","cobj pop",ui.rowB); img(ui.item,"",o); el("div","tag",o); ui.B.push(o); relayout(); ui.ss.set(q.a,ui.B.length); SFX.count(ui.B.length); Speech.count(cnS(ui.B.length),"auto-count"); T.after(600,step); return; }
             Speech.say("现在两边都是"+cnQ(q.a)+"个，公平啦！",{tag:"reveal"});
             afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(basket); });
           };
@@ -1940,14 +2154,15 @@ GAMES.bluey=ctx=>{
     ctx.ask("Bluey 有"+cnQ(q.a)+"个，Bingo 只有"+cnQ(q.b)+"个。点篮子给 Bingo 加，加到一样多，好了按绿色按钮！",basket);
     ctx.answering(true);
   }
-  /* L3 单双数：能不能公平分给两个人 */
+  /* L3 单双数配对舞会：两个两个手拉手，单出来的站聚光灯 */
   function buildOdd(L,item){
     q.act="card";
+    lvlTag(L.top,3,"配对舞会");
     const field=mkField(L.top,{l:15,r:4,t:16,b:36}); ui.field=field;
     fitObj(field,q.n,"scatter");
     ui.items=place(field,q.n,item,scatter(q.n));
     faceAt(L.top,"bluey",20,28); faceAt(L.top,"bingo",56,28,true);
-    ctx.ask(cnQ(q.n)+"块好吃的，分给 Bluey 和 Bingo 两个人，每人一样多 —— 能不能正好分完？",field);
+    ctx.ask("舞会开始！"+cnQ(q.n)+"块好吃的要两个两个手拉手。分给 Bluey 和 Bingo 两个人 —— 能不能正好分完？",field);
     ctx.answering(true);
     const wrap=el("div","cards",L.bot);
     const mk=(key,label)=>{
@@ -1970,37 +2185,56 @@ GAMES.bluey=ctx=>{
       [].forEach.call(wrap.children,x=>{ if(+x.dataset.n===q.ans) x.classList.add("right"); });
       st.done=true;
     }
-    // 无论对错都演示配对：这是单双数概念的建立
+    // 无论对错都跳"配对舞"：两个两个牵手站好，单出来的站进聚光灯 —— 单双数看得见
     st.locked=true; const my=st;
     const pairs=Math.floor(q.n/2);
     let i=0; Link.clear();
-    const pos=rowFixed(q.n,q.n);
-    ui.items.forEach((o,idx)=>{ o.style.left=pos[idx][0]+"%"; o.style.top=(idx%2===0?"36%":"64%"); });
+    const colW=70/Math.max(pairs,1);
+    ui.items.forEach((o,idx)=>{
+      o.style.transition="left .55s cubic-bezier(.3,1.2,.5,1),top .55s cubic-bezier(.3,1.2,.5,1)";
+      if(idx<pairs*2){ o.style.left=(11+Math.floor(idx/2)*colW)+"%"; o.style.top=(idx%2===0?"36%":"64%"); }
+      else { o.style.left="88%"; o.style.top="50%"; }              // 单出来的到台前
+    });
     const step=()=>{
       if(!ctx.alive()||st!==my) return;
       if(i>=pairs){
-        if(q.n%2===1){ const last=ui.items[q.n-1]; last.classList.add("tapme");
-          Speech.say(cnQ(q.n)+"是单数！两个两个分，最后多出来一块，不能公平分。",{tag:"verify"});
+        if(q.n%2===1){
+          const last=ui.items[q.n-1];
+          last.classList.add("tapme");
+          ui.spot=spotAt(ui.field,88,50);                           // 聚光灯打在单出来的那块上
+          Speech.say(cnQ(q.n)+"是单数！两个两个牵手，最后总有一块没朋友，不能公平分。",{tag:"verify"});
         }else{
-          Speech.say(cnQ(q.n)+"是双数！两个两个分，正好分完，公平！",{tag:"verify"});
+          confetti(12);
+          Speech.say(cnQ(q.n)+"是双数！两个两个牵手，正好全部配上，公平！",{tag:"verify"});
         }
         afterSay(T,1200,()=>{ if(ctx.alive()&&st===my){ Link.clear();
           if(ok) ctx.win(card); else build(true); } });
         return;
       }
-      Link.line(ui.items[i*2],ui.items[i*2+1],"#ffd75e"); SFX.count(i+1); i++; T.after(430,step);
+      const a2=ui.items[i*2],b2=ui.items[i*2+1];
+      Link.line(a2,b2,"#ffd75e");
+      [a2,b2].forEach(o=>{ o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit"); });
+      SFX.count(i+1); i++; T.after(430,step);
     };
-    T.after(600,step);
+    T.after(700,step);
   }
-  /* L4 平分：每人几块 */
+  /* L4 一人一半：轮流发到两个盘子里，跷跷板全程盯着公平 */
   function buildShare(L,item){
     q.act="card";
+    lvlTag(L.top,4,"一人一半");
     const field=mkField(L.top,{l:15,r:4,t:14,b:38}); ui.field=field;
     fitObj(field,q.n,"scatter");
     ui.items=place(field,q.n,item,scatter(q.n));
     faceAt(L.top,"bluey",20,28); faceAt(L.top,"bingo",56,28,true);
+    // 两个盘子（篮子）：发牌的落点
+    ["24","68"].forEach(x=>{
+      const pl=el("div","",field);
+      pl.style.cssText="position:absolute;left:"+x+"%;top:88%;transform:translate(-50%,-50%);width:calc(var(--obj)*1.8);z-index:3;pointer-events:none;opacity:.95";
+      img(A.pr("basket"),"",pl).style.cssText="width:100%;height:auto";
+    });
+    ui.ss=seesaw(L.top,8); ui.ss.set(0,0);
     ui.eq=eqBar(L.top,[String(q.n),"分成两份","=","□","+","□"]);
-    ctx.ask(cnQ(q.n)+"块点心平分给 Bluey 和 Bingo，每人分到几块？",field);
+    ctx.ask(cnQ(q.n)+"块点心平分给 Bluey 和 Bingo，一人一块轮流发！每人分到几块？",field);
     const my=st;
     afterSay(T,1200,()=>{
       if(!ctx.alive()||st!==my) return;
@@ -2021,9 +2255,11 @@ GAMES.bluey=ctx=>{
               return;
             }
             const o=ui.items[i];
-            o.style.transition="left .45s,top .45s";
-            o.style.left=(i%2===0?18:64)+ (Math.floor(i/2)*7) +"%";
-            o.style.top=(i%2===0?"32%":"66%");
+            o.style.transition="left .5s cubic-bezier(.3,1.2,.5,1),top .5s cubic-bezier(.3,1.2,.5,1)";
+            o.style.left=((i%2===0?15:59)+Math.floor(i/2)*4.6)+"%";  // 轮流发到两个盘子上方叠放
+            o.style.top=(74-Math.floor(i/2)*6)+"%";
+            o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit");
+            ui.ss.set(Math.ceil((i+1)/2),Math.floor((i+1)/2));       // 跷跷板实时显示两边数量
             SFX.count(Math.floor(i/2)+1);
             i++; T.after(380,step);
           }; step();
@@ -2061,22 +2297,26 @@ GAMES.hulu=ctx=>{
     if(forceKind) q.kind=forceKind;
     const L=layout(ctx.root); ui={L};
     sideCast(L.top,"l",["yeye"],22);
-    if(q.kind==="ordL"||q.kind==="ordR") buildOrd(L);
-    else if(q.kind==="miss") buildMiss(L);
-    else buildBond(L);
+    if(q.kind==="ordL"){ lvlTag(L.top,1,"藤上排队"); buildOrd(L); }
+    else if(q.kind==="ordR"){ lvlTag(L.top,2,"倒着数"); buildOrd(L); }
+    else if(q.kind==="miss"){ lvlTag(L.top,3,"爷爷的篮子"); buildMiss(L); }
+    else { lvlTag(L.top,4,"分身法术"); buildBond(L); }
   }
-  /* 正/倒序数 */
+  /* 正/倒序数：葫芦挂在藤上摇摆，答对的那个落地变成葫芦娃 */
   function buildOrd(L){
     q.act="gourd";
     const total=q.total, fromR=q.kind==="ordR";
     const cols=shuffle(GOURDS).slice(0,total);
     const field=mkField(L.top,{mat:false,l:12,r:4,t:14,b:36});
+    el("div","vine",L.top);                              // 藤蔓横贯山头
     fitObj(field,total,"row");
-    const pos=rowPos(total).map(p=>[p[0],60]);
+    const pos=rowPos(total).map(p=>[p[0],34]);
     const gs=[];
     for(let i=0;i<total;i++){
-      const o=el("div","cobj",field); o.dataset.g=String(i+1);
+      const o=el("div","cobj hang",field); o.dataset.g=String(i+1);
       o.style.left=pos[i][0]+"%"; o.style.top=pos[i][1]+"%";
+      o.style.animationDelay=(i*0.33)+"s";               // 各自摇摆，错落有致
+      el("div","hangline",o);                            // 挂绳
       img(A.pr(cols[i]),"",o); el("div","tag",o);
       gs.push(o); onTap(o,()=>tapG(i,o,gs));
     }
@@ -2096,12 +2336,20 @@ GAMES.hulu=ctx=>{
     const ok=(i+1===q.ans); record(ctx,st,ok);
     if(ok){
       st.done=true; ctx.answering(false);
-      o.classList.add("bounce"); SFX.right();
-      T.after(300,()=>{
+      SFX.right();
+      // 摘葫芦：停止摇摆 → 落到地面 → 变身葫芦娃
+      o.classList.remove("hang");
+      const hl=o.querySelector(".hangline"); if(hl) hl.remove();
+      o.style.transition="top .6s cubic-bezier(.5,0,.6,1.3)";
+      o.style.top="72%";
+      T.after(620,()=>{
         if(!ctx.alive()) return;
+        const pf=el("div","poof",ui.field);
+        pf.style.left=o.style.left; pf.style.top="72%";
+        T.after(750,()=>pf.remove());
         o.querySelector("img").src=A.ch(HULU_COLORS[(q.t-1)%7]);
         o.classList.add("pop");
-        Speech.say("对啦！从"+(q.kind==="ordR"?"右":"左")+"边数第"+cnS(q.t)+"个！",{tag:"right",interrupt:true});
+        Speech.say("对啦！从"+(q.kind==="ordR"?"右":"左")+"边数第"+cnS(q.t)+"个，摘下来变身！",{tag:"right",interrupt:true});
         afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(o); });
       });
     }else{
@@ -2154,21 +2402,26 @@ GAMES.hulu=ctx=>{
     ui.zl=zl; ui.zr=zr; ui.sl=sl; ui.sr=sr; ui.left=[]; ui.right=[];
     for(let i=0;i<q.a;i++){ const im=img(A.ch(HULU_COLORS[i%7]),"",sl); ui.left.push(im); }
     ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.N)]);
+    // 分合图从一开始就在场，右边的部分跟着孩子的手实时变
+    ui.pw=partWhole(L.top,"right:1.5%;top:10%");
+    ui.pw.setN(q.N); ui.pw.setA(q.a); ui.pw.setB("?",false);
     onTap(zr,()=>{ if(busyState(st)||ui.right.length>=8) return;
       const im=img(A.ch(HULU_COLORS[(q.a+ui.right.length)%7]),"",sr);
       im.classList.add("pop"); ui.right.push(im);
+      ui.pw.setB(ui.right.length,false);
       SFX.count(ui.right.length); Speech.count(cnS(ui.right.length),"child-count");
       okBtn.disabled=ui.right.length===0; });
     onTap(sr,()=>{ if(busyState(st)||!ui.right.length) return;
-      ui.right.pop().remove(); SFX.tap(); okBtn.disabled=ui.right.length===0; });
+      ui.right.pop().remove(); SFX.tap();
+      ui.pw.setB(ui.right.length||"?",false);
+      okBtn.disabled=ui.right.length===0; });
     const okBtn=bigBtn(L.bot,"出发！","green",()=>{
       if(st.done) return;
       const ok=(ui.right.length===q.ans); record(ctx,st,ok);
       if(ok){
         st.done=true; okBtn.disabled=true; ctx.answering(false);
         ui.eq.setHole(q.ans);
-        const pw=partWhole(ui.L.top,"right:2%;top:11%");
-        pw.setN(q.N); pw.setA(q.a); pw.setB(q.ans);
+        ui.pw.setB(q.ans);
         Speech.say(cnQ(q.a)+"加"+cnQ(q.ans)+"，正好"+cnQ(q.N)+"个，出发！",{tag:"right",interrupt:true});
         SFX.right();
         afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
@@ -2187,8 +2440,7 @@ GAMES.hulu=ctx=>{
               T.after(600,step); return;
             }
             ui.eq.setHole(q.ans);
-            const pw=partWhole(ui.L.top,"right:2%;top:11%");
-            pw.setN(q.N); pw.setA(q.a); pw.setB(q.ans);
+            ui.pw.setB(q.ans);
             Speech.say("还差的就是"+cnQ(q.ans)+"个："+cnQ(q.a)+"加"+cnQ(q.ans)+"等于"+cnQ(q.N)+"。",{tag:"reveal"});
             afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
           };
@@ -2239,7 +2491,13 @@ GAMES.hulu=ctx=>{
           });
           T.after(q.N*140+800,()=>{
             if(!ctx.alive()||st!==my2) return;
-            Speech.say("一队"+cnQ(q.x)+"个，一队"+cnQ(q.ans)+"个！",{tag:"verify"});
+            // 分身完成：两队各起一团白烟
+            [[10+(q.x-1)*4.5,36],[10+(q.ans-1)*4.5,66]].forEach(p=>{
+              const pf=el("div","poof",ui.field); pf.style.left=p[0]+"%"; pf.style.top=p[1]+"%";
+              T.after(750,()=>pf.remove());
+            });
+            SFX.whoosh();
+            Speech.say("分身术成功！一队"+cnQ(q.x)+"个，一队"+cnQ(q.ans)+"个！",{tag:"verify"});
             afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(card); });
           });
         }
@@ -2275,10 +2533,18 @@ GAMES.aveng=ctx=>{
     st=bindState(newState(retry)); q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.a||o.n||o.b)+","+(o.b||o.k||0),box),{world:"aveng",act:"card"}));
     const L=layout(ctx.root); ui={L};
     const field=mkField(L.top,{l:4,r:4,t:14,b:6}); ui.field=field;
-    if(q.kind==="add") buildAdd(L,field);
-    else if(q.kind==="sub") buildSub(L,field);
-    else if(q.kind==="missA") buildMissA(L,field);
-    else buildTeen(L,field);
+    if(q.kind==="add"){ lvlTag(L.top,1,"空投集结"); buildAdd(L,field); }
+    else if(q.kind==="sub"){ lvlTag(L.top,2,"传送门撤离"); buildSub(L,field); }
+    else if(q.kind==="missA"){ lvlTag(L.top,3,"全息缺口"); buildMissA(L,field); }
+    else { lvlTag(L.top,4,"十人方阵"); buildTeen(L,field); }
+  }
+  /** 右上角的旋转传送门 */
+  function mkPortal(field){
+    const por=el("div","",field);
+    por.style.cssText="position:absolute;right:1%;top:6%;width:clamp(46px,8vmin,92px);pointer-events:none";
+    img(A.pr("portal"),"",por).style.cssText="width:100%;height:auto";
+    por.firstChild.classList.add("portalspin");
+    return por;
   }
   function heroRow(field,n,names,y,xs){
     const out=[];
@@ -2300,66 +2566,103 @@ GAMES.aveng=ctx=>{
     ui.B=heroRow(field,q.b,names.slice(q.a),null,posB);
     ui.A.concat(ui.B).forEach(o=>{ o.style.opacity="0"; });
     ui.eq=eqBar(L.top,[String(q.a),"+",String(q.b),"=","□"]);
-    let k=0; const all=ui.A.concat(ui.B);
+    const por=mkPortal(field);
     const dropIn=()=>{
       if(!ctx.alive()) return;
-      if(k>=all.length){ askAns(cnQ(q.a)+"加"+cnQ(q.b)+"等于几？"); return; }
-      all[k].style.opacity="1"; all[k].classList.add("pop"); SFX.tap(); k++;
-      T.after(220,dropIn);
+      const my=st;
+      // 昆式机飞越，左队一个个空投
+      const jet=el("div","flyby",ui.L.top); img(A.pr("quinjet"),"",jet);
+      SFX.whoosh();
+      ui.A.forEach((o,i)=>{ T.after(350+i*230,()=>{ if(!ctx.alive()||st!==my) return;
+        o.style.opacity="1"; o.classList.add("pop"); SFX.tap(); }); });
+      T.after(350+q.a*230+500,()=>{
+        if(!ctx.alive()||st!==my) return;
+        jet.remove();
+        Speech.say("传送门打开！",{tag:"g:aveng"});
+        // 右队从传送门缩放飞入
+        ui.B.forEach((o,i)=>{ T.after(300+i*260,()=>{ if(!ctx.alive()||st!==my) return;
+          const tx=o.style.left, ty=o.style.top;
+          o.style.left="92%"; o.style.top="10%";
+          o.style.opacity="1"; o.style.transform="translate(-50%,-50%) scale(.25)";
+          requestAnimationFrame(()=>requestAnimationFrame(()=>{
+            o.style.transition="left .55s cubic-bezier(.3,1.1,.5,1),top .55s cubic-bezier(.3,1.1,.5,1),transform .55s";
+            o.style.left=tx; o.style.top=ty; o.style.transform="translate(-50%,-50%)";
+          }));
+          SFX.tap(); }); });
+        T.after(300+q.b*260+700,()=>{ if(ctx.alive()&&st===my) askAns(cnQ(q.a)+"加"+cnQ(q.b)+"等于几？"); });
+      });
     };
-    ctx.ask("左边"+cnQ(q.a)+"个英雄，右边"+cnQ(q.b)+"个英雄，一共几个？",field);
+    ctx.ask("昆式机空投"+cnQ(q.a)+"个英雄，传送门再来"+cnQ(q.b)+"个，一共几个？",field);
     afterSay(T,800,dropIn);
   }
   function buildSub(L,field){
     const names=shuffle(HEROES);
     fitObj(field,q.n,"row");
     ui.A=heroRow(field,q.n,names,52,rowPos(q.n));
-    const por=el("div","",field);
-    por.style.cssText="position:absolute;right:1%;top:6%;width:clamp(40px,7vmin,80px);pointer-events:none";
-    img(A.pr("portal"),"",por).style.cssText="width:100%;height:auto";
+    mkPortal(field);
     ui.eq=eqBar(L.top,[String(q.n),"−",String(q.k),"=","□"]);
-    ctx.ask(cnQ(q.n)+"个英雄在大厦里，"+cnQ(q.k)+"个要穿过传送门去别的任务，还剩几个？",field);
+    ctx.ask(cnQ(q.n)+"个英雄在大厦里，"+cnQ(q.k)+"个要被传送门吸走去别的任务，还剩几个？",field);
     const my=st;
     afterSay(T,1000,()=>{
       if(!ctx.alive()||st!==my) return;
       for(let i=0;i<q.k;i++){
         const o=ui.A[q.n-1-i];
-        o.style.transition="left .8s,top .8s,opacity .8s,transform .8s";
-        o.style.left="92%"; o.style.top="12%"; o.style.opacity="0"; o.style.transform="translate(-50%,-50%) scale(.3)";
+        T.after(i*380,()=>{ if(!ctx.alive()||st!==my) return;
+          o.style.transition="left .8s ease-in,top .8s ease-in,opacity .8s,transform .8s ease-in";
+          o.style.left="92%"; o.style.top="10%"; o.style.opacity="0";
+          o.style.transform="translate(-50%,-50%) scale(.1) rotate(340deg)";   // 旋转着被吸进传送门
+          SFX.whoosh();
+        });
       }
-      SFX.whoosh();
-      T.after(1100,()=>{ if(ctx.alive()&&st===my) askAns(cnQ(q.n)+"减"+cnQ(q.k)+"等于几？"); });
+      T.after(q.k*380+1000,()=>{ if(ctx.alive()&&st===my) askAns(cnQ(q.n)+"减"+cnQ(q.k)+"等于几？"); });
     });
   }
   function buildMissA(L,field){
     const names=shuffle(HEROES);
     fitObj(field,q.n,"row");
     ui.A=heroRow(field,q.a,names,52,rowPos(q.n).slice(0,q.a));
-    const por=el("div","",field);
-    por.style.cssText="position:absolute;right:1%;top:6%;width:clamp(40px,7vmin,80px);pointer-events:none";
-    img(A.pr("portal"),"",por).style.cssText="width:100%;height:auto";
+    mkPortal(field);
+    // 缺的名额 = 闪烁的全息剪影空位，缺口本身看得见、数得出
+    ui.slots=[];
+    rowPos(q.n).slice(q.a).forEach((p,i)=>{
+      const s2=el("div","slotghost holo",field);
+      s2.style.cssText+=";position:absolute;left:"+p[0]+"%;top:52%;transform:translate(-50%,-50%);width:var(--obj);aspect-ratio:1";
+      img(A.ch(HEROES[(q.a+i)%HEROES.length]),"",s2);
+      ui.slots.push(s2);
+    });
     ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.n)]);
-    ctx.ask("这次任务要"+cnQ(q.n)+"个英雄！现在只有"+cnQ(q.a)+"个，传送门还要送来几个？",field);
+    ctx.ask("这次任务要"+cnQ(q.n)+"个英雄！现在只有"+cnQ(q.a)+"个，闪着光的空位还要传送门送来几个？",field);
     const my=st;
     afterSay(T,1000,()=>{ if(ctx.alive()&&st===my) askAns("还要来几个英雄？"); });
   }
   function buildTeen(L,field){
-    // 10 个坏蛋一整排（一个"十"），加 b 个英雄 —— 十几就是 10 加几
-    fitObj(field,10,"row");
-    const gp=rowPos(10);
+    // 坏蛋列队行进，站成 2×5 方阵 —— "一个十"是有形状的
+    fitObj(field,11,"row");
+    const frame=el("div","",field);
+    frame.style.cssText="position:absolute;left:14%;top:14%;width:46%;height:44%;border:4px solid #ffd75e;"+
+      "border-radius:14px;background:rgba(255,215,94,.08);pointer-events:none";
+    const lab=el("div","",field);
+    lab.style.cssText="position:absolute;left:14%;top:8%;font-weight:900;color:#ffd75e;"+
+      "font-size:clamp(16px,3.4vmin,32px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
+    lab.textContent="一个十";
     ui.G=[];
+    const my=st;
     for(let i=0;i<10;i++){
+      const gx=19+(i%5)*9, gy=i<5?26:46;
       const o=el("div","cobj",field);
-      o.style.left=gp[i][0]+"%"; o.style.top="32%";
+      o.style.left="-8%"; o.style.top=gy+"%";        // 从场外行进入列
       img(A.pr("goon"),"",o); el("div","tag",o);
       ui.G.push(o);
+      T.after(300+i*160,()=>{ if(!ctx.alive()||st!==my) return;
+        o.style.transition="left .5s cubic-bezier(.3,1.1,.5,1)";
+        o.style.left=gx+"%"; SFX.tap(); });
     }
     const names=shuffle(HEROES);
-    ui.A=heroRow(field,q.b,names,74,rowPos(Math.max(q.b,5)).slice(0,q.b));
+    ui.A=heroRow(field,q.b,names,80,rowPos(Math.max(q.b,5)).slice(0,q.b));
     ui.eq=eqBar(L.top,["10","+",String(q.b),"=","□"]);
-    ctx.ask("上面整整一排是十个坏蛋！下面还有"+cnQ(q.b)+"个英雄。十加"+cnQ(q.b)+"，一共是多少？",field);
-    const my=st;
-    afterSay(T,1200,()=>{ if(ctx.alive()&&st===my) askAns("十加"+cnQ(q.b)+"是多少？"); });
+    ctx.ask("坏蛋站成整整齐齐的方阵 —— 一个十！下面还有"+cnQ(q.b)+"个英雄。十加"+cnQ(q.b)+"，一共是多少？",field);
+    const my2=st;
+    afterSay(T,1200,()=>{ if(ctx.alive()&&st===my2) askAns("十加"+cnQ(q.b)+"是多少？"); });
   }
   function askAns(t){
     const hi=q.kind==="teen"?19:10, lo=q.kind==="teen"?11:0;
@@ -2384,6 +2687,7 @@ GAMES.aveng=ctx=>{
             const o=el("div","cobj pop",ui.field);
             o.style.left=pos[i][0]+"%"; o.style.top="52%";
             img(A.ch(names[i%names.length]),"",o); el("div","tag",o);
+            if(ui.slots&&ui.slots[i]){ ui.slots[i].classList.remove("holo"); ui.slots[i].classList.add("fill"); }  // 空位点亮
             SFX.count(q.a+i+1); Speech.count(cnS(q.a+i+1),"auto-count");
             i++; T.after(560,step);
           }; T.after(500,step);
@@ -2456,17 +2760,29 @@ GAMES.monkey=ctx=>{
     fitObj(field,CELLS+2,"row");
     const pos=[],stones=[];
     for(let i=0;i<CELLS;i++) pos.push([X0+(XW/CELLS)*(i+.5),66]);
+    const kindNames={reach:[1,"接着数"],skip2:[2,"二连筋斗"],double:[3,"如意变变变"],over10:[4,"冲过十号门"]};
+    lvlTag(L.top,kindNames[q.kind][0],kindNames[q.kind][1]);
     for(let i=0;i<CELLS;i++){
       const o=el("div","cobj",field); o.dataset.stone=String(i);
       o.style.left=pos[i][0]+"%"; o.style.top=pos[i][1]+"%";
       img(A.pr("stone"),"",o); el("div","tag",o); o.style.zIndex="6";
       const n=el("div","",o);
-      n.style.cssText="position:absolute;left:50%;bottom:-38%;transform:translateX(-50%);font-weight:900;color:#fff;font-size:calc(var(--obj)*.34);text-shadow:0 2px 0 rgba(0,0,0,.55)";
+      const even=(i+1)%2===0;
+      n.style.cssText="position:absolute;left:50%;bottom:-52%;transform:translateX(-50%);font-weight:900;"+
+        "font-size:calc(var(--obj)*.52);text-shadow:0 2px 0 rgba(0,0,0,.55);"+
+        // 二连筋斗关：双数刻度全程金色 —— 2,4,6,8 的规律直接写在数轴上
+        (q.kind==="skip2"&&even?"color:#ffd75e;font-size:calc(var(--obj)*.66)":"color:#fff");
       n.textContent=String(i+1);
       stones.push(o);
       onTap(o,()=>tapStone(i));
     }
     ui.stones=stones; ui.pos=pos;
+    // 十号石墩上的金门（冲过十关专属）
+    if(q.kind==="over10"){
+      const gate=el("div","tengate",field);
+      gate.style.left=pos[9][0]+"%"; gate.style.top="60%";
+      ui.gate=gate;
+    }
     const staff=el("div","",field);
     staff.style.cssText="position:absolute;left:"+X0+"%;top:58%;height:clamp(14px,2.6vmin,26px);"+
       "width:0;background:url("+A.pr("gubang_seg")+") repeat-x center/auto 100%;transition:width .3s cubic-bezier(.3,1.3,.5,1);z-index:5";
@@ -2477,6 +2793,11 @@ GAMES.monkey=ctx=>{
     const anchor=el("div","",field);   // 数轴 0 点：跳跃弧线的起点
     anchor.style.cssText="position:absolute;left:"+X0+"%;top:66%;width:2px;height:2px;pointer-events:none";
     ui.anchor=anchor;
+    // 小悟空骑在棒尖上，每长一格蹦一下
+    const rider=el("div","rider",field);
+    rider.style.left=X0+"%"; rider.style.top="58%";
+    img(A.ch("wukong"),"",rider);
+    ui.rider=rider;
     const wk=el("div","",field);
     wk.style.cssText="position:absolute;left:0;bottom:4%;height:30%;max-width:12%;z-index:7;pointer-events:none;display:flex;align-items:flex-end;justify-content:center";
     img(A.ch("wukong"),"",wk).style.cssText="width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))";
@@ -2499,6 +2820,7 @@ GAMES.monkey=ctx=>{
         const from=ui.len>0?ui.stones[ui.len-1]:ui.anchor;
         ui.len=Math.min(CELLS,ui.len+2); render();   // 一跳两格，只报双数
         Link.arc(from,ui.stones[ui.len-1],"#ffd75e");  // 一道弧 = 一跳（跨两格）
+        if(ui.rider){ ui.rider.classList.remove("hop"); void ui.rider.offsetWidth; ui.rider.classList.add("hop"); }  // 二连筋斗
         SFX.count(ui.len); numPop(ui.stones[ui.len-1],ui.len);
         Speech.count(cnS(ui.len),"child-count");
         ui.jumpN=(ui.jumpN||0)+1;
@@ -2552,19 +2874,30 @@ GAMES.monkey=ctx=>{
       retry:()=>build(true,"double"),
       onRight:card=>{
         st.locked=true; const my=st;
-        const step=()=>{
-          if(!ctx.alive()||st!==my) return;
-          if(ui.len>=q.target){
-            // 两段同样长的大弧：翻倍 = 同样的一段再来一次
-            Link.clear();
-            Link.arc(ui.anchor,ui.stones[q.pre-1],"#ffd75e");
-            Link.arc(ui.stones[q.pre-1],ui.stones[q.target-1],"#ffd75e");
-            Speech.say("看！同样长的一段再来一次 —— 这就是两倍，正好"+cnQ(q.target)+"格！",{tag:"verify"});
-            afterSay(T,900,cross); return;
-          }
-          grow(true); T.after(480,step);
-        };
-        T.after(400,step);
+        // 镜像分身：现有的一段"复制"出来滑到后面接上 —— 翻倍是看得见的动作
+        const gh=el("div","",ui.field);
+        gh.style.cssText="position:absolute;left:"+ui.x0+"%;top:58%;height:clamp(14px,2.6vmin,26px);"+
+          "width:"+(ui.cw*q.pre)+"%;background:url("+A.pr("gubang_seg")+") repeat-x center/auto 100%;"+
+          "opacity:.6;filter:hue-rotate(40deg) brightness(1.35);z-index:5;transition:left .9s cubic-bezier(.3,1,.4,1)";
+        SFX.whoosh();
+        Speech.say("变！同样的一段，再来一次！",{tag:"verify"});
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{ gh.style.left=(ui.x0+ui.cw*q.pre)+"%"; }));
+        T.after(1000,()=>{
+          if(!ctx.alive()||st!==my){ gh.remove(); return; }
+          const step=()=>{
+            if(!ctx.alive()||st!==my) return;
+            if(ui.len>=q.target){
+              gh.remove();
+              Link.clear();
+              Link.arc(ui.anchor,ui.stones[q.pre-1],"#ffd75e");
+              Link.arc(ui.stones[q.pre-1],ui.stones[q.target-1],"#ffd75e");   // 两段同样长的大弧
+              Speech.say("两段一样长 —— 这就是两倍，正好"+cnQ(q.target)+"格！",{tag:"verify"});
+              afterSay(T,900,cross); return;
+            }
+            grow(true); T.after(420,step);
+          };
+          step();
+        });
       }
     });
   }
@@ -2574,6 +2907,8 @@ GAMES.monkey=ctx=>{
     ui.len++;
     render();
     Link.arc(from,ui.stones[ui.len-1],"rgba(255,255,255,.8)");   // 一格一小跳
+    if(ui.rider){ ui.rider.classList.remove("hop"); void ui.rider.offsetWidth; ui.rider.classList.add("hop"); }
+    if(ui.gate&&ui.len>=10&&!ui.gateHit){ ui.gateHit=1; ui.gate.classList.add("flash"); confetti(10); SFX.star(); }  // 冲过十号金门！
     SFX.count(ui.len); numPop(ui.stones[ui.len-1],ui.len);
     Speech.count(cnS(ui.len),auto?"auto-count":"child-count");
   }
@@ -2583,6 +2918,7 @@ GAMES.monkey=ctx=>{
     ui.staff.style.width=(ui.cw*ui.len)+"%";
     ui.tip.style.opacity=ui.len>0?"1":"0";
     ui.tip.style.left=(ui.x0+ui.cw*ui.len)+"%";
+    if(ui.rider) ui.rider.style.left=(ui.x0+ui.cw*ui.len)+"%";   // 悟空跟着棒尖走
     ui.stones.forEach((o,i)=>{
       o.classList.toggle("counted",i<ui.len);
       const t=o.querySelector(".tag");
@@ -2636,9 +2972,15 @@ GAMES.monkey=ctx=>{
       revealSay:isSkip?("跳了"+cnQ(q.ans)+"次。"):("加了"+cnQ(q.ans)+"格："+cnQ(q.pre)+"加"+cnQ(q.ans)+"等于"+cnQ(q.target)+"。"),
       retry:()=>{ build(true,q.kind); },
       onRight:()=>{
-        // 一道金色大弧把"新加的一段"整体圈出来：pre → target
-        if(!isSkip&&q.target<=CELLS)
+        if(q.kind==="over10"){
+          // 凑十法可视化：先跳到 10（蓝），再跳过去（金）—— 一跳在十号门口分成两截
+          Link.arc(ui.stones[q.pre-1],ui.stones[9],"#7fd4ff");
+          Link.arc(ui.stones[9],ui.stones[q.target-1],"#ffd75e");
+          if(ui.gate) ui.gate.classList.add("flash");
+        }else if(!isSkip&&q.target<=CELLS){
+          // 一道金色大弧把"新加的一段"整体圈出来：pre → target
           Link.arc(q.pre>0?ui.stones[q.pre-1]:ui.anchor,ui.stones[q.target-1],"#ffd75e");
+        }
         cross();
       }
     });
