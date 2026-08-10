@@ -701,7 +701,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "6.5.0";
+const VERSION = "6.6.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -1963,7 +1963,7 @@ GAMES.peppa=ctx=>{
     lvlTag(L.top,2,"生日蛋糕");
     verbBanner(L.top,"装饰！");
     const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
-    sideCast(L.top,"r",["peppa",{n:"george",sm:1}],26);
+    sideCast(L.top,"r",["peppa",{n:"george",sm:1}],19);
     // 蛋糕
     const cw=el("div","cakewrap",field);
     const cake=el("div","cake",cw); cake.style.cssText="position:absolute;inset:0";
@@ -1982,10 +1982,10 @@ GAMES.peppa=ctx=>{
     const oc=el("div","ordercard",field);
     const mkRow=(color,n)=>{
       const r=el("div","row",oc);
-      const lab=el("span","",r); lab.textContent=(color==="red"?"红莓":"蓝莓");
+      const lab=el("span","",r); lab.textContent=(color==="red"?"红莓":"蓝莓"); lab.style.cssText="width:2.6em";
       const dots=[];
       for(let i=0;i<n;i++){ const d=el("i","",r); d.style.background=color==="red"?"#e2453f":"#3f6fe2"; dots.push(d); }
-      const num=el("b","",r); num.textContent="0/"+n;
+      const num=el("b","",r); num.textContent="0/"+n; num.style.cssText="width:2.4em;text-align:right";
       return {r,dots,num};
     };
     ui.rowR=mkRow("red",q.a); ui.rowB=mkRow("blue",q.b);
@@ -2454,8 +2454,8 @@ GAMES.paw=ctx=>{
     sideCast(L.top,"l",["rubble"],28);
     // 雷达屏
     const radar=el("div","",field);
-    radar.style.cssText="position:absolute;right:2%;top:8%;width:19%;aspect-ratio:1;border-radius:50%;z-index:9;"+
-      "background:radial-gradient(circle,#0a2e18,#06371d 60%,#032010 100%);box-shadow:0 0 0 5px #274,0 6px 14px rgba(0,0,0,.4)";
+    radar.style.cssText="position:absolute;right:2%;top:8%;width:15%;aspect-ratio:1;border-radius:50%;z-index:9;"+
+      "background:radial-gradient(circle,#155c33,#0c4423 60%,#093018 100%);box-shadow:0 0 0 5px #3a8a5c,0 6px 14px rgba(0,0,0,.4)";
     const rnum=el("div","",radar);
     rnum.style.cssText="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#5aff9c;font-weight:900";
     rnum.innerHTML='<span style="font-size:clamp(11px,2vmin,18px)">埋着</span><b style="font-size:clamp(26px,6vmin,58px)">'+q.n+'</b><span id="rdGot" style="font-size:clamp(11px,2vmin,18px)">挖到 0</span>';
@@ -2465,8 +2465,8 @@ GAMES.paw=ctx=>{
     slots.forEach((p,i)=>{
       const z=el("div","",field);
       z.style.cssText="position:absolute;left:"+p[0]+"%;top:"+p[1]+"%;width:11%;aspect-ratio:1.4;transform:translate(-50%,-50%);"+
-        "border-radius:50%;background:radial-gradient(ellipse,rgba(255,236,150,.55),rgba(255,236,150,.12) 70%,transparent);z-index:5;"+
-        "animation:holo 1.5s ease-in-out infinite";
+        "border-radius:50%;background:radial-gradient(ellipse,rgba(255,236,150,.85),rgba(255,236,150,.28) 70%,transparent);"+
+        "box-shadow:0 0 0 3px rgba(255,255,255,.55);z-index:5;animation:holo 1.5s ease-in-out infinite";
       z.dataset.zone=String(i);
       ui.zones.push(z);
     });
@@ -2550,7 +2550,7 @@ GAMES.paw=ctx=>{
     ui.turts=[];
     for(let i=0;i<q.ans;i++){
       const o=el("div","cobj",field);
-      o.style.left=(46+i*11)+"%"; o.style.top="56%"; o.style.width="9%";
+      o.style.left=(42+i*10)+"%"; o.style.top="56%"; o.style.width="9%";
       img(A.pr("turtle"),"",o); el("div","tag",o);
       o.style.animation="sway 2.4s ease-in-out infinite"; o.style.animationDelay=(i*.4)+"s";
       ui.turts.push(o);
@@ -2558,15 +2558,15 @@ GAMES.paw=ctx=>{
     // 发射器 + 圈堆 + 弹舱
     const launcher=el("div","",field);
     launcher.dataset.launcher="1";
-    launcher.style.cssText="position:absolute;left:14%;top:66%;width:12%;aspect-ratio:1;z-index:8";
+    launcher.style.cssText="position:absolute;left:10%;top:74%;width:12%;aspect-ratio:1;z-index:8";
     launcher.innerHTML='<svg viewBox="0 0 80 80" style="width:100%;height:100%"><rect x="30" y="34" width="44" height="16" rx="8" fill="#5b6ee1" stroke="#2c3a91" stroke-width="4"/><circle cx="26" cy="42" r="18" fill="#8b97ee" stroke="#2c3a91" stroke-width="4"/><circle cx="26" cy="42" r="7" fill="#2c3a91"/></svg>';
     ui.launcher=launcher;
     const mag=el("div","",field);
-    mag.style.cssText="position:absolute;left:6%;top:86%;display:flex;gap:6px;z-index:8";
+    mag.style.cssText="position:absolute;left:4%;top:92%;display:flex;gap:6px;z-index:8";
     ui.mag=mag; ui.loaded=0; ui.fired=0;
     // 圈堆（可点装弹）
     const pile=el("div","",field);
-    pile.style.cssText="position:absolute;left:30%;top:82%;width:26%;height:12%;z-index:8;display:flex;gap:4px;align-items:center";
+    pile.style.cssText="position:absolute;left:24%;top:86%;width:30%;height:12%;z-index:8;display:flex;gap:4px;align-items:center";
     for(let i=0;i<8;i++){
       const r=el("div","",pile);
       r.style.cssText="width:clamp(26px,5vmin,52px);aspect-ratio:1;border-radius:50%;border:7px solid #ff8a3d;box-shadow:inset 0 0 0 3px #fff,0 3px 6px rgba(0,0,0,.35);cursor:pointer";
@@ -2829,6 +2829,11 @@ GAMES.bluey=ctx=>{
     const wall=el("div","",field);
     wall.style.cssText="position:absolute;left:22%;right:22%;top:6%;bottom:26%;border-radius:14px;z-index:2;"+
       "background:linear-gradient(#fdf6e3,#efe3c0);box-shadow:0 8px 18px rgba(0,0,0,.45)";
+    wall.innerHTML='<div style="position:absolute;inset:0;border-radius:14px;'+
+      'background:repeating-linear-gradient(0deg,transparent 0 19%,rgba(90,70,30,.08) 19% 19.6%)"></div>'+
+      '<div style="position:absolute;right:5%;top:5%;width:13%;aspect-ratio:1;border-radius:50%;'+
+      'background:radial-gradient(circle at 40% 35%,#fff7d6,#f4d97b 70%);box-shadow:0 0 18px rgba(255,235,150,.8)"></div>'+
+      '<b style="position:absolute;left:5%;top:4%;font-weight:900;color:#b9a26a;font-size:clamp(13px,2.6vmin,24px)">影子墙</b>';
     // 两条影子列（格子塔）
     const mkCol=(x,color)=>{
       const col=el("div","",field);
@@ -3008,7 +3013,7 @@ GAMES.bluey=ctx=>{
     // 舞池
     const floor=el("div","",field);
     floor.style.cssText="position:absolute;left:18%;right:18%;top:10%;height:34%;border-radius:16px;z-index:2;"+
-      "background:repeating-conic-gradient(rgba(255,255,255,.14) 0 25%,rgba(255,255,255,.05) 0 50%) 50%/24% 24%;"+
+      "background:repeating-conic-gradient(rgba(255,255,255,.26) 0 25%,rgba(255,255,255,.10) 0 50%) 50%/24% 24%;"+
       "box-shadow:0 0 0 4px rgba(255,215,94,.5),0 8px 20px rgba(0,0,0,.4)";
     ui.floor=floor;
     faceAt(L.top,"bluey",10,22); faceAt(L.top,"bingo",10,22,true);
@@ -3017,7 +3022,7 @@ GAMES.bluey=ctx=>{
     const item=pick([A.pr("cookie"),A.pr("icecream")]);
     for(let i=0;i<q.n;i++){
       const o=el("div","cobj",field); o.dataset.idx=String(i);
-      o.style.left=(10+i*(80/Math.max(q.n-1,1)))+"%"; o.style.top="72%"; o.style.width="9%";
+      o.style.left=(10+i*(80/Math.max(q.n-1,1)))+"%"; o.style.top="70%"; o.style.width="10.5%";
       img(item,"",o); el("div","tag",o);
       ui.items.push(o);
     }
@@ -3132,15 +3137,15 @@ GAMES.bluey=ctx=>{
     faceAt(L.top,"bluey",14,24); faceAt(L.top,"bingo",14,24,true);
     // 披萨
     const pz=el("div","",field);
-    pz.style.cssText="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:44%;aspect-ratio:1;z-index:4;"+
+    pz.style.cssText="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:39%;aspect-ratio:1;z-index:4;"+
       "border-radius:50%;background:radial-gradient(circle,#ffd98c 62%,#e8a94b 63%,#c9853a 100%);"+
       "box-shadow:0 8px 20px rgba(0,0,0,.4),inset 0 0 0 6px rgba(201,133,58,.7)";
     ui.pz=pz;
     // 中缝走廊
     const corridor=el("div","",field);
-    corridor.style.cssText="position:absolute;left:50%;top:24%;transform:translateX(-50%);width:7%;height:44%;z-index:6;"+
-      "border-left:4px dashed rgba(255,255,255,.9);border-right:4px dashed rgba(255,255,255,.9);"+
-      "background:rgba(255,255,255,.12);opacity:.4;border-radius:8px";
+    corridor.style.cssText="position:absolute;left:50%;top:24%;transform:translateX(-50%);width:9%;height:44%;z-index:6;opacity:.4";
+    corridor.innerHTML='<div style="position:absolute;left:50%;top:0;bottom:0;width:0;'+
+      'border-left:5px dashed #fff;filter:drop-shadow(0 0 4px rgba(0,0,0,.5))"></div>';
     ui.corridor=corridor;
     // 左右樱桃槽位（每侧 4 个固定位）
     const slotPos=[[38,34],[38,46],[38,58],[42,70],[62,34],[62,46],[62,58],[58,70]];
@@ -3371,14 +3376,15 @@ GAMES.hulu=ctx=>{
     ui.caves=[]; ui.plates=[];
     const total=q.total;
     for(let i=0;i<total;i++){
-      const y=8+i*(84/(total-1));
+      const y=14+i*(78/(total-1));
       const cave=el("div","",cliff);
       cave.style.cssText="position:absolute;left:18%;top:"+y+"%;transform:translateY(-50%);width:64%;height:11%;"+
         "border-radius:50% 50% 8px 8px/70% 70% 8px 8px;background:radial-gradient(#1c1230,#31215a 80%);"+
         "box-shadow:inset 0 4px 8px rgba(0,0,0,.6)";
       const plate=el("div","",cave);
-      plate.style.cssText="position:absolute;left:-34%;top:50%;transform:translate(0,-50%);font-weight:900;color:#ffd75e;"+
-        "font-size:clamp(13px,2.6vmin,24px);text-shadow:0 2px 0 rgba(0,0,0,.55);white-space:nowrap";
+      plate.style.cssText="position:absolute;left:-46%;top:50%;transform:translate(0,-50%);font-weight:900;color:#ffd75e;"+
+        "font-size:clamp(12px,2.3vmin,21px);white-space:nowrap;background:rgba(20,14,50,.72);"+
+        "padding:.12em .5em;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.35)";
       plate.textContent="上"+cnS(i+1);
       ui.caves.push(cave); ui.plates.push(plate);
       cave.dataset.level=String(i+1);
@@ -3388,14 +3394,14 @@ GAMES.hulu=ctx=>{
     rope.style.cssText="position:absolute;left:57%;top:0;width:4px;bottom:0;background:#6a4a23;z-index:4";
     const basket=el("div","",field);
     basket.dataset.basket="1";
-    basket.style.cssText="position:absolute;left:57%;top:8%;transform:translate(-50%,-30%);width:12%;aspect-ratio:1;z-index:6;"+
+    basket.style.cssText="position:absolute;left:57%;top:14%;transform:translate(-50%,-40%);width:12%;aspect-ratio:1;z-index:6;"+
       "transition:top .4s cubic-bezier(.3,1.1,.5,1);touch-action:none";
     img(A.pr("basket"),"",basket).style.cssText="width:100%;height:auto";
     const rider=el("div","",basket);
     rider.style.cssText="position:absolute;left:50%;top:-38%;transform:translateX(-50%);width:62%";
     img(A.ch(HULU_COLORS[rnd(7)]),"",rider).style.cssText="width:100%;height:auto";
     ui.basket=basket; ui.level=1;
-    const yOf=i=>8+ (i-1)*(84/(total-1));
+    const yOf=i=>14+ (i-1)*(78/(total-1));
     basket.style.top=yOf(1)+"%";
     // 上下滑（在场地任意处滑）
     let y0=null;
@@ -3473,7 +3479,7 @@ GAMES.hulu=ctx=>{
     lvlTag(L.top,3,"炼丹炉");
     verbBanner(L.top,"炼！");
     const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
-    sideCast(L.top,"l",["yeye"],26);
+    sideCast(L.top,"l",["yeye"],16);
     // 炉子
     const fur=el("div","",field);
     fur.style.cssText="position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:34%;aspect-ratio:1.1;z-index:5";
@@ -3486,8 +3492,8 @@ GAMES.hulu=ctx=>{
     // 炉沿 N 个槽（环形排布在炉口）
     ui.slots=[];
     for(let i=0;i<q.N;i++){
-      const a=(-160+i*(140/Math.max(q.N-1,1)))*Math.PI/180;
-      const sx=50+38*Math.cos(a), sy=24+16*Math.sin(a)+8;
+      const a=(-152+i*(124/Math.max(q.N-1,1)))*Math.PI/180;
+      const sx=50+36*Math.cos(a), sy=26+13*Math.sin(a)+6;
       const s2=el("i","",fur);
       s2.style.cssText="position:absolute;left:"+sx+"%;top:"+sy+"%;transform:translate(-50%,-50%);width:11%;aspect-ratio:1;"+
         "border-radius:50%;display:block;"+(i<q.x?"background:#6fbf4a;box-shadow:0 0 8px #6fbf4a":"border:3px dashed rgba(255,255,255,.85);background:rgba(0,0,0,.25)");
@@ -3499,7 +3505,7 @@ GAMES.hulu=ctx=>{
     ui.bundles=[];
     opts.slice(0,3).forEach((v,i)=>{
       const b2=el("div","",field); b2.dataset.bundle=String(v);
-      b2.style.cssText="position:absolute;left:"+(16+i*26)+"%;top:80%;transform:translate(-50%,-50%);width:15%;aspect-ratio:1.2;z-index:7;"+
+      b2.style.cssText="position:absolute;left:"+(26+i*24)+"%;top:80%;transform:translate(-50%,-50%);width:15%;aspect-ratio:1.2;z-index:7;"+
         "background:rgba(255,255,255,.94);border-radius:14px;box-shadow:0 5px 12px rgba(0,0,0,.35);"+
         "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px";
       const dots=el("div","",b2);
@@ -3597,7 +3603,7 @@ GAMES.hulu=ctx=>{
       }
     };
     mkBeads();
-    const lab=el("div","chip",field); lab.style.left="50%"; lab.style.right="auto"; lab.style.top="2.5%"; lab.style.transform="translateX(-50%)";
+    const lab=el("div","chip",field); lab.style.left="50%"; lab.style.right="auto"; lab.style.top="12%"; lab.style.transform="translateX(-50%)";
     lab.textContent="一共 "; el("b","",lab).textContent=String(q.N);
     // 分流门：N−1 个把手（1..N−1 = 左股数量）
     ui.gates=[];
@@ -3615,7 +3621,7 @@ GAMES.hulu=ctx=>{
     const mkPool=(x)=>{
       const p2=el("div","",field);
       p2.style.cssText="position:absolute;left:"+x+"%;bottom:6%;width:26%;height:12%;border-radius:50%;z-index:5;"+
-        "background:radial-gradient(ellipse,#7fd4ff88,#3fa9f544);box-shadow:inset 0 4px 10px rgba(0,0,0,.25)";
+        "background:radial-gradient(ellipse,#7fd4ffd9,#3fa9f5a8);box-shadow:inset 0 4px 10px rgba(0,0,0,.3),0 0 0 4px rgba(255,255,255,.35)";
       const t2=el("b","",p2);
       t2.style.cssText="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-weight:900;color:#fff;"+
         "font-size:clamp(18px,4vmin,40px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
@@ -3744,8 +3750,9 @@ GAMES.aveng=ctx=>{
     for(let i=0;i<10;i++){
       const lt=el("div","",field);
       lt.style.cssText="position:absolute;left:31%;bottom:"+(8+i*8.6)+"%;width:5%;aspect-ratio:1.4;border-radius:8px;z-index:5;"+
-        "display:flex;align-items:center;justify-content:center;font-weight:900;color:#8ea0d8;"+
-        "font-size:clamp(13px,2.6vmin,24px);background:rgba(255,255,255,.08);border:2px solid #3a4570;transition:all .25s";
+        "display:flex;align-items:center;justify-content:center;font-weight:900;color:#cfd9f8;"+
+        "font-size:clamp(13px,2.6vmin,24px);background:#20295f;border:2px solid #4a5aa0;transition:all .25s;"+
+        "box-shadow:0 3px 8px rgba(0,0,0,.4)";
       lt.textContent=String(i+1);
       ui.lights.push(lt);
     }
@@ -3764,7 +3771,7 @@ GAMES.aveng=ctx=>{
     ui.pool=[];
     for(let i=5;i<10;i++){
       const o=el("div","cobj",field);
-      o.style.left=(8+ (i-5)*11)+"%"; o.style.top="80%"; o.style.width="10%";
+      o.style.left=(7+ (i-5)*12.5)+"%"; o.style.top="78%"; o.style.width="10.5%";
       img(A.ch(HEROES[i%HEROES.length]),"",o); el("div","tag",o);
       onTap(o,()=>enter(o));
       ui.pool.push(o);

@@ -183,68 +183,177 @@ def wait_q(page, pred, timeout=12000):
 
 
 # ---------------------------------------------------------------- 单轮求解器
+def _pdc(page, sel):
+    page.eval_on_selector(sel, """el=>{
+      const r=el.getBoundingClientRect();
+      const o={bubbles:true,cancelable:true,pointerType:'touch',button:0,pointerId:7,clientX:r.left+r.width/2,clientY:r.top+r.height/2};
+      el.dispatchEvent(new PointerEvent('pointerdown',o));
+      el.dispatchEvent(new PointerEvent('pointerup',o));}""")
+
+
 def solve_round(page, wid, deliberately_wrong=False):
-    """v3 课程通用解题器：读 window.__q 按 kind 作答。返回 True 表示已作答。"""
+    """v6 通用解题器：按 window.__q.kind 驱动 24 个小游戏。"""
     qo = page.evaluate("window.__q")
     if not qo:
         return False
     k = qo.get("kind")
-    ans = qo.get("ans")
-
-    def card(n):
-        sel = '.cards .card[data-n="%s"]' % n
-        page.wait_for_selector(sel, timeout=30000, state="attached")
-        page.wait_for_timeout(300)
-        page.click(sel, force=True)
-
-    if k in ("give", "more"):
-        for _ in range(int(ans)):
-            page.click('.cobj[data-dog]:not([data-out="1"])', force=True)
-            page.wait_for_timeout(240)
-        page.click(".bigbtn.green", force=True)
+    w = page.wait_for_timeout
+    if k == "bounce":
+        page.wait_for_function('window.__q.phase=="play"', timeout=30000)
+        w(300)
+        for _ in range(qo["n"]):
+            _pdc(page, ".tramp >> nth=1"); w(380)
+        page.wait_for_selector(".bigbtn.green", timeout=6000); w(150)
+        _pdc(page, ".bigbtn.green"); return True
+    if k == "cake":
+        w(1600)
+        for _ in range(qo["a"]):
+            _pdc(page, ".berry.red >> nth=0"); w(680)
+        for _ in range(qo["b"]):
+            _pdc(page, ".berry.blue >> nth=0"); w(680)
+        page.wait_for_selector(".bigbtn.green", timeout=6000); w(150)
+        _pdc(page, ".bigbtn.green"); return True
+    if k == "tidy":
+        w(1600)
+        for _ in range(qo["k"]):
+            _pdc(page, "#play .cobj:not([data-in]) >> nth=0"); w(650)
+        sel = '.cards .card[data-n="%d"]' % qo["ans"]
+        page.wait_for_selector(sel, timeout=25000); w(400)
+        _pdc(page, sel); return True
+    if k == "hat":
+        page.wait_for_function('window.__q.phase=="play"', timeout=40000)
+        w(500)
+        for _ in range(qo["ans"]):
+            _pdc(page, ".bigbtn:not(.green)"); w(340)
+        page.wait_for_selector(".bigbtn.green", timeout=6000); w(150)
+        _pdc(page, ".bigbtn.green"); return True
+    if k == "cable":
+        page.wait_for_function('window.__q.phase=="play"', timeout=30000)
+        for _ in range(qo["n"]):
+            w(1150); _pdc(page, ".cobj[data-dog]:not([data-out]) >> nth=0"); w(1500)
         return True
-    if k == "make":
-        for _ in range(int(ans)):
-            page.click("[data-basket]", force=True)
-            page.wait_for_timeout(240)
-        page.click(".bigbtn.green", force=True)
+    if k == "radar":
+        w(1800)
+        for _ in range(qo["n"]):
+            page.evaluate("""()=>{
+              const z=[...document.querySelectorAll('[data-zone]')].filter(x=>!x.dataset.done)[0];
+              const f=z.parentNode; const r=z.getBoundingClientRect();
+              const o={bubbles:true,cancelable:true,pointerType:'touch',pointerId:7,clientX:r.left+r.width/2,clientY:r.top+r.height/2};
+              f.dispatchEvent(new PointerEvent('pointerdown',o));
+              f.dispatchEvent(new PointerEvent('pointermove',o));
+              f.dispatchEvent(new PointerEvent('pointerup',o));}""")
+            w(520)
         return True
-    if k in ("ordL", "ordR"):
-        page.wait_for_timeout(600)
-        page.click('.cobj[data-g="%d"]' % ans, force=True)
+    if k == "ring":
+        w(1800)
+        for _ in range(qo["ans"]):
+            _pdc(page, '#play div[style*="cursor"] >> nth=0'); w(380)
+        page.wait_for_selector(".bigbtn.green", timeout=6000); w(150)
+        _pdc(page, ".bigbtn.green"); w(900)
+        for _ in range(qo["ans"]):
+            _pdc(page, "[data-launcher]"); w(2100)
         return True
-    if k == "miss" and qo.get("world") == "hulu":
-        for _ in range(int(ans)):
-            page.click('[data-zone="r"]', force=True)
-            page.wait_for_timeout(220)
-        page.click(".bigbtn.green", force=True)
+    if k == "crank":
+        w(1600)
+        for _ in range(qo["d"] // 2 * 4):
+            _pdc(page, "[data-crank]"); w(300)
         return True
-    if k in ("reach", "over10"):
-        page.wait_for_function("window.__len >= %d" % qo["pre"], timeout=25000)
-        page.wait_for_timeout(1200)
-        t0 = time.time()
-        while page.evaluate("window.__len") < qo["target"] and time.time() - t0 < 20:
+    if k == "shadow":
+        w(1500)
+        _pdc(page, '[data-lamp="a"]')
+        page.wait_for_function('window.__q.phase=="lampB"', timeout=25000); w(300)
+        _pdc(page, '[data-lamp="b"]')
+        page.wait_for_function('window.__q.phase=="judge"', timeout=25000); w(400)
+        taller = "a" if qo["a"] > qo["b"] else "b"
+        page.evaluate("""(t)=>{
+          const cols=[...document.querySelectorAll('#play div')].filter(d=>d.style.flexDirection==='column-reverse');
+          const col=t==='a'?cols[0]:cols[1];
+          const o={bubbles:true,cancelable:true,pointerType:'touch',pointerId:7};
+          col.dispatchEvent(new PointerEvent('pointerdown',o));}""", taller)
+        return True
+    if k == "balance":
+        w(1600)
+        for _ in range(qo["ans"]):
+            _pdc(page, "#play .cobj:not([data-on]) >> nth=0"); w(750)
+        return True
+    if k == "dance":
+        w(1500)
+        for _ in range(qo["n"] // 2):
+            _pdc(page, "#play .cobj:not([data-paired]) >> nth=0"); w(980)
+        sel = '.cards .card[data-n="%d"]' % qo["ans"]
+        page.wait_for_selector(sel, timeout=25000); w(300)
+        _pdc(page, sel); return True
+    if k == "pizza":
+        w(1600)
+        _pdc(page, '#play div[data-side="L"] >> nth=0'); w(1000)
+        page.eval_on_selector('#play div[style*="dashed"]', """el=>{
+          const r=el.getBoundingClientRect();
+          const o={bubbles:true,cancelable:true,pointerType:'touch',pointerId:7,clientX:r.left+r.width/2,clientY:r.top+r.height/2};
+          el.dispatchEvent(new PointerEvent('pointerdown',o));
+          el.dispatchEvent(new PointerEvent('pointerup',o));}""")
+        return True
+    if k == "vine":
+        w(1500); _pdc(page, '[data-g="%d"]' % qo["ans"]); return True
+    if k == "lift":
+        w(1500)
+        for _ in range(qo["ans"] - 1):
+            page.evaluate("""()=>{
+              const f=document.querySelector('#play .field');
+              const r=f.getBoundingClientRect();
+              const o1={bubbles:true,pointerType:'touch',pointerId:7,clientX:r.left+r.width/2,clientY:r.top+r.height*0.4};
+              const o2={bubbles:true,pointerType:'touch',pointerId:7,clientX:r.left+r.width/2,clientY:r.top+r.height*0.4+90};
+              f.dispatchEvent(new PointerEvent('pointerdown',o1));
+              f.dispatchEvent(new PointerEvent('pointerup',o2));}""")
+            w(540)
+        _pdc(page, ".bigbtn.green"); return True
+    if k == "furnace":
+        w(1600); _pdc(page, '[data-bundle="%d"]' % qo["ans"]); return True
+    if k == "falls":
+        w(1500)
+        _pdc(page, '[data-gate="1"]')
+        page.wait_for_function("window.__q.got&&window.__q.got.length>=1", timeout=20000)
+        page.wait_for_function('window.__q.phase=="play"', timeout=20000)
+        w(400)
+        _pdc(page, '[data-gate="2"]')
+        return True
+    if k == "elev":
+        w(1600)
+        for _ in range(qo["n"] - 5):
+            _pdc(page, "#play .cobj:not([data-in]) >> nth=0"); w(540)
+        return True
+    if k == "shield":
+        w(1600); _pdc(page, '[data-strip="%d"]' % qo["ans"]); return True
+    if k == "cannon":
+        w(1600); _pdc(page, '[data-can="%d"]' % qo["ans"]); return True
+    if k == "depot":
+        w(1600)
+        _pdc(page, "[data-tenbox]"); w(1300)
+        for _ in range(qo["b"]):
+            _pdc(page, "#play [data-sbox]:not([data-on]) >> nth=0"); w(540)
+        return True
+    if k == "bridge":
+        page.wait_for_function('window.__q.phase=="play"', timeout=30000); w(300)
+        for _ in range(qo["need"]):
             ln = page.evaluate("window.__len")
-            page.click('.cobj[data-stone="%d"]' % ln, force=True)
-            page.wait_for_timeout(280)
-        page.click(".bigbtn.green", force=True)
-        card(ans)
+            _pdc(page, '[data-stone="%d"]' % ln); w(440)
         return True
-    if k == "skip2":
-        page.wait_for_timeout(1500)
-        for _ in range(int(qo["jumps"])):
-            page.click("[data-jump]", force=True)
-            page.wait_for_timeout(300)
-        page.click(".bigbtn.green", force=True)
-        card(ans)
+    if k == "cloud":
+        w(1500)
+        for _ in range(qo["ans"]):
+            _pdc(page, "[data-cloud]"); w(680)
         return True
-    if k == "double":
-        page.wait_for_function("window.__len >= %d" % qo["pre"], timeout=25000)
-        card(ans)
+    if k == "peach":
+        w(1500)
+        for _ in range(qo["p"]):
+            _pdc(page, "#play [data-peach]:not([data-done]) >> nth=0"); w(1150)
         return True
-    # 其余全部是数字卡作答：flash/add/sub/miss/back/pairs/diff/share/odd/bond/teen/missA
-    card(ans)
-    return True
+    if k == "palace":
+        w(1700)
+        plan = [2, 2, 1] if qo["sum"] == 5 else [1, 1, 2]
+        for s2 in plan:
+            _pdc(page, '[data-jump="%d"]' % s2); w(720)
+        return True
+    return False
 
 
 def click_card_with(page, n, wrong=False):
