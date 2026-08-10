@@ -701,7 +701,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "6.4.0";
+const VERSION = "6.5.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -721,24 +721,24 @@ const cnSeq=n=>CN_SEQ[clamp(n,0,10)], cnQty=n=>CN_QTY[clamp(n,0,10)];
 
 /* ========================= 世界 ========================= */
 const WORLDS=[
- {id:"peppa", name:"佩奇的泥坑", bg:"bg_peppa", lead:"peppa", skill:"闪算加减",
+ {id:"peppa", name:"佩奇的泥坑", bg:"bg_peppa", lead:"peppa", skill:"看·合·减·藏",
   cast:["peppa","george","daddypig","mummypig"],
-  intro:"泥点闪一下就要算出来！看好啦！"},
- {id:"paw", name:"冒险湾救援", bg:"bg_paw", lead:"chase", skill:"数字任务",
+  intro:"泥坑蹦床开跳啦！"},
+ {id:"paw", name:"冒险湾救援", bg:"bg_paw", lead:"chase", skill:"配对救援",
   cast:["ryder","chase","marshall","skye","rubble","zuma","rocky"],
-  intro:"汪汪队看数字出任务，一只都不能多、不能少！"},
- {id:"bluey", name:"Bluey 的后院", bg:"bg_bluey", lead:"bluey", skill:"求差与平分",
+  intro:"汪汪队集合，出任务！"},
+ {id:"bluey", name:"Bluey 的后院", bg:"bg_bluey", lead:"bluey", skill:"公平游戏",
   cast:["bluey","bingo","bandit","chilli"],
-  intro:"谁多？多几个？能不能公平分？比一比！"},
- {id:"hulu", name:"葫芦山", bg:"bg_hulu", lead:"hulu1", skill:"序数与分解",
+  intro:"后院游戏时间到！"},
+ {id:"hulu", name:"葫芦山", bg:"bg_hulu", lead:"hulu1", skill:"序数与分合",
   cast:["hulu1","hulu2","hulu3","hulu4","hulu5","hulu6","hulu7","yeye"],
-  intro:"数字山冒险！第几个？分成几和几？"},
- {id:"aveng", name:"复仇者大厦", bg:"bg_aveng", lead:"ironman", skill:"加减算式",
+  intro:"葫芦山的宝贝等你来！"},
+ {id:"aveng", name:"复仇者大厦", bg:"bg_aveng", lead:"ironman", skill:"十的秘密",
   cast:["ironman","cap","thor","hulkman","widow","hawkeye","spider","spiderblack","blackpanther"],
-  intro:"英雄算式大作战！加一加，减一减！"},
- {id:"monkey", name:"花果山", bg:"bg_monkey", lead:"wukong", skill:"数轴跳跳",
+  intro:"英雄基地，准备行动！"},
+ {id:"monkey", name:"花果山", bg:"bg_monkey", lead:"wukong", skill:"数轴功夫",
   cast:["wukong","tangseng","bajie","shaseng","bailongma"],
-  intro:"金箍棒数轴桥，跳着数，过河去！"}
+  intro:"花果山的筋斗云来啦！"}
 ];
 const W_BY_ID={}; WORLDS.forEach(w=>W_BY_ID[w.id]=w);
 const ORDER=WORLDS.map(w=>w.id);
@@ -4139,272 +4139,453 @@ GAMES.aveng=ctx=>{
 };
 
 /* ============================================================================
-   世界六 · 花果山 —— 数轴桥：接着数 → 两个两个跳 → 翻倍 → 冲过十
+   世界六 · 花果山（v6）—— 四个独立小游戏：
+   L1 石墩数轴桥（点） L2 筋斗云升空（上滑翻两筋斗） L3 蟠桃穿分身门（逐颗拖） L4 龙宫三跃（走廊描弧）
    ============================================================================ */
 GAMES.monkey=ctx=>{
-  const T=ctx.T; let st=null,q=null,ui=null,posWrong=0; const box={last:null},fails={n:0};
-  const CELLS=12, X0=11, XW=62;
+  const T=ctx.T; let st=null,q=null,ui=null; const box={last:null},fails={n:0};
 
-  function spec(){
+  function build(retry){
+    st=bindState(newState(retry)); Link.clear();
     const lv=ctx.level();
-    if(lv===1){ const pre=rint(2,5),need=rint(2,4); return {kind:"reach",pre,need,target:pre+need,ans:need}; }
-    if(lv===2){ const j=rint(2,4); return {kind:"skip2",pre:0,jumps:j,target:j*2,ans:j}; }
-    if(lv===3){ const p=rint(2,5); return {kind:"double",pre:p,target:p*2,ans:p*2}; }
-    const pre=rint(8,9),need=rint(Math.max(2,11-pre),Math.min(4,12-pre));   // 保证 target 11~12，必跨十
-    return {kind:"over10",pre,need,target:pre+need,ans:need};
+    const L=layout(ctx.root); ui={L};
+    if(lv===1) buildBridge(L);
+    else if(lv===2) buildCloud(L);
+    else if(lv===3) buildPeach(L);
+    else buildPalace(L);
   }
-  function build(retry,forceKind){
-    st=bindState(newState(retry)); posWrong=0; Link.clear();
-    q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.pre||0)+","+(o.target),box),{world:"monkey"}));
-    if(forceKind) q.kind=forceKind;
-    const L=layout(ctx.root); ui={L,len:0};
+
+  /* ---------------- L1 石墩数轴桥（点石墩接着数） ---------------- */
+  function buildBridge(L){
+    const CELLS=10,X0=12,XW=62;
+    const mk=()=>{ const pre=rint(2,5),need=rint(2,4); return {kind:"bridge",pre,need,target:pre+need}; };
+    q=setQ(Object.assign(fresh(mk,o=>"br"+o.pre+","+o.need,box),{world:"monkey",act:"bridge",phase:"intro"}));
+    q.ans=q.need;
+    lvlTag(L.top,1,"石墩数轴桥");
+    verbBanner(L.top,"搭桥！");
     const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
     fitObj(field,CELLS+2,"row");
-    const pos=[],stones=[];
+    const pos=[];
     for(let i=0;i<CELLS;i++) pos.push([X0+(XW/CELLS)*(i+.5),66]);
-    const kindNames={reach:[1,"接着数"],skip2:[2,"二连筋斗"],double:[3,"如意变变变"],over10:[4,"冲过十号门"]};
-    lvlTag(L.top,kindNames[q.kind][0],kindNames[q.kind][1]);
+    ui.stones=[];
     for(let i=0;i<CELLS;i++){
       const o=el("div","cobj",field); o.dataset.stone=String(i);
-      o.style.left=pos[i][0]+"%"; o.style.top=pos[i][1]+"%";
-      img(A.pr("stone"),"",o); el("div","tag",o); o.style.zIndex="6";
+      o.style.left=pos[i][0]+"%"; o.style.top=pos[i][1]+"%"; o.style.zIndex="6";
+      img(A.pr("stone"),"",o); el("div","tag",o);
       const n=el("div","",o);
-      const even=(i+1)%2===0;
-      n.style.cssText="position:absolute;left:50%;bottom:-52%;transform:translateX(-50%);font-weight:900;"+
-        "font-size:calc(var(--obj)*.52);text-shadow:0 2px 0 rgba(0,0,0,.55);"+
-        // 二连筋斗关：双数刻度全程金色 —— 2,4,6,8 的规律直接写在数轴上
-        (q.kind==="skip2"&&even?"color:#ffd75e;font-size:calc(var(--obj)*.66)":"color:#fff");
+      n.style.cssText="position:absolute;left:50%;bottom:-52%;transform:translateX(-50%);font-weight:900;color:#fff;"+
+        "font-size:calc(var(--obj)*.5);text-shadow:0 2px 0 rgba(0,0,0,.55)";
       n.textContent=String(i+1);
-      stones.push(o);
+      ui.stones.push(o);
       onTap(o,()=>tapStone(i));
     }
-    ui.stones=stones; ui.pos=pos;
-    // 十号石墩上的金门（冲过十关专属）
-    if(q.kind==="over10"){
-      const gate=el("div","tengate",field);
-      gate.style.left=pos[9][0]+"%"; gate.style.top="60%";
-      ui.gate=gate;
-    }
     const staff=el("div","",field);
-    staff.style.cssText="position:absolute;left:"+X0+"%;top:58%;height:clamp(14px,2.6vmin,26px);"+
-      "width:0;background:url("+A.pr("gubang_seg")+") repeat-x center/auto 100%;transition:width .3s cubic-bezier(.3,1.3,.5,1);z-index:5";
-    const tip=el("div","",field);
-    tip.style.cssText="position:absolute;top:56%;height:clamp(18px,3.2vmin,32px);width:clamp(12px,2.2vmin,22px);"+
-      "background:url("+A.pr("gubang_tip")+") no-repeat center/contain;transition:left .3s cubic-bezier(.3,1.3,.5,1);z-index:6;opacity:0";
-    ui.staff=staff; ui.tip=tip; ui.x0=X0; ui.cw=XW/CELLS;
-    const anchor=el("div","",field);   // 数轴 0 点：跳跃弧线的起点
-    anchor.style.cssText="position:absolute;left:"+X0+"%;top:66%;width:2px;height:2px;pointer-events:none";
-    ui.anchor=anchor;
-    // 小悟空骑在棒尖上，每长一格蹦一下
+    staff.style.cssText="position:absolute;left:"+X0+"%;top:58%;height:clamp(14px,2.6vmin,26px);width:0;"+
+      "background:url("+A.pr("gubang_seg")+") repeat-x center/auto 100%;transition:width .3s cubic-bezier(.3,1.3,.5,1);z-index:5";
+    ui.staff=staff; ui.x0=X0; ui.cw=XW/CELLS; ui.len=0;
     const rider=el("div","rider",field);
     rider.style.left=X0+"%"; rider.style.top="58%";
-    img(A.ch("wukong"),"",rider);
-    ui.rider=rider;
-    const wk=el("div","",field);
-    wk.style.cssText="position:absolute;left:0;bottom:4%;height:30%;max-width:12%;z-index:7;pointer-events:none;display:flex;align-items:flex-end;justify-content:center";
-    img(A.ch("wukong"),"",wk).style.cssText="width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))";
+    img(A.ch("wukong"),"",rider); ui.rider=rider;
     const far=el("div","",field);
-    far.style.cssText="position:absolute;right:0;bottom:28%;width:22%;height:22%;z-index:7;pointer-events:none;display:flex;align-items:flex-end;gap:1px";
+    far.style.cssText="position:absolute;right:0;bottom:26%;width:22%;height:24%;z-index:7;pointer-events:none;display:flex;align-items:flex-end;gap:1px";
     ["tangseng","bajie","shaseng","bailongma"].forEach(c=>
       img(A.ch(c),"",far).style.cssText="flex:1 1 0;min-width:0;width:100%;height:auto;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))");
     ui.far=far;
-    // 目标旗
     const flag=el("div","",field);
-    flag.style.cssText="position:absolute;left:"+pos[q.target-1][0]+"%;top:56%;transform:translate(-50%,-50%);pointer-events:none;"+
-      "width:clamp(22px,4vmin,40px);height:clamp(22px,4vmin,40px);border-radius:50%;background:#ffd75e;"+
-      "box-shadow:0 0 0 4px #fff,0 0 18px #ffd75e;z-index:8";
-    ui.flag=flag;
-
-    if(q.kind==="skip2"){
-      const jump=bigBtn(L.bot,"跳两格！","",()=>{
-        if(busyState(st)||st.asking) return;
-        if(ui.len+2>CELLS) return;
-        const from=ui.len>0?ui.stones[ui.len-1]:ui.anchor;
-        ui.len=Math.min(CELLS,ui.len+2); render();   // 一跳两格，只报双数
-        Link.arc(from,ui.stones[ui.len-1],"#ffd75e");  // 一道弧 = 一跳（跨两格）
-        if(ui.rider){ ui.rider.classList.remove("hop"); void ui.rider.offsetWidth; ui.rider.classList.add("hop"); }  // 二连筋斗
-        SFX.count(ui.len); numPop(ui.stones[ui.len-1],ui.len);
-        Speech.count(cnS(ui.len),"child-count");
-        ui.jumpN=(ui.jumpN||0)+1;
+    flag.style.cssText="position:absolute;left:"+pos[q.target-1][0]+"%;top:55%;transform:translate(-50%,-50%);width:clamp(24px,4.4vmin,44px);"+
+      "aspect-ratio:1;border-radius:50%;background:#ffd75e;box-shadow:0 0 0 4px #fff,0 0 18px #ffd75e;z-index:8;pointer-events:none";
+    const render=()=>{
+      window.__len=ui.len;
+      staff.style.width=(ui.cw*ui.len)+"%";
+      rider.style.left=(X0+ui.cw*ui.len)+"%";
+      ui.stones.forEach((o,i)=>{
+        o.classList.toggle("counted",i<ui.len);
+        const t2=o.querySelector(".tag");
+        if(i<ui.len) setTag(t2,i+1); else { t2.className="tag"; t2.textContent=""; }
       });
-      jump.dataset.jump="1"; ui.jumpBtn=jump;
+    };
+    ui.render=render;
+    function grow(auto){
+      if(ui.len>=CELLS) return;
+      const from=ui.len>0?ui.stones[ui.len-1]:ui.stones[0];
+      ui.len++; render();
+      if(ui.len>1) Link.arc(from,ui.stones[ui.len-1],"rgba(255,255,255,.8)");
+      rider.classList.remove("hop"); void rider.offsetWidth; rider.classList.add("hop");
+      SFX.count(ui.len); numPop(ui.stones[ui.len-1],ui.len);
+      Speech.count(cnS(ui.len),auto?"auto-count":"child-count");
     }
-    const okBtn=bigBtn(L.bot,"过河！","green",()=>submit());
-    okBtn.disabled=true; ui.okBtn=okBtn;
+    function tapStone(i){
+      if(busyState(st)||q.phase!=="play") return;
+      if(i!==ui.len) return;      // 只能点下一格：强制真的在数
+      grow(false); q.draft=ui.len;
+      if(ui.len===q.target){ q.phase="commit"; T.after(600,commit); }
+    }
+    ctx.ask("桥先搭好"+cnQ(q.pre)+"格，要接着搭到亮着的"+cnS(q.target)+"号石墩！点下一个石墩！",field);
+    const my=st;
+    afterSay(T,600,()=>{
+      if(!ctx.alive()||st!==my) return;
+      st.locked=true;
+      let k=0;
+      const pre=()=>{
+        if(!ctx.alive()||st!==my) return;
+        if(k>=q.pre){ st.locked=false; q.phase="play"; return; }
+        grow(true); k++; T.after(520,pre);
+      };
+      pre();
+    });
+    function commit(){
+      if(st.done) return;
+      st.done=true; record(ctx,st,true); ctx.answering(false);
+      SFX.right();
+      runReveal(ctx,[
+        [300,()=>{ Link.arc(ui.stones[q.pre-1],ui.stones[q.target-1],"#ffd75e"); SFX.star(); }],
+        [500,()=>{ // 师徒过桥
+          const kids=[].slice.call(ui.far.children);
+          kids.forEach((im,i)=>{ im.style.transition="transform 1s cubic-bezier(.4,0,.5,1)";
+            setTimeout(()=>{ im.style.transform="translateX(-"+(28+i*8)+"vw)"; },i*200); });
+          confetti(12); }],
+        [900,()=>{ ui.eq=eqBar(ui.L.top,[String(q.pre),"+","□","=",String(q.target)]);
+          flyNum(ui.stones[q.target-1],q.need,ui.eq); }]
+      ],{done:()=>{
+        Speech.say("从"+cnS(q.pre)+"接着数"+cnQ(q.need)+"格，正好到"+cnS(q.target)+" —— 过河啦！",{tag:"verify"});
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.staff); });
+      }});
+    }
+  }
+
+  /* ---------------- L2 筋斗云升空（上滑=升2层，垂直数轴） ---------------- */
+  function buildCloud(L){
+    const mk=()=>({kind:"cloud",target:pick([6,8,10,12])});
+    q=setQ(Object.assign(fresh(mk,o=>"cl"+o.target,box),{world:"monkey",act:"cloud",phase:"play"}));
+    q.ans=q.target/2;   // 跳几次
+    lvlTag(L.top,2,"筋斗云升空");
+    verbBanner(L.top,"飞！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    // 高度表 1-12（双数金色）
+    ui.marks=[];
+    for(let i=1;i<=12;i++){
+      const m=el("div","",field);
+      const even=i%2===0;
+      m.style.cssText="position:absolute;left:14%;bottom:"+(6+i*6.6)+"%;transform:translateY(50%);z-index:5;display:flex;align-items:center;gap:6px";
+      const line=el("i","",m);
+      line.style.cssText="display:block;width:"+(even?"5.5vmin":"3vmin")+";height:3px;background:"+(even?"#ffd75e":"rgba(255,255,255,.6)");
+      const t2=el("b","",m);
+      t2.style.cssText="font-weight:900;color:"+(even?"#ffd75e":"rgba(255,255,255,.75)")+";font-size:clamp("+(even?"15px,3vmin,30px":"11px,2vmin,18px")+")";
+      t2.textContent=String(i);
+      ui.marks.push(m);
+    }
+    // 悬崖上的唐僧（目标高度）
+    const cliff=el("div","",field);
+    cliff.style.cssText="position:absolute;right:6%;bottom:"+(6+q.target*6.6-4)+"%;width:16%;height:12%;z-index:5;"+
+      "background:linear-gradient(#7a5a3a,#9a7648);border-radius:12px 12px 0 0;box-shadow:0 6px 12px rgba(0,0,0,.4)";
+    const ts=el("div","",cliff);
+    ts.style.cssText="position:absolute;left:50%;top:-84%;transform:translateX(-50%);width:52%";
+    img(A.ch("tangseng"),"",ts).style.cssText="width:100%;height:auto";
+    const tgt=el("b","",cliff);
+    tgt.style.cssText="position:absolute;right:4%;top:8%;font-weight:900;color:#ffd75e;font-size:clamp(16px,3.4vmin,34px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
+    tgt.textContent=String(q.target);
+    // 筋斗云 + 悟空
+    const cloud=el("div","",field); cloud.dataset.cloud="1";
+    cloud.style.cssText="position:absolute;left:42%;bottom:4%;transform:translateX(-50%);width:17%;aspect-ratio:1.7;z-index:7;"+
+      "transition:bottom .55s cubic-bezier(.3,1.15,.4,1);touch-action:none";
+    cloud.innerHTML='<svg viewBox="0 0 100 60" style="width:100%;height:100%">'+
+      '<ellipse cx="30" cy="42" rx="24" ry="15" fill="#fff"/><ellipse cx="58" cy="36" rx="26" ry="18" fill="#fff"/>'+
+      '<ellipse cx="80" cy="44" rx="17" ry="11" fill="#fff"/><ellipse cx="50" cy="48" rx="40" ry="10" fill="#f0ecff"/></svg>';
+    const wk=el("div","",cloud);
+    wk.style.cssText="position:absolute;left:50%;top:-66%;transform:translateX(-50%);width:52%";
+    img(A.ch("wukong"),"",wk).style.cssText="width:100%;height:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.4))";
+    ui.cloud=cloud; ui.wk=wk; ui.h=0; ui.jumps=0;
+    // 上滑（全场）
+    let y0=null;
+    field.style.touchAction="none";
+    field.addEventListener("pointerdown",e=>{ if(q.phase==="play"){ y0=e.clientY; SFX.gesture(); Audio2.kick(); } },{passive:true});
+    field.addEventListener("pointerup",e=>{
+      if(y0===null||q.phase!=="play") return;
+      const dy=y0-e.clientY; y0=null;
+      if(dy>24) hop();
+      else if(e.target.closest("[data-cloud]")) hop();   // 点云兜底
+    },{passive:true});
+    function hop(){
+      if(ui.h+2>12) return;
+      ui.h+=2; ui.jumps++; q.draft=ui.h;
+      cloud.style.bottom=(4+ui.h*6.6-3)+"%";
+      wk.style.transition="transform .5s"; wk.style.transform="translateX(-50%) rotate(360deg)";
+      T.after(520,()=>{ wk.style.transition="none"; wk.style.transform="translateX(-50%)"; });
+      // 跳痕弧
+      SFX.count(ui.h); numPop(cloud,ui.h);
+      Speech.count(cnS(ui.h),"child-count");
+      const m=ui.marks[ui.h-1]; if(m){ m.classList.add("pop"); }
+      if(ui.h===q.target){ q.phase="commit"; T.after(650,commit); }
+    }
+    ctx.ask("向上一划，悟空翻两个筋斗升两层！二、四、六…升到唐僧等的"+cnS(q.target)+"层！",cloud);
     ctx.answering(true);
-
-    const startAsk=()=>{
-      if(!ctx.alive()) return;
-      if(q.kind==="reach")
-        ctx.ask("桥已经有"+cnQ(q.pre)+"格，要正好搭到亮着的"+cnS(q.target)+"号石墩！接着往前点，好了按绿色按钮。",()=>ui.stones[Math.min(ui.len,CELLS-1)]);
-      else if(q.kind==="skip2")
-        ctx.ask("这次一跳就是两格！按'跳两格'按钮，跳到亮着的"+cnS(q.target)+"号石墩，好了按绿色按钮。",ui.jumpBtn);
-      else if(q.kind==="double")
-        ctx.ask("金箍棒有"+cnQ(q.pre)+"格。悟空喊：变两倍长！两倍是几格？先点数字卡告诉我！",()=>ui.stones[q.pre-1]);
-      else
-        ctx.ask("桥已经"+cnQ(q.pre)+"格啦，再加"+cnQ(q.need)+"格冲过十号石墩！接着点，好了按绿色按钮。",()=>ui.stones[Math.min(ui.len,CELLS-1)]);
-      if(q.kind!=="double") ui.stones[Math.min(ui.len,CELLS-1)].classList.add("tapme");
-    };
-
-    if(q.pre>0&&q.kind!=="double"){
-      st.locked=true; const my=st;
-      Speech.say("悟空先把金箍棒变长"+cnQ(q.pre)+"格！",{tag:"g:monkey"});
-      let k=0;
-      const preStep=()=>{
-        if(!ctx.alive()||st!==my) return;
-        if(k>=q.pre){ T.after(400,()=>{ if(ctx.alive()&&st===my){ st.locked=false; startAsk(); } }); return; }
-        grow(true); k++; T.after(560,preStep);
-      };
-      T.after(1200,preStep);
-    }else if(q.kind==="double"){
-      st.locked=true; const my=st;
-      let k=0;
-      const preStep=()=>{
-        if(!ctx.alive()||st!==my) return;
-        if(k>=q.pre){ T.after(400,()=>{ if(ctx.alive()&&st===my){ st.locked=false; startAsk(); askDouble(); } }); return; }
-        grow(true); k++; T.after(560,preStep);
-      };
-      T.after(1200,preStep);
-    }else T.after(1200,startAsk);
-  }
-  function askDouble(){
-    st.asking=true;
-    numAnswer(ctx,ui,st,fails,{
-      ans:q.ans,lo:2,hi:12,askText:"",
-      rightSay:cnQ(q.pre)+"的两倍就是"+cnQ(q.ans)+"！"+cnQ(q.pre)+"加"+cnQ(q.pre)+"等于"+cnQ(q.ans)+"！",
-      revealSay:cnQ(q.pre)+"加"+cnQ(q.pre)+"等于"+cnQ(q.ans)+"，两倍就是"+cnQ(q.ans)+"格。",
-      retry:()=>build(true,"double"),
-      onRight:card=>{
-        st.locked=true; const my=st;
-        // 镜像分身：现有的一段"复制"出来滑到后面接上 —— 翻倍是看得见的动作
-        const gh=el("div","",ui.field);
-        gh.style.cssText="position:absolute;left:"+ui.x0+"%;top:58%;height:clamp(14px,2.6vmin,26px);"+
-          "width:"+(ui.cw*q.pre)+"%;background:url("+A.pr("gubang_seg")+") repeat-x center/auto 100%;"+
-          "opacity:.6;filter:hue-rotate(40deg) brightness(1.35);z-index:5;transition:left .9s cubic-bezier(.3,1,.4,1)";
-        SFX.whoosh();
-        Speech.say("变！同样的一段，再来一次！",{tag:"verify"});
-        requestAnimationFrame(()=>requestAnimationFrame(()=>{ gh.style.left=(ui.x0+ui.cw*q.pre)+"%"; }));
-        T.after(1000,()=>{
-          if(!ctx.alive()||st!==my){ gh.remove(); return; }
-          const step=()=>{
-            if(!ctx.alive()||st!==my) return;
-            if(ui.len>=q.target){
-              gh.remove();
-              Link.clear();
-              Link.arc(ui.anchor,ui.stones[q.pre-1],"#ffd75e");
-              Link.arc(ui.stones[q.pre-1],ui.stones[q.target-1],"#ffd75e");   // 两段同样长的大弧
-              Speech.say("两段一样长 —— 这就是两倍，正好"+cnQ(q.target)+"格！",{tag:"verify"});
-              afterSay(T,900,cross); return;
-            }
-            grow(true); T.after(420,step);
-          };
-          step();
-        });
-      }
-    });
-  }
-  function grow(auto){
-    if(ui.len>=CELLS) return;
-    const from=ui.len>0?ui.stones[ui.len-1]:ui.anchor;
-    ui.len++;
-    render();
-    Link.arc(from,ui.stones[ui.len-1],"rgba(255,255,255,.8)");   // 一格一小跳
-    if(ui.rider){ ui.rider.classList.remove("hop"); void ui.rider.offsetWidth; ui.rider.classList.add("hop"); }
-    if(ui.gate&&ui.len>=10&&!ui.gateHit){ ui.gateHit=1; ui.gate.classList.add("flash"); confetti(10); SFX.star(); }  // 冲过十号金门！
-    SFX.count(ui.len); numPop(ui.stones[ui.len-1],ui.len);
-    Speech.count(cnS(ui.len),auto?"auto-count":"child-count");
-  }
-  function shrinkTo(k){ if(k<0||k===ui.len) return; ui.len=k; render(); Link.clear(); SFX.tap(); }
-  function render(){
-    window.__len=ui.len;
-    ui.staff.style.width=(ui.cw*ui.len)+"%";
-    ui.tip.style.opacity=ui.len>0?"1":"0";
-    ui.tip.style.left=(ui.x0+ui.cw*ui.len)+"%";
-    if(ui.rider) ui.rider.style.left=(ui.x0+ui.cw*ui.len)+"%";   // 悟空跟着棒尖走
-    ui.stones.forEach((o,i)=>{
-      o.classList.toggle("counted",i<ui.len);
-      const t=o.querySelector(".tag");
-      if(i<ui.len) setTag(t,i+1); else { t.className="tag"; t.textContent=""; }
-      o.classList.remove("tapme");
-    });
-    if(ui.len<CELLS&&q&&q.kind!=="skip2"&&q.kind!=="double") ui.stones[ui.len].classList.add("tapme");
-    if(ui.okBtn) ui.okBtn.disabled=(ui.len<=(q.pre||0));
-  }
-  function tapStone(i){
-    if(busyState(st)||st.asking||q.kind==="skip2"||q.kind==="double") return;
-    if(i<ui.len){ if(i+1>=q.pre) shrinkTo(i+1); return; }
-    if(i>ui.len) return;
-    grow(false);
-  }
-  function submit(){
-    if(st.done||st.asking) return;
-    if(ui.len!==q.target){
-      SFX.soft(); ui.staff.classList.add("shake");
-      T.after(500,()=>ui.staff.classList.remove("shake"));
-      posWrong++;
-      if(posWrong>=2){ autoFix(); return; }
-      Speech.say("桥还没有正好搭到亮着的石墩，看看现在是几格。",{tag:"g:monkey",interrupt:true});
-      return;
+    function commit(){
+      if(st.done) return;
+      st.done=true; record(ctx,st,true); ctx.answering(false);
+      SFX.right();
+      Speech.say("到啦！",{tag:"right",interrupt:true});
+      runReveal(ctx,[
+        [300,()=>{ // 云炸成小云朵
+          for(let i=0;i<6;i++){
+            const pf=el("div","poof",ui.field);
+            pf.style.left=(38+rnd(14))+"%"; pf.style.top=(84-q.target*6.6+rnd(8))+"%";
+            T.after(750,()=>pf.remove());
+          }
+          confetti(14); SFX.star(); }],
+        [500,()=>{ // 双数刻度依次闪
+          for(let i=2;i<=q.target;i+=2){
+            const m=ui.marks[i-1];
+            T.after((i/2-1)*220,()=>{ if(m){ m.classList.remove("hit"); void m.offsetWidth; m.classList.add("hit"); SFX.count(i); } });
+          } }],
+        [q.target/2*220+400,()=>{ ui.eq=eqBar(ui.L.top,[String(q.ans),"跳","×","2","=","□"]);
+          flyNum(ui.cloud,q.target,ui.eq); }]
+      ],{done:()=>{
+        Speech.say("跳了"+cnQ(q.ans)+"次，每次两层 —— 二四六八，一口气到"+cnS(q.target)+"！",{tag:"verify"});
+        afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(ui.cloud); });
+      }});
     }
-    askHowMany();
   }
-  function autoFix(){
-    markAssisted();
-    st.asking=true; ui.okBtn.disabled=true; ctx.answering(false);
-    ui.stones.forEach(o=>o.classList.remove("tapme"));
-    const step=()=>{
-      if(!ctx.alive()) return;
-      if(ui.len<q.target){ grow(true); T.after(520,step); return; }
-      if(ui.len>q.target){ shrinkTo(ui.len-1); T.after(440,step); return; }
-      Speech.say("好啦，正好搭到啦！",{tag:"g:monkey"});
-      afterSay(T,700,()=>{ if(ctx.alive()){ st.asking=false; askHowMany(); } });
+
+  /* ---------------- L3 蟠桃穿分身门（逐颗拖，1→2） ---------------- */
+  function buildPeach(L){
+    const mk=()=>({kind:"peach",p:rint(2,3)});
+    q=setQ(Object.assign(fresh(mk,o=>"pc"+o.p,box),{world:"monkey",act:"peach",phase:"play"}));
+    q.ans=q.p*2;
+    lvlTag(L.top,3,"蟠桃分身门");
+    verbBanner(L.top,"变！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    sideCast(L.top,"l",["wukong"],28);
+    // 分身门
+    const gate=el("div","",field); gate.dataset.gate2="1";
+    gate.style.cssText="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:15%;aspect-ratio:.62;z-index:6;"+
+      "border:6px solid #ffd75e;border-radius:99px 99px 12px 12px;"+
+      "background:linear-gradient(rgba(255,215,94,.25),rgba(180,124,232,.3));box-shadow:0 0 24px rgba(255,215,94,.6)";
+    ui.gate=gate;
+    // 枝上的桃（SVG 桃子）
+    const peachSVG='<svg viewBox="0 0 60 60" style="width:100%;height:100%"><circle cx="24" cy="34" r="19" fill="#ff9eb0"/><circle cx="37" cy="34" r="19" fill="#ff7f9d"/><path d="M30 16 Q33 6 42 6" stroke="#3f7d2e" stroke-width="4" fill="none"/><ellipse cx="42" cy="9" rx="7" ry="4" fill="#6fbf4a"/></svg>';
+    ui.peaches=[];
+    for(let i=0;i<q.p;i++){
+      const o=el("div","",field); o.dataset.peach="1";
+      o.style.cssText="position:absolute;left:"+(14+i*11)+"%;top:24%;transform:translate(-50%,-50%);width:9%;aspect-ratio:1;z-index:7";
+      o.innerHTML=peachSVG;
+      ui.peaches.push(o);
+      draggable(o,{
+        enabled:()=>(!busyState(st)&&q.phase==="play"&&!o.dataset.done),
+        zones:()=>[{el:gate}],
+        onDrop:(elm)=>{ through(elm); return true; },
+        onTap:()=>{ if(!busyState(st)&&q.phase==="play"&&!o.dataset.done) through(o); }
+      });
+    }
+    // 上下两条对齐槽
+    ui.rowT=el("div","",field); ui.rowB=el("div","",field);
+    ui.rowT.style.cssText="position:absolute;right:6%;top:26%;display:flex;gap:8px;z-index:6";
+    ui.rowB.style.cssText="position:absolute;right:6%;top:56%;display:flex;gap:8px;z-index:6";
+    ui.done=0;
+    function through(o){
+      o.dataset.done="1"; ui.done++;
+      // 桃飞进门
+      o.style.transition="left .4s,top .4s,opacity .35s";
+      o.style.left="50%"; o.style.top="44%";
+      SFX.whoosh();
+      const my=st;
+      T.after(420,()=>{
+        if(!ctx.alive()||st!==my) return;
+        o.style.opacity="0";
+        const pf=el("div","poof",ui.field); pf.style.left="50%"; pf.style.top="44%";
+        T.after(750,()=>pf.remove());
+        // 裂成两颗：上下槽各一
+        [ui.rowT,ui.rowB].forEach((row,j)=>{
+          const c=el("div","",row);
+          c.style.cssText="width:clamp(30px,5.6vmin,58px);aspect-ratio:1;position:relative";
+          c.innerHTML=peachSVG;
+          c.classList.add("pop");
+          const t2=el("b","",c);
+          t2.style.cssText="position:absolute;right:-18%;bottom:-8%;font-weight:900;color:#fff;font-size:clamp(13px,2.6vmin,24px);text-shadow:0 2px 0 rgba(0,0,0,.55)";
+          t2.textContent=String(ui.done*2-1+j);
+          SFX.count(ui.done*2-1+j);
+        });
+        Speech.count(cnS(ui.done*2),"child-count");
+        if(ui.done>=q.p){ q.phase="commit"; T.after(700,commit); }
+      });
+    }
+    ctx.ask("枝上有"+cnQ(q.p)+"颗蟠桃！把桃一颗一颗拖过分身门 —— 穿过去就变成两颗！",gate);
+    ctx.answering(true);
+    function commit(){
+      if(st.done) return;
+      st.done=true; record(ctx,st,true); ctx.answering(false);
+      SFX.right();
+      runReveal(ctx,[
+        [300,()=>{ // 两行对齐压弯枝头
+          confetti(12); SFX.star(); }],
+        [400,()=>{ ui.eq=eqBar(ui.L.top,[String(q.p),"×","2","=","□"]);
+          flyNum(ui.rowB,q.ans,ui.eq); }]
+      ],{done:()=>{
+        Speech.say(cnQ(q.p)+"颗桃穿过分身门，每颗变两颗 —— 一共"+cnQ(q.ans)+"颗！"+cnQ(q.p)+"的两倍就是"+cnQ(q.ans)+"！",{tag:"verify"});
+        afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(ui.gate); });
+      }});
+    }
+  }
+
+  /* ---------------- L4 龙宫三跃（走廊描弧：三跳凑 4/5，残影换排列） ---------------- */
+  function buildPalace(L){
+    const mk=()=>{
+      const sum=pick([4,5]);                        // 三跳总和 4 或 5（必含 1 和 2）
+      const start=pick([6,7]), target=start+sum;    // 跨十：金门在 10
+      return {kind:"palace",start,target,sum};
     };
-    T.after(600,step);
-  }
-  function askHowMany(){
-    st.asking=true; ui.okBtn.disabled=true;
-    ui.stones.forEach(o=>o.classList.remove("tapme"));
-    const isSkip=q.kind==="skip2";
-    const t=isSkip?"你按了几次'跳两格'？":(q.kind==="over10"?("从"+cnS(q.pre)+"到"+cnS(q.target)+"，你加了几格？"):"你一共加了几格？");
-    numAnswer(ctx,ui,st,fails,{
-      ans:q.ans,lo:1,hi:isSkip?6:8,askText:t+"点数字卡。",
-      rightSay:isSkip?("对啦！跳了"+cnQ(q.ans)+"次，两个两个数："+Array.from({length:q.jumps},(x,i)=>cnS((i+1)*2)).join("、")+"！")
-        :(q.kind==="over10"?("对啦！"+cnQ(q.pre)+"加"+cnQ(q.ans)+"，冲过十，到"+cnS(q.target)+"啦！")
-        :("对啦！从"+cnS(q.pre)+"接着数"+cnQ(q.ans)+"格，正好到"+cnS(q.target)+"！")),
-      revealSay:isSkip?("跳了"+cnQ(q.ans)+"次。"):("加了"+cnQ(q.ans)+"格："+cnQ(q.pre)+"加"+cnQ(q.ans)+"等于"+cnQ(q.target)+"。"),
-      retry:()=>{ build(true,q.kind); },
-      onRight:()=>{
-        if(q.kind==="over10"){
-          // 凑十法可视化：先跳到 10（蓝），再跳过去（金）—— 一跳在十号门口分成两截
-          Link.arc(ui.stones[q.pre-1],ui.stones[9],"#7fd4ff");
-          Link.arc(ui.stones[9],ui.stones[q.target-1],"#ffd75e");
-          if(ui.gate) ui.gate.classList.add("flash");
-        }else if(!isSkip&&q.target<=CELLS){
-          // 一道金色大弧把"新加的一段"整体圈出来：pre → target
-          Link.arc(q.pre>0?ui.stones[q.pre-1]:ui.anchor,ui.stones[q.target-1],"#ffd75e");
-        }
-        cross();
+    q=setQ(Object.assign(fresh(mk,o=>"pl"+o.start+","+o.sum,box),{world:"monkey",act:"palace",phase:"play"}));
+    q.ans=q.sum;
+    lvlTag(L.top,4,"龙宫三跃");
+    verbBanner(L.top,"跳！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    // 水下色
+    const sea=el("div","",field);
+    sea.style.cssText="position:absolute;inset:0;background:linear-gradient(rgba(10,40,90,.35),rgba(8,24,70,.5));z-index:1;pointer-events:none";
+    // 珊瑚数字台 6..12
+    ui.pads={};
+    for(let n=6;n<=12;n++){
+      const x=8+(n-6)*13.5, y=64-(n%2)*8;
+      const pad=el("div","",field); pad.dataset.pad=String(n);
+      pad.style.cssText="position:absolute;left:"+x+"%;top:"+y+"%;transform:translate(-50%,-50%);width:11%;aspect-ratio:1.25;z-index:5;"+
+        "border-radius:46% 46% 40% 40%/60% 60% 30% 30%;background:linear-gradient("+(n===10?"#ffd75e,#e8a94b":"#ff8fb3,#d76c92")+");"+
+        "box-shadow:0 6px 0 rgba(0,0,0,.3),0 10px 14px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center";
+      const t2=el("b","",pad);
+      t2.style.cssText="font-weight:900;color:#fff;font-size:clamp(18px,4vmin,40px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
+      t2.textContent=String(n);
+      ui.pads[n]=pad;
+    }
+    // 金门（10 号台上）
+    const gaten=el("div","tengate",field);
+    const p10=ui.pads[10];
+    gaten.style.left=p10.style.left; gaten.style.top=(parseFloat(p10.style.top)-13)+"%";
+    ui.gaten=gaten;
+    // 神针（终点台）
+    const pin=el("div","",field);
+    pin.style.cssText="position:absolute;left:"+ui.pads[q.target].style.left+";top:"+(parseFloat(ui.pads[q.target].style.top)-16)+"%;"+
+      "transform:translate(-50%,-50%);width:2.2%;height:16%;z-index:6;border-radius:4px;"+
+      "background:linear-gradient(#ffd75e,#e8a94b);box-shadow:0 0 14px #ffd75e";
+    // 悟空
+    const wk=el("div","",field); wk.dataset.wk="1";
+    wk.style.cssText="position:absolute;left:"+ui.pads[q.start].style.left+";top:"+(parseFloat(ui.pads[q.start].style.top)-12)+"%;"+
+      "transform:translate(-50%,-50%);width:10%;z-index:8;transition:left .45s cubic-bezier(.3,.9,.4,1),top .45s cubic-bezier(.3,.9,.4,1)";
+    img(A.ch("wukong"),"",wk).style.cssText="width:100%;height:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))";
+    ui.wk=wk; ui.at=q.start; ui.seq=[]; ui.peachN=3;
+    // 仙桃架
+    const rack=el("div","chip",field); rack.style.left="2%"; rack.style.right="auto"; rack.style.top="8%";
+    rack.textContent="仙桃 "; ui.peachLab=el("b","",rack); ui.peachLab.textContent="●●●";
+    // 跳 1 / 跳 2 按钮（●/●● 图形）
+    const mkJump=(span,label)=>{
+      const b2=el("button","bigbtn",L.bot); b2.dataset.jump=String(span);
+      const s2=el("span","",b2); s2.textContent=label;
+      b2.style.minWidth="112px";
+      onTap(b2,()=>jump(span));
+      return b2;
+    };
+    ui.j1=mkJump(1,"● 跳1"); ui.j2=mkJump(2,"●● 跳2");
+    function jump(span){
+      if(busyState(st)||q.phase!=="play"||ui.peachN<=0) return;
+      if(ui.at+span>12) return;
+      const from=ui.pads[ui.at];
+      ui.at+=span; ui.seq.push(span); ui.peachN--; q.draft=ui.seq.join("+");
+      ui.peachLab.textContent="●".repeat(ui.peachN)||"—";
+      const to=ui.pads[ui.at];
+      wk.style.left=to.style.left; wk.style.top=(parseFloat(to.style.top)-12)+"%";
+      Link.arc(from,to,span===2?"#ffd75e":"rgba(255,255,255,.85)");
+      if(ui.at>=10&&!ui.gateHit&&ui.at-span<10){ ui.gateHit=1; ui.gaten.classList.add("flash"); SFX.star(); }
+      SFX.count(ui.at); numPop(to,ui.at);
+      Speech.count(cnS(ui.at),"child-count");
+      if(ui.peachN===0){ q.phase="judge"; T.after(650,judge); }
+    }
+    ctx.ask("龙宫寻宝！悟空只有三颗仙桃 = 只能跳三次。用「跳1」和「跳2」，正好落到"+cnS(q.target)+"号台拔神针！",field);
+    ctx.answering(true);
+    function judge(){
+      const ok=(ui.at===q.target); record(ctx,st,ok);
+      if(!ok){
+        st.wrongs++; fails.n++;
+        SFX.soft();
+        const diff=q.target-ui.at;
+        Speech.say(ui.seq.join("加")+"是"+cnQ(ui.seq.reduce((a2,b2)=>a2+b2,0))+"，"+(diff>0?("还差"+cnQ(diff)+"格！"):"跳过头啦！")+"再来！",{tag:"remedy",interrupt:true});
+        afterSay(T,600,()=>{
+          if(!ctx.alive()) return;
+          if(st.wrongs>=2||fails.n>=2){ autoSolve(); return; }
+          // 复位（弧链留虚影：不清 Link）
+          ui.at=q.start; ui.seq=[]; ui.peachN=3;
+          ui.peachLab.textContent="●●●";
+          wk.style.left=ui.pads[q.start].style.left; wk.style.top=(parseFloat(ui.pads[q.start].style.top)-12)+"%";
+          ui.gateHit=0; ui.gaten.classList.remove("flash");
+          q.phase="play";
+        });
+        return;
       }
-    });
+      st.done=true; q.phase="commit"; ctx.answering(false);
+      ui.j1.disabled=ui.j2.disabled=true;
+      Speech.say("正好落在"+cnS(q.target)+"号！",{tag:"right",interrupt:true});
+      // 残影：另一种合法排列
+      const perms=[];
+      const arr=ui.seq.slice();
+      const uniq=new Set();
+      const permute=(a2,cur)=>{ if(!a2.length){ const k=cur.join(","); if(!uniq.has(k)){ uniq.add(k); perms.push(cur.slice()); } return; }
+        for(let i=0;i<a2.length;i++){ const rest=a2.slice(); const v=rest.splice(i,1)[0]; cur.push(v); permute(rest,cur); cur.pop(); } };
+      permute(arr,[]);
+      const other=perms.find(p2=>p2.join(",")!==ui.seq.join(","))||ui.seq;
+      runReveal(ctx,[
+        [400,()=>{ // 金色残影重跳
+          const ghost=el("div","",ui.field);
+          ghost.style.cssText=ui.wk.style.cssText+";opacity:.55;filter:sepia(1) saturate(3) hue-rotate(-18deg) drop-shadow(0 0 10px #ffd75e);z-index:7;transition:left .22s,top .22s";
+          img(A.ch("wukong"),"",ghost).style.cssText="width:100%;height:auto";
+          ghost.style.left=ui.pads[q.start].style.left; ghost.style.top=(parseFloat(ui.pads[q.start].style.top)-12)+"%";
+          ui.ghost=ghost;
+          let at=q.start;
+          other.forEach((span,i)=>{
+            T.after(300+i*260,()=>{ if(!ctx.alive()) return;
+              const from=ui.pads[at]; at+=span; const to=ui.pads[at];
+              ghost.style.left=to.style.left; ghost.style.top=(parseFloat(to.style.top)-12)+"%";
+              Link.arc(from,to,"#7fd4ff"); SFX.tap(); });
+          });
+        }],
+        [400+other.length*260+300,()=>{ // 三弧压成金箍棒
+          confetti(16); SFX.star();
+          const bar=el("div","",ui.field);
+          bar.style.cssText="position:absolute;left:50%;top:26%;transform:translateX(-50%);z-index:9;"+
+            "background:linear-gradient(#ffd75e,#e8a94b);border-radius:99px;height:clamp(10px,2vmin,20px);width:34%;"+
+            "box-shadow:0 0 16px #ffd75e";
+          const t2=el("b","",bar);
+          t2.style.cssText="position:absolute;left:50%;top:-140%;transform:translateX(-50%);font-weight:900;color:#fff;"+
+            "font-size:clamp(16px,3.4vmin,34px);text-shadow:0 2px 0 rgba(0,0,0,.5);white-space:nowrap";
+          t2.textContent=ui.seq.join("+")+" = "+other.join("+")+" = "+q.sum;
+        }],
+        [600,()=>{ ui.eq=eqBar(ui.L.top,[String(q.start),"+","□","=",String(q.target)]);
+          flyNum(ui.pads[q.target],q.sum,ui.eq); }]
+      ],{done:()=>{
+        Speech.say("你跳"+ui.seq.join("、")+"，残影跳"+other.join("、")+" —— 顺序不一样，落点一样！都是加"+cnQ(q.sum)+"！",{tag:"verify"});
+        afterSay(T,1100,()=>{ if(ctx.alive()) ctx.win(ui.pads[q.target]); });
+      }});
+    }
+    function autoSolve(){
+      st.locked=true; const my=st;
+      ui.at=q.start; ui.seq=[]; ui.peachN=3; ui.peachLab.textContent="●●●";
+      wk.style.left=ui.pads[q.start].style.left; wk.style.top=(parseFloat(ui.pads[q.start].style.top)-12)+"%";
+      Link.clear();
+      const plan=q.sum===5?[2,2,1]:[1,1,2];
+      let i=0;
+      const step=()=>{
+        if(!ctx.alive()||st!==my) return;
+        if(i>=plan.length){ st.locked=false; q.phase="judge"; judge(); return; }
+        st.locked=false; jump(plan[i]); st.locked=true;
+        i++; T.after(700,step);
+      };
+      Speech.say("看悟空怎么跳：",{tag:"reveal",interrupt:true});
+      afterSay(T,300,step);
+    }
   }
-  function cross(){
-    ui.stones.forEach(o=>o.classList.remove("tapme"));
-    confetti(16);
-    const kids=[].slice.call(ui.far.children);
-    kids.forEach((im,i)=>{
-      im.style.transition="transform 1s cubic-bezier(.4,0,.5,1)";
-      setTimeout(()=>{ im.style.transform="translateX(-"+(30+i*8)+"vw)"; },i*220);
-    });
-    Speech.say("师父他们过河啦！谢谢你！",{tag:"win"});
-    afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(ui.staff); });
-  }
+
   return {
     start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
     repeat:()=>{ if(!q) return "";
-      if(q.kind==="reach") return "接着点石墩，搭到亮着的"+cnS(q.target)+"号。";
-      if(q.kind==="skip2") return "按'跳两格'跳到"+cnS(q.target)+"号石墩。";
-      if(q.kind==="double") return cnQ(q.pre)+"格的两倍是几格？";
-      return "接着点，冲过十号，到"+cnS(q.target)+"号。"; },
+      if(q.kind==="bridge") return "点下一个石墩，搭到"+cnS(q.target)+"号！";
+      if(q.kind==="cloud") return "向上滑翻筋斗，升到"+cnS(q.target)+"层！";
+      if(q.kind==="peach") return "把蟠桃拖过分身门，一颗变两颗！";
+      return "三颗仙桃跳三次，正好到"+cnS(q.target)+"号台！"; },
     destroy:()=>{ Link.clear(); ui=null; q=null; st=null; }
   };
 };
