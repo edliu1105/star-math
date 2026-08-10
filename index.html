@@ -701,7 +701,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "6.1.0";
+const VERSION = "6.2.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -2798,252 +2798,471 @@ GAMES.paw=ctx=>{
 };
 
 /* ============================================================================
-   世界三 · Bluey 的后院 —— 公平俱乐部：求差 → 补齐 → 单双数 → 平分
+   世界三 · Bluey（v6）—— 四个独立小游戏：
+   L1 影子怪兽比高（三次点） L2 后院跷跷板（拖配平） L3 月光舞会（相邻滑配对） L4 镜像餐盘披萨（换边拖+走廊切）
    ============================================================================ */
 GAMES.bluey=ctx=>{
   const T=ctx.T; let st=null,q=null,ui=null; const box={last:null},fails={n:0};
 
-  function spec(){
-    const lv=ctx.level();
-    if(lv===1){ const a=rint(4,9); let b=a; while(b===a) b=clamp(a+pick([-3,-2,-1,1,2,3]),2,9);
-                return {kind:"diff",a,b,ans:Math.abs(a-b)}; }
-    if(lv===2){ const a=rint(5,9),b=a-rint(1,3); return {kind:"make",a,b,ans:a-b}; }
-    if(lv===3){ const n=rint(4,11); return {kind:"odd",n,ans:n%2===0?1:0}; }
-    const n=pick([6,8,10,12]); return {kind:"share",n,ans:n/2};
-  }
-  function rows(L,a,b,item){
-    const rowA=mkField(L.top,{l:15,r:4,t:20,b:52});
-    const rowB=mkField(L.top,{l:15,r:4,t:54,b:24});   // 底部让位给跷跷板
-    const most=Math.max(a,b);
-    fitObj(rowA,most,"row"); fitObj(rowB,most,"row");
-    faceAt(L.top,"bluey",22,30); faceAt(L.top,"bingo",58,30);
-    ui.A=place(rowA,a,item,rowFixed(a,most));
-    ui.B=place(rowB,b,item,rowFixed(b,most));
-    ui.rowA=rowA; ui.rowB=rowB;
-  }
   function build(retry){
-    st=bindState(newState(retry)); q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.a||o.n)+","+(o.b||0),box),{world:"bluey"}));
+    st=bindState(newState(retry));
+    const lv=ctx.level();
     const L=layout(ctx.root); ui={L};
-    const item=pick([A.pr("cookie"),A.pr("icecream")]); ui.item=item;
-    if(q.kind==="diff") buildDiff(L,item);
-    else if(q.kind==="make") buildMake(L,item);
-    else if(q.kind==="odd") buildOdd(L,item);
-    else buildShare(L,item);
+    if(lv===1) buildShadow(L);
+    else if(lv===2) buildSeesaw(L);
+    else if(lv===3) buildDance(L);
+    else buildPizza(L);
   }
-  /* L1 求差：跷跷板对决 —— 多的一边把板压下去 */
-  function buildDiff(L,item){
-    q.act="card";
-    lvlTag(L.top,1,"跷跷板对决");
-    rows(L,q.a,q.b,item);
-    ui.ss=seesaw(L.top,10);
-    ui.ss.set(0,0);
-    T.after(700,()=>{ if(ctx.alive()) ui.ss.set(q.a,q.b); });   // 稍等再倾斜，孩子看得见"压下去"
-    SFX.whoosh();
-    const moreName=q.a>q.b?"Bluey":"Bingo";
-    ctx.ask("上面一排是 Bluey 的，下面一排是 Bingo 的。看跷跷板！多的一边沉下去了 —— "+moreName+"多几个呢？",ui.rowA);
-    const my=st;
-    afterSay(T,1200,()=>{
-      if(!ctx.alive()||st!==my) return;
-      numAnswer(ctx,ui,st,fails,{
-        ans:q.ans,lo:1,hi:6,askText:moreName+"多几个？点数字卡。",
-        rightSay:"对啦！"+moreName+"多"+cnQ(q.ans)+"个！",
-        revealSay:moreName+"多"+cnQ(q.ans)+"个。",
-        retry:()=>build(true),
-        onRight:card=>{
-          // 一一配对演示，多出来的闪一闪
-          const n=Math.min(q.a,q.b); Link.clear();
-          let i=0; const step=()=>{
-            if(!ctx.alive()) return;
-            if(i>=n){
-              const extra=(q.a>q.b?ui.A.slice(n):ui.B.slice(n));
-              extra.forEach(x=>x.classList.add("tapme"));
-              Speech.say("配对以后，多出来的就是这"+cnQ(q.ans)+"个 —— 就是它们把跷跷板压下去的！",{tag:"verify"});
-              afterSay(T,1000,()=>{ if(ctx.alive()){ Link.clear(); ctx.win(card); } });
-              return;
-            }
-            Link.line(ui.A[i],ui.B[i],"#fff"); SFX.tap(); i++; T.after(280,step);
-          }; step();
-        }
+
+  /* ---------------- L1 影子怪兽比高（三次有意义点按） ---------------- */
+  function buildShadow(L){
+    const mk=()=>{ const a=rint(4,8); let b=a; while(b===a) b=clamp(a+pick([-3,-2,-1,1,2,3]),3,9); return {kind:"shadow",a,b}; };
+    q=setQ(Object.assign(fresh(mk,o=>"sh"+o.a+","+o.b,box),{world:"bluey",act:"shadow",phase:"lampA"}));
+    q.ans=q.a>q.b?"a":"b"; q.diff=Math.abs(q.a-q.b);
+    lvlTag(L.top,1,"影子怪兽比高");
+    verbBanner(L.top,"比！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    // 夜幕
+    const night=el("div","",field);
+    night.style.cssText="position:absolute;inset:0;background:rgba(18,10,54,.45);z-index:1;pointer-events:none";
+    // 墙（影子幕布）
+    const wall=el("div","",field);
+    wall.style.cssText="position:absolute;left:22%;right:22%;top:6%;bottom:26%;border-radius:14px;z-index:2;"+
+      "background:linear-gradient(#fdf6e3,#efe3c0);box-shadow:0 8px 18px rgba(0,0,0,.45)";
+    // 两条影子列（格子塔）
+    const mkCol=(x,color)=>{
+      const col=el("div","",field);
+      col.style.cssText="position:absolute;left:"+x+"%;bottom:27%;width:12%;display:flex;flex-direction:column-reverse;gap:3px;z-index:3";
+      return col;
+    };
+    ui.colA=mkCol(30); ui.colB=mkCol(58);
+    faceAt(L.top,"bluey",64,20); faceAt(L.top,"bingo",64,20,true);
+    // 两盏投影灯
+    const mkLamp=(x,who,color)=>{
+      const lp=el("button","",field); lp.dataset.lamp=who;
+      lp.style.cssText="position:absolute;left:"+x+"%;bottom:6%;width:13%;aspect-ratio:1.1;z-index:6;background:none;border:none";
+      lp.innerHTML='<svg viewBox="0 0 90 80" style="width:100%;height:100%">'+
+        '<path d="M20 30 L64 14 L64 46 Z" fill="'+color+'" stroke="rgba(0,0,0,.3)" stroke-width="3"/>'+
+        '<circle cx="18" cy="30" r="13" fill="'+color+'" stroke="rgba(0,0,0,.3)" stroke-width="3"/>'+
+        '<rect x="60" y="52" width="10" height="22" rx="4" fill="#5b4a35"/></svg>';
+      const tag=el("div","",lp);
+      tag.style.cssText="position:absolute;left:50%;bottom:-16%;transform:translateX(-50%);font-weight:900;color:#fff;font-size:clamp(12px,2.2vmin,20px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
+      tag.textContent=who==="a"?"Bluey 的灯":"Bingo 的灯";
+      return lp;
+    };
+    ui.lampA=mkLamp(26,"a","#3fa9f5"); ui.lampB=mkLamp(54,"b","#ff8a3d");
+    ui.grown={a:0,b:0};
+    const growCol=(who,n,done)=>{
+      const col=who==="a"?ui.colA:ui.colB;
+      const color=who==="a"?"#27437c":"#8a4a1d";
+      let i=0; const my=st;
+      const step=()=>{
+        if(!ctx.alive()||st!==my) return;
+        if(i>=n){ if(done) done(); return; }
+        i++;
+        const cell=el("div","",col);
+        cell.style.cssText="width:100%;height:clamp(14px,3vmin,30px);border-radius:6px;background:"+color+";"+
+          "box-shadow:0 2px 4px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;"+
+          "color:rgba(255,255,255,.85);font-weight:900;font-size:clamp(11px,2vmin,18px)";
+        cell.textContent=String(i);
+        cell.classList.add("pop");
+        SFX.count(i); Speech.count(cnS(i),"auto-count");
+        T.after(330,step);
+      };
+      step();
+    };
+    onTap(ui.lampA,()=>{
+      if(busyState(st)||q.phase!=="lampA") return;
+      q.phase="growA"; ui.lampA.style.opacity=".45";
+      SFX.whoosh();
+      growCol("a",q.a,()=>{ q.phase="lampB";
+        Speech.say("Bluey 的影子"+cnQ(q.a)+"格！点 Bingo 的灯！",{tag:"instruct"}); });
+    });
+    onTap(ui.lampB,()=>{
+      if(busyState(st)||q.phase!=="lampB") return;
+      q.phase="growB"; ui.lampB.style.opacity=".45";
+      SFX.whoosh();
+      growCol("b",q.b,()=>{ q.phase="judge";
+        Speech.say("谁的影子高？点一点更高的那条影子！",{tag:"instruct"});
+        ui.colA.style.cursor=ui.colB.style.cursor="pointer";
+        onTap(ui.colA,()=>judge("a")); onTap(ui.colB,()=>judge("b"));
       });
     });
-  }
-  /* L2 补到平衡：每加一个，跷跷板就回正一点 */
-  function buildMake(L,item){
-    q.act="basket";
-    lvlTag(L.top,2,"补到平衡");
-    rows(L,q.a,q.b,item);
-    ui.ss=seesaw(L.top,10); ui.ss.set(q.a,q.b);
-    const basket=el("button","",L.bot);
-    basket.dataset.basket="1";
-    basket.style.cssText="width:clamp(64px,11vmin,120px);height:clamp(64px,11vmin,120px);position:relative";
-    img(A.pr("basket"),"",basket).style.cssText="width:100%;height:100%;object-fit:contain";
-    let added=0;
-    onTap(basket,()=>{
-      if(busyState(st)||q.b+added>=9) return;
-      added++;
-      const o=el("div","cobj pop",ui.rowB);
-      img(ui.item,"",o); el("div","tag",o);
-      ui.B.push(o); relayout(); ui.ss.set(q.a,ui.B.length);   // 板子一点点回正
-      SFX.count(q.b+added); Speech.count(cnS(q.b+added),"child-count");
-      okBtn.disabled=false;
-    });
-    function relayout(){
-      const pos=rowFixed(ui.B.length,Math.max(q.a,ui.B.length));
-      const pa=rowFixed(q.a,Math.max(q.a,ui.B.length));
-      ui.B.forEach((o,i)=>{ o.style.left=pos[i][0]+"%"; o.style.top="50%"; });
-      ui.A.forEach((o,i)=>{ o.style.left=pa[i][0]+"%"; });
-    }
-    const okBtn=bigBtn(L.bot,"公平了！","green",()=>{
-      if(st.done) return;
-      const ok=(ui.B.length===q.a); record(ctx,st,ok);
+    ctx.ask("影子比高大赛！先点 Bluey 的灯，让她的影子长出来！",ui.lampA);
+    ctx.answering(true);
+    function judge(pick2){
+      if(st.done||q.phase!=="judge") return;
+      const ok=(pick2===q.ans); record(ctx,st,ok);
       if(ok){
-        st.done=true; okBtn.disabled=true; ctx.answering(false);
-        confetti(14);                                   // 跷跷板放平的一刻
-        Speech.say("看！跷跷板放平啦 —— 两边都是"+cnQ(q.a)+"个，你加了"+cnQ(q.ans)+"个！",{tag:"right",interrupt:true});
-        SFX.right();
-        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(basket); });
+        st.done=true; q.phase="commit"; ctx.answering(false);
+        const tallCol=q.ans==="a"?ui.colA:ui.colB, shortCol=q.ans==="a"?ui.colB:ui.colA;
+        const tallN=Math.max(q.a,q.b), shortN=Math.min(q.a,q.b);
+        Speech.say("对！"+(q.ans==="a"?"Bluey":"Bingo")+"的影子高！",{tag:"right",interrupt:true});
+        runReveal(ctx,[
+          [400,()=>{ tallCol.classList.add("hit"); SFX.right(); }],
+          [400,()=>{ // 矮影子头顶补差值虚格
+            for(let i=0;i<q.diff;i++){
+              const g=el("div","",shortCol);
+              g.style.cssText="width:100%;height:clamp(14px,3vmin,30px);border-radius:6px;border:3px dashed rgba(255,255,255,.85);background:rgba(255,215,94,.2)";
+              g.classList.add("pop");
+            }
+            SFX.tap(); }],
+          [500,()=>{ ui.eq=eqBar(ui.L.top,["高","□","格"]);
+            flyNum(shortCol,q.diff,ui.eq); }]
+        ],{done:()=>{
+          Speech.say(cnQ(tallN)+"比"+cnQ(shortN)+"高"+cnQ(q.diff)+"格 —— 补上"+cnQ(q.diff)+"格就一样高！",{tag:"verify"});
+          afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.field); });
+        }});
       }else{
-        st.wrongs++; fails.n++; SFX.soft(); ui.rowB.classList.add("shake");
-        T.after(500,()=>ui.rowB.classList.remove("shake"));
+        st.wrongs++; fails.n++; SFX.soft();
+        const wrongCol=pick2==="a"?ui.colA:ui.colB;
+        wrongCol.classList.add("shake"); T.after(500,()=>wrongCol.classList.remove("shake"));
+        Speech.say("再看看 —— 哪条影子的格子更多？",{tag:"remedy",interrupt:true});
         if(st.wrongs>=2||fails.n>=2){
-          st.done=true; st.locked=true; const my=st;
-          const step=()=>{
-            if(!ctx.alive()||st!==my) return;
-            if(ui.B.length<q.a){ const o=el("div","cobj pop",ui.rowB); img(ui.item,"",o); el("div","tag",o); ui.B.push(o); relayout(); ui.ss.set(q.a,ui.B.length); SFX.count(ui.B.length); Speech.count(cnS(ui.B.length),"auto-count"); T.after(600,step); return; }
-            Speech.say("现在两边都是"+cnQ(q.a)+"个，公平啦！",{tag:"reveal"});
-            afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(basket); });
-          };
-          T.after(500,step);
-          return;
+          st.done=true;
+          const tallCol=q.ans==="a"?ui.colA:ui.colB;
+          tallCol.classList.add("tapme");
+          Speech.say("这条更高，有"+cnQ(Math.max(q.a,q.b))+"格。",{tag:"reveal"});
+          afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(ui.field); });
         }
-        Speech.say("还不一样多哦，比一比，Bingo 还差几个？",{tag:"remedy",interrupt:true});
       }
-    });
-    okBtn.disabled=true;
-    ui.eq=eqBar(L.top,[String(q.b),"+","□","=",String(q.a)]);
-    ctx.ask("Bluey 有"+cnQ(q.a)+"个，Bingo 只有"+cnQ(q.b)+"个。点篮子给 Bingo 加，加到一样多，好了按绿色按钮！",basket);
-    ctx.answering(true);
-  }
-  /* L3 单双数配对舞会：两个两个手拉手，单出来的站聚光灯 */
-  function buildOdd(L,item){
-    q.act="card";
-    lvlTag(L.top,3,"配对舞会");
-    const field=mkField(L.top,{l:15,r:4,t:16,b:36}); ui.field=field;
-    fitObj(field,q.n,"scatter");
-    ui.items=place(field,q.n,item,scatter(q.n));
-    faceAt(L.top,"bluey",20,28); faceAt(L.top,"bingo",56,28,true);
-    ctx.ask("舞会开始！"+cnQ(q.n)+"块好吃的要两个两个手拉手。分给 Bluey 和 Bingo 两个人 —— 能不能正好分完？",field);
-    ctx.answering(true);
-    const wrap=el("div","cards",L.bot);
-    const mk=(key,label)=>{
-      const c=el("div","card",wrap); c.dataset.n=key;
-      const t=el("div","num",c); t.textContent=label; t.style.fontSize="clamp(17px,3.6vmin,34px)";
-      onTap(c,()=>{ if(c.dataset.off) return; pickOdd(key,c,wrap); });
-      return c;
-    };
-    mk(1,"能！正好分完"); mk(0,"不能，多一块");
-    ui.wrap=wrap;
-  }
-  function pickOdd(v,card,wrap){
-    if(st.done) return;
-    Speech.cut();                       // 孩子已作答，别再念题
-    const ok=(v===q.ans); record(ctx,st,ok);
-    lockCards(wrap);
-    if(ok){ st.done=true; card.classList.add("right"); ctx.answering(false); SFX.right(); }
-    else{
-      st.wrongs++; fails.n++; SFX.soft(); card.classList.add("wrong"); ctx.answering(false);
-      [].forEach.call(wrap.children,x=>{ if(+x.dataset.n===q.ans) x.classList.add("right"); });
-      st.done=true;
     }
-    // 无论对错都跳"配对舞"：两个两个牵手站好，单出来的站进聚光灯 —— 单双数看得见
-    st.locked=true; const my=st;
-    const pairs=Math.floor(q.n/2);
-    let i=0; Link.clear();
-    const colW=70/Math.max(pairs,1);
-    ui.items.forEach((o,idx)=>{
-      o.style.transition="left .55s cubic-bezier(.3,1.2,.5,1),top .55s cubic-bezier(.3,1.2,.5,1)";
-      if(idx<pairs*2){ o.style.left=(11+Math.floor(idx/2)*colW)+"%"; o.style.top=(idx%2===0?"36%":"64%"); }
-      else { o.style.left="88%"; o.style.top="50%"; }              // 单出来的到台前
-    });
-    const step=()=>{
-      if(!ctx.alive()||st!==my) return;
-      if(i>=pairs){
-        if(q.n%2===1){
-          const last=ui.items[q.n-1];
-          last.classList.add("tapme");
-          ui.spot=spotAt(ui.field,88,50);                           // 聚光灯打在单出来的那块上
-          Speech.say(cnQ(q.n)+"是单数！两个两个牵手，最后总有一块没朋友，不能公平分。",{tag:"verify"});
-        }else{
-          confetti(12);
-          Speech.say(cnQ(q.n)+"是双数！两个两个牵手，正好全部配上，公平！",{tag:"verify"});
-        }
-        afterSay(T,1200,()=>{ if(ctx.alive()&&st===my){ Link.clear();
-          if(ok) ctx.win(card); else build(true); } });
+  }
+
+  /* ---------------- L2 后院跷跷板（拖配平） ---------------- */
+  function buildSeesaw(L){
+    const mk=()=>{ const a=rint(5,9),b=a-rint(1,3); return {kind:"balance",a,b}; };
+    q=setQ(Object.assign(fresh(mk,o=>"bl"+o.a+","+o.b,box),{world:"bluey",act:"balance",phase:"play"}));
+    q.ans=q.a-q.b;
+    lvlTag(L.top,2,"后院跷跷板");
+    verbBanner(L.top,"配平！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    faceAt(L.top,"bluey",12,24); faceAt(L.top,"bingo",12,24,true);
+    ui.ss=seesaw(L.top,10); ui.ss.set(q.a,q.b);
+    ui.ss.el.style.bottom="10%";
+    // 地上饼干堆（可拖）
+    ui.added=0; ui.ground=[];
+    const gold=[];
+    for(let i=0;i<5;i++){
+      const o=el("div","cobj",field);
+      o.style.left=(30+i*9)+"%"; o.style.top="30%"; o.style.width="8%";
+      img(A.pr("cookie"),"",o); el("div","tag",o);
+      ui.ground.push(o);
+      draggable(o,{
+        enabled:()=>(!busyState(st)&&q.phase==="play"&&!o.dataset.on),
+        zones:()=>[{el:ui.ss.el}],
+        onDrop:(elm)=>{ put(elm); return true; },
+        onTap:()=>{ if(!busyState(st)&&q.phase==="play"&&!o.dataset.on) put(o); }
+      });
+    }
+    function put(o){
+      o.dataset.on="1"; ui.added++; q.draft=ui.added;
+      // 金徽章：配平所加的块
+      o.style.transition="left .4s,top .4s,transform .4s";
+      o.style.left=(66+ui.added*3)+"%"; o.style.top="72%";
+      o.style.transform="translate(-50%,-50%) scale(.6)"; o.style.filter="drop-shadow(0 0 8px #ffd75e)";
+      setTag(o.querySelector(".tag"),ui.added);
+      ui.ss.set(q.a,q.b+ui.added);
+      SFX.count(q.b+ui.added); Speech.count(cnS(q.b+ui.added),"child-count");
+      if(q.b+ui.added===q.a){ q.phase="commit"; T.after(700,commit); }
+      else if(q.b+ui.added>q.a){
+        // 加过头：跳回
+        T.after(500,()=>{
+          o.dataset.on=""; ui.added--;
+          o.style.left=(30+rnd(5)*9)+"%"; o.style.top="30%"; o.style.transform=""; o.style.filter="";
+          o.querySelector(".tag").textContent="";
+          ui.ss.set(q.a,q.b+ui.added);
+          SFX.soft();
+          Speech.say("太多啦，跳回来一块！",{tag:"remedy",interrupt:true});
+        });
+      }
+    }
+    ctx.ask("Bluey 这边"+cnQ(q.a)+"块，Bingo 只有"+cnQ(q.b)+"块，板子歪啦！拖饼干给 Bingo，把板子放平！",ui.ss.el);
+    ctx.answering(true);
+    function commit(){
+      if(st.done) return;
+      st.done=true; record(ctx,st,true); ctx.answering(false);
+      confetti(14); SFX.right();
+      Speech.say("当 —— 平啦！",{tag:"right",interrupt:true});
+      runReveal(ctx,[
+        [400,()=>{ SFX.star(); }],
+        [400,()=>{ ui.eq=eqBar(ui.L.top,[String(q.b),"+","□","=",String(q.a)]);
+          flyNum(ui.ss.el,q.ans,ui.eq); }]
+      ],{done:()=>{
+        Speech.say("你加了"+cnQ(q.ans)+"块才放平 —— Bluey 就是多"+cnQ(q.ans)+"块！",{tag:"verify"});
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.field); });
+      }});
+    }
+  }
+
+  /* ---------------- L3 月光舞会（相邻滑配对，单数独舞） ---------------- */
+  function buildDance(L){
+    const mk=()=>({kind:"dance",n:rint(5,9)});
+    q=setQ(Object.assign(fresh(mk,o=>"dc"+o.n,box),{world:"bluey",act:"dance",phase:"pair"}));
+    q.ans=q.n%2===0?1:0;   // 1=双数能分完
+    lvlTag(L.top,3,"月光舞会");
+    verbBanner(L.top,"配对！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    const night=el("div","",field);
+    night.style.cssText="position:absolute;inset:0;background:linear-gradient(rgba(24,12,64,.55),rgba(24,12,64,.25));z-index:1;pointer-events:none";
+    // 舞池
+    const floor=el("div","",field);
+    floor.style.cssText="position:absolute;left:18%;right:18%;top:10%;height:34%;border-radius:16px;z-index:2;"+
+      "background:repeating-conic-gradient(rgba(255,255,255,.14) 0 25%,rgba(255,255,255,.05) 0 50%) 50%/24% 24%;"+
+      "box-shadow:0 0 0 4px rgba(255,215,94,.5),0 8px 20px rgba(0,0,0,.4)";
+    ui.floor=floor;
+    faceAt(L.top,"bluey",10,22); faceAt(L.top,"bingo",10,22,true);
+    // 排队的点心
+    ui.items=[]; ui.paired=0;
+    const item=pick([A.pr("cookie"),A.pr("icecream")]);
+    for(let i=0;i<q.n;i++){
+      const o=el("div","cobj",field); o.dataset.idx=String(i);
+      o.style.left=(10+i*(80/Math.max(q.n-1,1)))+"%"; o.style.top="72%"; o.style.width="9%";
+      img(item,"",o); el("div","tag",o);
+      ui.items.push(o);
+    }
+    // 相邻滑配对：按下 A，滑到相邻 B 抬起
+    let selFrom=null;
+    field.style.touchAction="none";
+    field.addEventListener("pointerdown",e=>{
+      if(busyState(st)||q.phase!=="pair") return;
+      const t=e.target.closest(".cobj");
+      if(t&&!t.dataset.paired){ selFrom=t; t.classList.add("counted"); SFX.gesture(); Audio2.kick(); }
+    },{passive:true});
+    field.addEventListener("pointerup",e=>{
+      if(!selFrom||q.phase!=="pair"){ selFrom=null; return; }
+      const from=selFrom; selFrom=null; from.classList.remove("counted");
+      const t=document.elementFromPoint(e.clientX,e.clientY);
+      const to=t&&t.closest?t.closest(".cobj"):null;
+      if(!to||to===from||to.dataset.paired) { if(to===from) tapSingle(from); return; }
+      const i1=+from.dataset.idx, i2=+to.dataset.idx;
+      // 相邻判定：中间没有未配对的
+      const lo=Math.min(i1,i2),hi=Math.max(i1,i2);
+      const between=ui.items.filter(o=>+o.dataset.idx>lo&&+o.dataset.idx<hi&&!o.dataset.paired);
+      if(between.length){ SFX.soft(); return; }
+      pairUp(from,to);
+    },{passive:true});
+    function tapSingle(o){
+      // 点按兜底：单点=与最近的未配对邻居配对
+      const i=+o.dataset.idx;
+      const cand=ui.items.filter(x=>!x.dataset.paired&&x!==o)
+        .sort((a2,b2)=>Math.abs(+a2.dataset.idx-i)-Math.abs(+b2.dataset.idx-i))[0];
+      if(cand){
+        const lo=Math.min(+cand.dataset.idx,i),hi=Math.max(+cand.dataset.idx,i);
+        const between=ui.items.filter(x=>+x.dataset.idx>lo&&+x.dataset.idx<hi&&!x.dataset.paired);
+        if(!between.length) pairUp(o,cand);
+      }
+    }
+    function pairUp(a2,b2){
+      a2.dataset.paired=b2.dataset.paired="1";
+      ui.paired++; q.draft=ui.paired;
+      const px=22+((ui.paired-1)%3)*22, py=ui.paired<=3?20:34;
+      [a2,b2].forEach((o,j)=>{
+        o.style.transition="left .55s cubic-bezier(.3,1.1,.5,1),top .55s cubic-bezier(.3,1.1,.5,1)";
+        o.style.left=(px+j*7)+"%"; o.style.top=py+"%";
+        o.classList.add("hit");
+      });
+      Link.line(a2,b2,"#ffd75e");
+      T.after(600,()=>Link.clear());
+      setTag(a2.querySelector(".tag"),ui.paired);
+      SFX.count(ui.paired); Speech.count("第"+cnS(ui.paired)+"对","child-count");
+      const rest=ui.items.filter(o=>!o.dataset.paired);
+      if(rest.length===1){
+        // 单数：最后一个独舞
+        q.phase="solo";
+        const solo=rest[0];
+        T.after(700,()=>{
+          solo.style.transition="left .6s,top .6s";
+          solo.style.left="50%"; solo.style.top="52%";
+          ui.spot=spotAt(ui.field,50,52);
+          SFX.whoosh();
+          T.after(800,()=>askOdd());
+        });
+      }else if(rest.length===0){
+        q.phase="full";
+        T.after(700,()=>askOdd());
+      }
+    }
+    ctx.ask("月光舞会！从一个点心滑到旁边的点心，让它们手拉手成一对！",field);
+    ctx.answering(true);
+    function askOdd(){
+      ctx.answering(true);
+      Speech.say(cnQ(q.n)+"块点心 —— 是双数还是单数？",{tag:"instruct"});
+      const wrap=el("div","cards",ui.L.bot);
+      const mk2=(key,label)=>{
+        const c=el("div","card",wrap); c.dataset.n=key;
+        const t=el("div","num",c); t.textContent=label; t.style.fontSize="clamp(17px,3.6vmin,34px)";
+        onTap(c,()=>{ if(c.dataset.off) return; pickOdd(key,c,wrap); });
+      };
+      mk2(1,"双数·正好成对"); mk2(0,"单数·多一个");
+    }
+    function pickOdd(v,card,wrap){
+      if(st.done) return;
+      Speech.cut();
+      const ok=(v===q.ans); record(ctx,st,ok);
+      lockCards(wrap);
+      st.done=true; ctx.answering(false);
+      if(ok){ card.classList.add("right"); SFX.right(); }
+      else{ card.classList.add("wrong"); SFX.soft();
+        [].forEach.call(wrap.children,x=>{ if(+x.dataset.n===q.ans) x.classList.add("right"); }); }
+      runReveal(ctx,[
+        [300,()=>{ if(q.ans===0&&ui.spot){ /* 独舞鞠躬 */
+            const solo=ui.items.find(o=>!o.dataset.paired);
+            if(solo){ solo.style.transform="translate(-50%,-50%) rotate(12deg)"; }
+          } else confetti(14);
+          SFX.star(); }],
+        [500,()=>{ ui.eq=eqBar(ui.L.top,[String(q.n),"=",String(ui.paired),"对",q.ans===0?"+1":""]);
+          flyNum(ui.floor,q.n,ui.eq); }]
+      ],{done:()=>{
+        Speech.say(q.ans===1?(cnQ(q.n)+"是双数！两个两个正好牵手成"+cnQ(ui.paired)+"对！")
+          :(cnQ(q.n)+"是单数 —— 配成"+cnQ(ui.paired)+"对，总有一个没朋友。下次帮它带个朋友来！"),{tag:"verify"});
+        afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(ui.floor); });
+      }});
+    }
+  }
+
+  /* ---------------- L4 镜像餐盘披萨（换边拖 + 走廊切） ---------------- */
+  function buildPizza(L){
+    const mk=()=>{ const half=rint(2,4); return {kind:"pizza",n:half*2,mis:1}; };
+    q=setQ(Object.assign(fresh(mk,o=>"pz"+o.n,box),{world:"bluey",act:"pizza",phase:"fix"}));
+    q.ans=q.n/2;
+    lvlTag(L.top,4,"野餐切披萨");
+    verbBanner(L.top,"分！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    faceAt(L.top,"bluey",14,24); faceAt(L.top,"bingo",14,24,true);
+    // 披萨
+    const pz=el("div","",field);
+    pz.style.cssText="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:44%;aspect-ratio:1;z-index:4;"+
+      "border-radius:50%;background:radial-gradient(circle,#ffd98c 62%,#e8a94b 63%,#c9853a 100%);"+
+      "box-shadow:0 8px 20px rgba(0,0,0,.4),inset 0 0 0 6px rgba(201,133,58,.7)";
+    ui.pz=pz;
+    // 中缝走廊
+    const corridor=el("div","",field);
+    corridor.style.cssText="position:absolute;left:50%;top:24%;transform:translateX(-50%);width:7%;height:44%;z-index:6;"+
+      "border-left:4px dashed rgba(255,255,255,.9);border-right:4px dashed rgba(255,255,255,.9);"+
+      "background:rgba(255,255,255,.12);opacity:.4;border-radius:8px";
+    ui.corridor=corridor;
+    // 左右樱桃槽位（每侧 4 个固定位）
+    const slotPos=[[38,34],[38,46],[38,58],[42,70],[62,34],[62,46],[62,58],[58,70]];
+    ui.slots=slotPos.map((p2,i)=>({x:p2[0],y:p2[1],side:i<4?"L":"R",used:null}));
+    // 初始摆放：一侧多 1 颗（总数偶数）
+    const leftN=q.n/2+1, rightN=q.n/2-1;
+    ui.cherries=[];
+    let li=0,ri=4;
+    for(let i=0;i<q.n;i++){
+      const side=i<leftN?"L":"R";
+      const slot=side==="L"?ui.slots[li++]:ui.slots[ri++];
+      const ch=el("div","",field);
+      ch.style.cssText="position:absolute;left:"+slot.x+"%;top:"+slot.y+"%;width:6.5%;aspect-ratio:1;border-radius:50%;"+
+        "background:radial-gradient(circle at 36% 30%,#ff7f7f,#c81f1f 70%);box-shadow:0 3px 6px rgba(0,0,0,.35);z-index:7;transform:translate(-50%,-50%)";
+      ch.dataset.side=side; slot.used=ch; ch._slot=slot;
+      ui.cherries.push(ch);
+      draggable(ch,{
+        enabled:()=>(!busyState(st)&&q.phase==="fix"),
+        zones:()=>[{el:ui.pz}],
+        onDrop:(elm)=>{ replace(elm); return true; },
+        onTap:()=>{ if(!busyState(st)&&q.phase==="fix") replace(ch,true); }
+      });
+    }
+    // 数量气泡
+    ui.chipL=mkChip(L.top,"左 "); ui.chipL.el.style.left="20%"; ui.chipL.el.style.right="auto"; ui.chipL.el.style.top="12%";
+    ui.chipR=mkChip(L.top,"右 "); ui.chipR.el.style.top="12%";
+    const counts=()=>{
+      const l=ui.cherries.filter(c=>c.dataset.side==="L").length;
+      return [l,q.n-l];
+    };
+    const updChips=()=>{ const [l,r]=counts(); ui.chipL.set(l); ui.chipR.set(r);
+      ui.corridor.style.opacity=(l===r)?"1":".4"; };
+    updChips();
+    function replace(ch,auto){
+      // 换边：飞到对侧第一个空槽
+      const cur=ch._slot; const targetSide=ch.dataset.side==="L"?"R":"L";
+      const slot=ui.slots.find(s2=>s2.side===targetSide&&!s2.used);
+      if(!slot){ // 无空位弹回
+        ch.style.transition="left .3s,top .3s";
+        ch.style.left=cur.x+"%"; ch.style.top=cur.y+"%";
         return;
       }
-      const a2=ui.items[i*2],b2=ui.items[i*2+1];
-      Link.line(a2,b2,"#ffd75e");
-      [a2,b2].forEach(o=>{ o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit"); });
-      SFX.count(i+1); i++; T.after(430,step);
-    };
-    T.after(700,step);
-  }
-  /* L4 一人一半：轮流发到两个盘子里，跷跷板全程盯着公平 */
-  function buildShare(L,item){
-    q.act="card";
-    lvlTag(L.top,4,"一人一半");
-    const field=mkField(L.top,{l:15,r:4,t:14,b:38}); ui.field=field;
-    fitObj(field,q.n,"scatter");
-    ui.items=place(field,q.n,item,scatter(q.n));
-    faceAt(L.top,"bluey",20,28); faceAt(L.top,"bingo",56,28,true);
-    // 两个盘子（篮子）：发牌的落点
-    ["24","68"].forEach(x=>{
-      const pl=el("div","",field);
-      pl.style.cssText="position:absolute;left:"+x+"%;top:88%;transform:translate(-50%,-50%);width:calc(var(--obj)*1.8);z-index:3;pointer-events:none;opacity:.95";
-      img(A.pr("basket"),"",pl).style.cssText="width:100%;height:auto";
-    });
-    ui.ss=seesaw(L.top,8); ui.ss.set(0,0);
-    ui.eq=eqBar(L.top,[String(q.n),"分成两份","=","□","+","□"]);
-    ctx.ask(cnQ(q.n)+"块点心平分给 Bluey 和 Bingo，一人一块轮流发！每人分到几块？",field);
-    const my=st;
-    afterSay(T,1200,()=>{
-      if(!ctx.alive()||st!==my) return;
-      numAnswer(ctx,ui,st,fails,{
-        ans:q.ans,lo:1,hi:8,askText:"每人几块？点数字卡。",
-        rightSay:"对啦！"+cnQ(q.n)+"平分就是每人"+cnQ(q.ans)+"块！",
-        revealSay:"每人"+cnQ(q.ans)+"块："+cnQ(q.ans)+"加"+cnQ(q.ans)+"正好是"+cnQ(q.n)+"。",
-        retry:()=>build(true),
-        onRight:card=>{
-          // 发牌演示：一人一块轮流发
-          st.locked=true; const my2=st;
-          let i=0;
-          const step=()=>{
-            if(!ctx.alive()||st!==my2) return;
-            if(i>=q.n){
-              Speech.say("Bluey "+cnQ(q.ans)+"块，Bingo "+cnQ(q.ans)+"块，一样多！",{tag:"verify"});
-              afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(card); });
-              return;
-            }
-            const o=ui.items[i];
-            o.style.transition="left .5s cubic-bezier(.3,1.2,.5,1),top .5s cubic-bezier(.3,1.2,.5,1)";
-            o.style.left=((i%2===0?15:59)+Math.floor(i/2)*4.6)+"%";  // 轮流发到两个盘子上方叠放
-            o.style.top=(74-Math.floor(i/2)*6)+"%";
-            o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit");
-            ui.ss.set(Math.ceil((i+1)/2),Math.floor((i+1)/2));       // 跷跷板实时显示两边数量
-            SFX.count(Math.floor(i/2)+1);
-            i++; T.after(380,step);
-          }; step();
+      cur.used=null; slot.used=ch; ch._slot=slot; ch.dataset.side=targetSide;
+      ch.style.transition="left .4s cubic-bezier(.3,1.1,.5,1),top .4s cubic-bezier(.3,1.1,.5,1)";
+      ch.style.left=slot.x+"%"; ch.style.top=slot.y+"%";
+      SFX.tap(); updChips();
+      const [l,r]=counts();
+      Speech.say("左边"+cnQ(l)+"，右边"+cnQ(r)+"。",{tag:"g:bluey",interrupt:true});
+      if(l===r) Speech.say("一样多了！沿中间的虚线切一刀！",{tag:"instruct"});
+    }
+    // 走廊切：pointerdown 在走廊里且 move 纵向穿过
+    let cutting=false,cutY0=0;
+    corridor.style.pointerEvents="auto"; corridor.style.touchAction="none";
+    corridor.addEventListener("pointerdown",e=>{
+      if(busyState(st)||q.phase!=="fix") return;
+      cutting=true; cutY0=e.clientY; SFX.gesture(); Audio2.kick();
+    },{passive:true});
+    corridor.addEventListener("pointerup",e=>{
+      if(!cutting) return; cutting=false;
+      doCut();
+    },{passive:true});
+    function doCut(){
+      const [l,r]=counts();
+      const ok=(l===r);
+      record(ctx,st,ok);
+      if(!ok){
+        st.wrongs++; fails.n++;
+        ui.pz.classList.add("shake"); T.after(500,()=>ui.pz.classList.remove("shake"));
+        SFX.soft();
+        Speech.say("还不公平！"+(l>r?"左边":"右边")+"多 —— 先把樱桃挪一挪。",{tag:"remedy",interrupt:true});
+        if(st.wrongs>=2||fails.n>=2){
+          // 演示：自动挪平再切
+          st.locked=true; const my=st;
+          const heavy=l>r?"L":"R";
+          const ch=ui.cherries.find(c=>c.dataset.side===heavy);
+          T.after(700,()=>{ if(ctx.alive()&&st===my){ st.locked=false; replace(ch,true); T.after(800,doCut); } });
         }
-      });
-    });
+        return;
+      }
+      if(st.done) return;
+      st.done=true; q.phase="cut"; ctx.answering(false);
+      // 刀光
+      const knife=el("div","",ui.field);
+      knife.style.cssText="position:absolute;left:50%;top:22%;transform:translateX(-50%);width:5px;height:0;z-index:9;"+
+        "background:linear-gradient(#fff,#ffd75e);box-shadow:0 0 12px #fff;transition:height .35s";
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{ knife.style.height="48%"; }));
+      SFX.whoosh();
+      runReveal(ctx,[
+        [450,()=>{ knife.remove();
+          // 两半分开
+          ui.pz.style.transition="transform .6s";
+          ui.pz.style.transform="translate(-56%,-50%)";
+          const half=el("div","",ui.field);
+          half.style.cssText=ui.pz.style.cssText.replace("translate(-56%,-50%)","translate(-44%,-50%)");
+          // 简化：左右平移错开
+          ui.pz.style.clipPath="inset(0 50% 0 0)";
+          half.style.clipPath="inset(0 0 0 50%)";
+          half.style.transform="translate(-44%,-50%)";
+          ui.cherries.forEach(c=>{
+            c.style.transition="left .6s";
+            c.style.left=(parseFloat(c.style.left)+(c.dataset.side==="L"?-4:4))+"%";
+          });
+          SFX.right(); }],
+        [700,()=>{ confetti(14);
+          ui.eq=eqBar(ui.L.top,[String(q.n),"=","□","+","□"]);
+          flyNum(ui.pz,q.ans,ui.eq); }]
+      ],{done:()=>{
+        Speech.say(cnQ(q.n)+"颗樱桃切成两半 —— 每人"+cnQ(q.ans)+"颗，一样多！",{tag:"verify"});
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.pz); });
+      }});
+    }
+    ctx.ask("野餐切披萨！先把樱桃挪到两边一样多，再沿中间的虚线切一刀！",pz);
+    ctx.answering(true);
   }
+
   return {
     start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
     repeat:()=>{ if(!q) return "";
-      if(q.kind==="diff") return "谁多？多几个？";
-      if(q.kind==="make") return "点篮子给 Bingo 加到和 Bluey 一样多。";
-      if(q.kind==="odd") return cnQ(q.n)+"块能不能公平分给两个人？";
-      return cnQ(q.n)+"块平分给两个人，每人几块？"; },
+      if(q.kind==="shadow") return "点灯让影子长出来，再点更高的那条！";
+      if(q.kind==="balance") return "拖饼干给 Bingo，把跷跷板放平！";
+      if(q.kind==="dance") return "滑到旁边的点心，让它们成一对！";
+      return "樱桃挪到两边一样多，再沿虚线切！"; },
     destroy:()=>{ Link.clear(); ui=null; q=null; st=null; }
   };
 };
