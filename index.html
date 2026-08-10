@@ -335,7 +335,13 @@ canvas{display:block}
   border-right:4px solid #8a5a00;border-radius:0 99px 99px 0}
 @keyframes pulse{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.16);opacity:1}}
 #soundHint .txt{font-size:clamp(11px,2vmin,15px);font-weight:800;color:#6a4a00;line-height:1.2}
-#parentDot{position:fixed;right:0;bottom:0;width:58px;height:58px;z-index:210;opacity:0}
+#parentDot{position:fixed;right:8px;bottom:8px;width:48px;height:48px;z-index:210;
+  display:flex;align-items:center;justify-content:center;border-radius:50%;
+  background:rgba(20,14,50,.4);font-size:24px;opacity:.55;
+  -webkit-user-select:none;user-select:none;touch-action:none}
+#gearTip{position:fixed;right:62px;bottom:18px;z-index:211;background:rgba(20,14,50,.9);color:#fff;
+  padding:8px 14px;border-radius:12px;font-size:14px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none}
+#gearTip.on{opacity:1}
 #panel{position:fixed;inset:0;z-index:300;background:rgba(12,8,28,.94);display:none;
   padding:calc(var(--safeT) + 12px) 14px calc(var(--safeB) + 14px);overflow:auto;color:#e8e2ff;font-size:14px;
   -webkit-user-select:text;user-select:text;-webkit-overflow-scrolling:touch}
@@ -414,7 +420,8 @@ canvas{display:block}
   <span class="spk"><span class="bar"></span></span>
   <span class="txt">听不到声音？点我再说一遍</span>
 </button>
-<div id="parentDot"></div>
+<div id="parentDot">⚙️</div>
+<div id="gearTip">家长入口：长按 3 秒</div>
 
 <div id="gateAdult">
   <div id="gaQ">7 + 6 = ?</div>
@@ -2855,12 +2862,15 @@ const App=(()=>{
       Speech.replay("你好呀！听得到我说话吗？",{tag:"hint-retry"});
     });
 
-    let lp=null; const pd=$("#parentDot");
+    let lp=null,tipT=null; const pd=$("#parentDot");
     pd.addEventListener("pointerdown",e=>{ e.preventDefault();
       if(Date.now()<gaCooldownUntil) return;      // 答错后的冷却期内长按无效
-      lp=setTimeout(openAdultGate,3000); },{passive:false});
+      lp=setTimeout(()=>{ lp=null; openAdultGate(); },3000); },{passive:false});
     ["pointerup","pointercancel","pointerleave"].forEach(ev=>
-      pd.addEventListener(ev,()=>{ if(lp){clearTimeout(lp);lp=null;} }));
+      pd.addEventListener(ev,()=>{ if(lp){clearTimeout(lp);lp=null;
+        // 按了但没按满 3 秒 → 提示怎么进
+        const t=$("#gearTip"); t.classList.add("on");
+        clearTimeout(tipT); tipT=setTimeout(()=>t.classList.remove("on"),1800); } }));
 
     document.addEventListener("contextmenu",e=>e.preventDefault());
     document.addEventListener("gesturestart",e=>e.preventDefault());
@@ -2925,7 +2935,16 @@ const SILENT_WAV="UklGRvQHAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YdAHAACAgI
 
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",App.boot);
 else App.boot();
-if("serviceWorker" in navigator) addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+if("serviceWorker" in navigator) addEventListener("load",()=>{
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(()=>{});
+  // 新版 SW 接管且不在游戏中 → 自动换成新版页面，杜绝"旧代码一直赖在缓存里"
+  let hadCtrl=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    const inGame=document.querySelector("#stage.on");
+    if(hadCtrl&&!inGame) location.reload();
+    hadCtrl=true;
+  });
+});
 </script>
 </body>
 </html>
