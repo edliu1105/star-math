@@ -701,7 +701,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "6.3.0";
+const VERSION = "6.4.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -3711,223 +3711,430 @@ GAMES.hulu=ctx=>{
 };
 
 /* ============================================================================
-   世界五 · 复仇者大厦 —— 算式大战：加法 → 减法 → 缺失加数 → 十几（10+n）
+   世界五 · 复仇者（v6）—— 四个独立小游戏：
+   L1 英雄电梯（点·从5接着数） L2 盾牌缺口补丁（拖条匹配） L3 凑十能量炮（选罐甩） L4 十号仓库（拖十箱+点散箱）
    ============================================================================ */
 GAMES.aveng=ctx=>{
   const T=ctx.T; let st=null,q=null,ui=null; const box={last:null},fails={n:0};
   const HEROES=["ironman","cap","thor","hulkman","widow","hawkeye","spider","spiderblack","blackpanther"];
 
-  function spec(){
-    const lv=ctx.level();
-    if(lv===1){ const a=rint(2,5),b=rint(1,Math.min(4,9-a)); return {kind:"add",a,b,ans:a+b}; }
-    if(lv===2){ const n=rint(5,9),k=rint(1,4); return {kind:"sub",n,k,ans:n-k}; }
-    if(lv===3){ const n=rint(6,10),a=rint(2,n-2); return {kind:"missA",n,a,ans:n-a}; }
-    const b=rint(1,9); return {kind:"teen",b,ans:10+b};
-  }
   function build(retry){
-    st=bindState(newState(retry)); q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.a||o.n||o.b)+","+(o.b||o.k||0),box),{world:"aveng",act:"card"}));
+    st=bindState(newState(retry));
+    const lv=ctx.level();
     const L=layout(ctx.root); ui={L};
-    const field=mkField(L.top,{l:4,r:4,t:14,b:6}); ui.field=field;
-    if(q.kind==="add"){ lvlTag(L.top,1,"空投集结"); buildAdd(L,field); }
-    else if(q.kind==="sub"){ lvlTag(L.top,2,"传送门撤离"); buildSub(L,field); }
-    else if(q.kind==="missA"){ lvlTag(L.top,3,"全息缺口"); buildMissA(L,field); }
-    else { lvlTag(L.top,4,"十人方阵"); buildTeen(L,field); }
+    if(lv===1) buildLift(L);
+    else if(lv===2) buildShield(L);
+    else if(lv===3) buildCannon(L);
+    else buildDepot(L);
   }
-  /** 右上角的旋转传送门 */
-  function mkPortal(field){
-    const por=el("div","",field);
-    por.style.cssText="position:absolute;right:1%;top:6%;width:clamp(46px,8vmin,92px);pointer-events:none";
-    img(A.pr("portal"),"",por).style.cssText="width:100%;height:auto";
-    por.firstChild.classList.add("portalspin");
-    return por;
-  }
-  function heroRow(field,n,names,y,xs){
-    const out=[];
-    for(let i=0;i<n;i++){
-      const o=el("div","cobj",field);
-      o.style.left=xs[i][0]+"%"; o.style.top=(y!=null?y:xs[i][1])+"%";
-      img(A.ch(names[i%names.length]),"",o); el("div","tag",o);
-      out.push(o);
-    }
-    return out;
-  }
-  function buildAdd(L,field){
-    const names=shuffle(HEROES);
-    fitObj(field,Math.max(q.ans,5),"row");
-    const posA=[],posB=[];
-    for(let i=0;i<q.a;i++) posA.push([13+(i%3)*13, 36+Math.floor(i/3)*26]);
-    for(let i=0;i<q.b;i++) posB.push([65+(i%3)*13, 36+Math.floor(i/3)*26]);
-    ui.A=heroRow(field,q.a,names,null,posA);
-    ui.B=heroRow(field,q.b,names.slice(q.a),null,posB);
-    ui.A.concat(ui.B).forEach(o=>{ o.style.opacity="0"; });
-    ui.eq=eqBar(L.top,[String(q.a),"+",String(q.b),"=","□"]);
-    const por=mkPortal(field);
-    const dropIn=()=>{
-      if(!ctx.alive()) return;
-      const my=st;
-      // 昆式机飞越，左队一个个空投
-      const jet=el("div","flyby",ui.L.top); img(A.pr("quinjet"),"",jet);
-      SFX.whoosh();
-      ui.A.forEach((o,i)=>{ T.after(350+i*230,()=>{ if(!ctx.alive()||st!==my) return;
-        o.style.opacity="1"; o.classList.add("pop"); SFX.tap(); }); });
-      T.after(350+q.a*230+500,()=>{
-        if(!ctx.alive()||st!==my) return;
-        jet.remove();
-        Speech.say("传送门打开！",{tag:"g:aveng"});
-        // 右队从传送门缩放飞入
-        ui.B.forEach((o,i)=>{ T.after(300+i*260,()=>{ if(!ctx.alive()||st!==my) return;
-          const tx=o.style.left, ty=o.style.top;
-          o.style.left="92%"; o.style.top="10%";
-          o.style.opacity="1"; o.style.transform="translate(-50%,-50%) scale(.25)";
-          requestAnimationFrame(()=>requestAnimationFrame(()=>{
-            o.style.transition="left .55s cubic-bezier(.3,1.1,.5,1),top .55s cubic-bezier(.3,1.1,.5,1),transform .55s";
-            o.style.left=tx; o.style.top=ty; o.style.transform="translate(-50%,-50%)";
-          }));
-          SFX.tap(); }); });
-        T.after(300+q.b*260+700,()=>{ if(ctx.alive()&&st===my) askAns(cnQ(q.a)+"加"+cnQ(q.b)+"等于几？"); });
-      });
-    };
-    ctx.ask("昆式机空投"+cnQ(q.a)+"个英雄，传送门再来"+cnQ(q.b)+"个，一共几个？",field);
-    afterSay(T,800,dropIn);
-  }
-  function buildSub(L,field){
-    const names=shuffle(HEROES);
-    fitObj(field,q.n,"row");
-    ui.A=heroRow(field,q.n,names,52,rowPos(q.n));
-    mkPortal(field);
-    ui.eq=eqBar(L.top,[String(q.n),"−",String(q.k),"=","□"]);
-    ctx.ask(cnQ(q.n)+"个英雄在大厦里，"+cnQ(q.k)+"个要被传送门吸走去别的任务，还剩几个？",field);
-    const my=st;
-    afterSay(T,1000,()=>{
-      if(!ctx.alive()||st!==my) return;
-      for(let i=0;i<q.k;i++){
-        const o=ui.A[q.n-1-i];
-        T.after(i*380,()=>{ if(!ctx.alive()||st!==my) return;
-          o.style.transition="left .8s ease-in,top .8s ease-in,opacity .8s,transform .8s ease-in";
-          o.style.left="92%"; o.style.top="10%"; o.style.opacity="0";
-          o.style.transform="translate(-50%,-50%) scale(.1) rotate(340deg)";   // 旋转着被吸进传送门
-          SFX.whoosh();
-        });
-      }
-      T.after(q.k*380+1000,()=>{ if(ctx.alive()&&st===my) askAns(cnQ(q.n)+"减"+cnQ(q.k)+"等于几？"); });
-    });
-  }
-  function buildMissA(L,field){
-    const names=shuffle(HEROES);
-    fitObj(field,q.n,"row");
-    ui.A=heroRow(field,q.a,names,52,rowPos(q.n).slice(0,q.a));
-    mkPortal(field);
-    // 缺的名额 = 闪烁的全息剪影空位，缺口本身看得见、数得出
-    ui.slots=[];
-    rowPos(q.n).slice(q.a).forEach((p,i)=>{
-      const s2=el("div","slotghost holo",field);
-      s2.style.cssText+=";position:absolute;left:"+p[0]+"%;top:52%;transform:translate(-50%,-50%);width:var(--obj);aspect-ratio:1";
-      img(A.ch(HEROES[(q.a+i)%HEROES.length]),"",s2);
-      ui.slots.push(s2);
-    });
-    ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.n)]);
-    ctx.ask("这次任务要"+cnQ(q.n)+"个英雄！现在只有"+cnQ(q.a)+"个，闪着光的空位还要传送门送来几个？",field);
-    const my=st;
-    afterSay(T,1000,()=>{ if(ctx.alive()&&st===my) askAns("还要来几个英雄？"); });
-  }
-  function buildTeen(L,field){
-    // 坏蛋列队行进，站成 2×5 方阵 —— "一个十"是有形状的
-    fitObj(field,11,"row");
-    const frame=el("div","",field);
-    frame.style.cssText="position:absolute;left:14%;top:14%;width:46%;height:44%;border:4px solid #ffd75e;"+
-      "border-radius:14px;background:rgba(255,215,94,.08);pointer-events:none";
-    const lab=el("div","",field);
-    lab.style.cssText="position:absolute;left:14%;top:8%;font-weight:900;color:#ffd75e;"+
-      "font-size:clamp(16px,3.4vmin,32px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
-    lab.textContent="一个十";
-    ui.G=[];
-    const my=st;
+
+  /* ---------------- L1 英雄电梯（预置5位，从5接着数到 n） ---------------- */
+  function buildLift(L){
+    const mk=()=>({kind:"elev",n:rint(8,10)});
+    q=setQ(Object.assign(fresh(mk,o=>"el"+o.n,box),{world:"aveng",act:"elev",phase:"play"}));
+    q.ans=q.n;
+    lvlTag(L.top,1,"英雄电梯");
+    verbBanner(L.top,"上楼！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    // 电梯井 + 楼层灯 1-10
+    const shaft=el("div","",field);
+    shaft.style.cssText="position:absolute;left:38%;top:4%;width:24%;bottom:6%;border-radius:14px;z-index:4;"+
+      "background:linear-gradient(#28304e,#171c33);box-shadow:0 8px 18px rgba(0,0,0,.45),inset 0 0 0 4px #3a4570";
+    ui.lights=[];
     for(let i=0;i<10;i++){
-      const gx=19+(i%5)*9, gy=i<5?26:46;
-      const o=el("div","cobj",field);
-      o.style.left="-8%"; o.style.top=gy+"%";        // 从场外行进入列
-      img(A.pr("goon"),"",o); el("div","tag",o);
-      ui.G.push(o);
-      T.after(300+i*160,()=>{ if(!ctx.alive()||st!==my) return;
-        o.style.transition="left .5s cubic-bezier(.3,1.1,.5,1)";
-        o.style.left=gx+"%"; SFX.tap(); });
+      const lt=el("div","",field);
+      lt.style.cssText="position:absolute;left:31%;bottom:"+(8+i*8.6)+"%;width:5%;aspect-ratio:1.4;border-radius:8px;z-index:5;"+
+        "display:flex;align-items:center;justify-content:center;font-weight:900;color:#8ea0d8;"+
+        "font-size:clamp(13px,2.6vmin,24px);background:rgba(255,255,255,.08);border:2px solid #3a4570;transition:all .25s";
+      lt.textContent=String(i+1);
+      ui.lights.push(lt);
     }
-    const names=shuffle(HEROES);
-    ui.A=heroRow(field,q.b,names,80,rowPos(Math.max(q.b,5)).slice(0,q.b));
-    ui.eq=eqBar(L.top,["10","+",String(q.b),"=","□"]);
-    ctx.ask("坏蛋站成整整齐齐的方阵 —— 一个十！下面还有"+cnQ(q.b)+"个英雄。十加"+cnQ(q.b)+"，一共是多少？",field);
-    const my2=st;
-    afterSay(T,1200,()=>{ if(ctx.alive()&&st===my2) askAns("十加"+cnQ(q.b)+"是多少？"); });
+    // 目标屏
+    const tgt=el("div","chip",field); tgt.style.left="64%"; tgt.style.right="auto"; tgt.style.top="8%";
+    tgt.textContent="目标 "; el("b","",tgt).textContent=String(q.n);
+    // 轿厢（预置5位）
+    const cab=el("div","",field);
+    cab.style.cssText="position:absolute;left:50%;bottom:8%;transform:translateX(-50%);width:20%;height:17%;z-index:6;"+
+      "border-radius:10px;background:linear-gradient(#bfe0ff44,#7fa8e055);box-shadow:inset 0 0 0 3px #9db8ee;"+
+      "display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:1%;transition:bottom .5s cubic-bezier(.3,.9,.4,1)";
+    ui.cab=cab; ui.count=5;
+    for(let i=0;i<5;i++){ const im=img(A.ch(HEROES[i]),"",cab); im.style.cssText="width:30%;height:auto"; }
+    for(let i=0;i<5;i++) ui.lights[i].style.cssText+=";background:#37d67a;color:#04310f;border-color:#37d67a";
+    // 待命英雄
+    ui.pool=[];
+    for(let i=5;i<10;i++){
+      const o=el("div","cobj",field);
+      o.style.left=(8+ (i-5)*11)+"%"; o.style.top="80%"; o.style.width="10%";
+      img(A.ch(HEROES[i%HEROES.length]),"",o); el("div","tag",o);
+      onTap(o,()=>enter(o));
+      ui.pool.push(o);
+    }
+    fitObj(field,8,"row");
+    ctx.ask("电梯里已经有五位英雄，楼层灯亮到五！任务要"+cnQ(q.n)+"位 —— 点英雄进电梯，从五接着数！",cab);
+    ctx.answering(true);
+    function enter(o){
+      if(busyState(st)||q.phase!=="play"||o.dataset.in||ui.count>=10) return;
+      o.dataset.in="1"; ui.count++; q.draft=ui.count;
+      const s=ui.field.getBoundingClientRect(), cr=ui.cab.getBoundingClientRect();
+      o.style.transition="left .45s,top .45s,transform .45s";
+      o.style.left="50%"; o.style.top=((cr.top+cr.height/2-s.top)/s.height*100)+"%";
+      o.style.transform="translate(-50%,-50%) scale(.6)";
+      const lt=ui.lights[ui.count-1];
+      lt.style.background="#37d67a"; lt.style.color="#04310f"; lt.style.borderColor="#37d67a"; lt.classList.add("pop");
+      SFX.count(ui.count); Speech.count(cnS(ui.count),"child-count");
+      if(ui.count===q.n){ q.phase="commit"; T.after(600,commit); }
+      else if(ui.count>q.n){ /* 超载不可能：到 n 即提交 */ }
+    }
+    function commit(){
+      if(st.done) return;
+      st.done=true; record(ctx,st,true); ctx.answering(false);
+      SFX.right();
+      Speech.say("叮！到"+cnQ(q.n)+"层！",{tag:"right",interrupt:true});
+      runReveal(ctx,[
+        [300,()=>{ ui.cab.style.bottom=(8+(q.n-1)*7.4)+"%"; SFX.whoosh(); }],
+        [700,()=>{ confetti(12); SFX.star(); }],
+        [300,()=>{ ui.eq=eqBar(ui.L.top,["5","+","□","=",String(q.n)]);
+          flyNum(ui.cab,q.n-5,ui.eq); }]
+      ],{done:()=>{
+        Speech.say("五位再上"+cnQ(q.n-5)+"位 —— 从五接着数到"+cnQ(q.n)+"！",{tag:"verify"});
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.cab); });
+      }});
+    }
   }
-  function askAns(t){
-    const hi=q.kind==="teen"?19:10, lo=q.kind==="teen"?11:0;
-    numAnswer(ctx,ui,st,fails,{
-      ans:q.ans,lo,hi,askText:t+"点数字卡。",
-      rightSay:rightText(), revealSay:"是"+String(q.ans)+"，"+rightText(),
-      retry:()=>build(true),
-      onRight:card=>{
-        ui.eq.setHole(q.ans);
-        if(q.kind==="missA"){
-          // 分合图 + 传送门把缺的英雄送进来验证
-          const pw=partWhole(ui.L.top,"left:2%;top:11%");
-          pw.setN(q.n); pw.setA(q.a); pw.setB(q.ans);
-          st.locked=true; const my=st;
-          const names=shuffle(HEROES).slice(3);
-          const pos=rowPos(q.n).slice(q.a);
-          let i=0;
-          const step=()=>{
-            if(!ctx.alive()||st!==my) return;
-            if(i>=q.ans){ Speech.say("现在正好"+cnQ(q.n)+"个英雄，集合完毕！",{tag:"verify"});
-              afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(card); }); return; }
-            const o=el("div","cobj pop",ui.field);
-            o.style.left=pos[i][0]+"%"; o.style.top="52%";
-            img(A.ch(names[i%names.length]),"",o); el("div","tag",o);
-            if(ui.slots&&ui.slots[i]){ ui.slots[i].classList.remove("holo"); ui.slots[i].classList.add("fill"); }  // 空位点亮
-            SFX.count(q.a+i+1); Speech.count(cnS(q.a+i+1),"auto-count");
-            i++; T.after(560,step);
-          }; T.after(500,step);
-        }else if(q.kind==="teen"){
-          // 20 格双阵：左边一整框"10"，右边零头 —— 十几 = 一个十加几个一
-          const tf=tenFrame(ui.L.top,20,"left:2%;top:12%;width:42%");
-          tf.setAll(10,"f");
-          st.locked=true; const my=st;
-          Speech.say("十个再数"+cnQ(q.b)+"个："+Array.from({length:q.b},(x,i)=>cnS(10+i+1)).join("、")+"！",{tag:"verify"});
-          ui.A.forEach((o,i)=>{ T.after(400+i*430,()=>{ if(!ctx.alive()||st!==my) return;
-            o.classList.add("counted","hit"); setTag(o.querySelector(".tag"),10+i+1);
-            tf.mark(10+i,"g"); SFX.count(10+i+1); }); });
-          T.after(700+q.b*430+900,()=>{ if(ctx.alive()&&st===my) ctx.win(card); });
-        }else if(q.kind==="sub"){
-          // 十格阵：满 n 格，划掉 k 格，剩下的就是答案
-          const tf=tenFrame(ui.L.top,10,"left:2%;top:14%;width:22%");
-          tf.setAll(q.n,"f");
-          st.locked=true; const my=st;
-          for(let i2=0;i2<q.k;i2++) T.after(400+i2*340,()=>{ if(ctx.alive()&&st===my){ tf.mark(q.n-1-i2,"x"); SFX.tap(); } });
-          T.after(500+q.k*340,()=>{ if(!ctx.alive()||st!==my) return;
-            autoCount(ctx,ui.A.slice(0,q.ans),0,360,()=>{ if(ctx.alive()) ctx.win(card); }); });
-        }else{
-          // 加法：十格阵红蓝两段 —— 看见 a+b 在"十"里的位置
-          const tf=tenFrame(ui.L.top,10,"left:2%;top:14%;width:22%");
-          const objs=ui.A.concat(ui.B||[]);
-          objs.forEach((o,i)=>{ T.after(i*360+80,()=>{ if(ctx.alive()) tf.mark(i,i<q.a?"f":"g"); }); });
-          autoCount(ctx,objs,0,360,()=>{ if(ctx.alive()) ctx.win(card); });
-        }
-      }
+
+  /* ---------------- L2 盾牌缺口补丁（整条扇区三选一拖） ---------------- */
+  function buildShield(L){
+    const mk=()=>{ const has=rint(6,8); return {kind:"shield",has,miss:10-has}; };
+    q=setQ(Object.assign(fresh(mk,o=>"sd"+o.has,box),{world:"aveng",act:"shield",phase:"play"}));
+    q.ans=q.miss;
+    lvlTag(L.top,2,"盾牌拼图");
+    verbBanner(L.top,"补！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    sideCast(L.top,"r",["cap"],30);
+    // 盾牌：10 段圆环，缺口为连续 miss 段
+    const R=34, cx=38, cy=42;
+    const shield=el("div","",field);
+    shield.style.cssText="position:absolute;left:"+cx+"%;top:"+cy+"%;transform:translate(-50%,-50%);width:44%;aspect-ratio:1;z-index:5";
+    const svgNS="http://www.w3.org/2000/svg";
+    const svg=document.createElementNS(svgNS,"svg");
+    svg.setAttribute("viewBox","0 0 100 100"); svg.style.cssText="width:100%;height:100%";
+    shield.appendChild(svg);
+    const seg=(i,color,ghost)=>{
+      const a0=(i*36-90)*Math.PI/180, a1=((i+1)*36-90)*Math.PI/180;
+      const x0=50+40*Math.cos(a0),y0=50+40*Math.sin(a0),x1=50+40*Math.cos(a1),y1=50+40*Math.sin(a1);
+      const p=document.createElementNS(svgNS,"path");
+      p.setAttribute("d","M50 50 L"+x0+" "+y0+" A40 40 0 0 1 "+x1+" "+y1+" Z");
+      p.setAttribute("fill",ghost?"rgba(255,255,255,.10)":color);
+      p.setAttribute("stroke",ghost?"#fff":"#7c1f1c");
+      if(ghost){ p.setAttribute("stroke-dasharray","4 4"); }
+      p.setAttribute("stroke-width","1.6");
+      svg.appendChild(p); return p;
+    };
+    ui.segs=[];
+    for(let i=0;i<10;i++){
+      ui.segs.push(seg(i, i%2?"#e2453f":"#f0f0f4", i>=q.has));
+    }
+    const core=document.createElementNS(svgNS,"circle");
+    core.setAttribute("cx","50"); core.setAttribute("cy","50"); core.setAttribute("r","14");
+    core.setAttribute("fill","#3f6fe2"); core.setAttribute("stroke","#22337c"); core.setAttribute("stroke-width","3");
+    svg.appendChild(core);
+    const coreT=document.createElementNS(svgNS,"text");
+    coreT.setAttribute("x","50"); coreT.setAttribute("y","56"); coreT.setAttribute("text-anchor","middle");
+    coreT.setAttribute("font-size","16"); coreT.setAttribute("font-weight","900"); coreT.setAttribute("fill","#fff");
+    coreT.textContent=String(q.has);
+    svg.appendChild(coreT);
+    ui.shield=shield;
+    // 三条扇区条（2/3/4 格，点阵+数字）
+    const opts=shuffle([2,3,4]);
+    ui.strips=[];
+    opts.forEach((v,i)=>{
+      const s2=el("div","",field); s2.dataset.strip=String(v);
+      s2.style.cssText="position:absolute;left:"+(70)+"%;top:"+(18+i*24)+"%;transform:translate(-50%,-50%);width:16%;aspect-ratio:1.5;z-index:7;"+
+        "background:rgba(255,255,255,.95);border-radius:12px;box-shadow:0 5px 12px rgba(0,0,0,.35);"+
+        "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px";
+      const dots=el("div","",s2); dots.style.cssText="display:flex;gap:4px";
+      for(let k=0;k<v;k++){ const d2=el("i","",dots);
+        d2.style.cssText="width:clamp(10px,2vmin,18px);aspect-ratio:1;border-radius:3px;background:#e2453f;display:block"; }
+      const num=el("b","",s2); num.style.cssText="font-weight:900;color:#2a1f4d;font-size:clamp(16px,3.2vmin,32px)";
+      num.textContent=String(v);
+      ui.strips.push(s2);
+      draggable(s2,{
+        enabled:()=>(!busyState(st)&&q.phase==="play"),
+        zones:()=>[{el:shield}],
+        onDrop:(elm)=>{ tryStrip(elm,v); return true; },
+        onTap:()=>{ if(!busyState(st)&&q.phase==="play") tryStrip(s2,v); }
+      });
     });
+    ctx.ask("美队的盾牌十片碎了一段！已经有"+cnQ(q.has)+"片 —— 哪一条刚好补满十？拖它上盾！",shield);
+    ctx.answering(true);
+    function tryStrip(s2,v){
+      const ok=(v===q.ans); record(ctx,st,ok);
+      if(!ok){
+        st.wrongs++; fails.n++;
+        st.locked=true; const my=st;
+        // 预演：幽灵填充差错
+        const fill=Math.min(v,q.ans);
+        for(let k=0;k<fill;k++) ui.segs[q.has+k].setAttribute("fill","rgba(226,69,63,.45)");
+        SFX.soft();
+        Speech.say(v<q.ans?"还空一片！这条太短了。":"多出一片没地方放！这条太长了。",{tag:"remedy",interrupt:true});
+        T.after(1500,()=>{ if(!ctx.alive()||st!==my) return;
+          for(let k=0;k<fill;k++) ui.segs[q.has+k].setAttribute("fill","rgba(255,255,255,.10)");
+          st.locked=false;
+          if(st.wrongs>=2||fails.n>=2){ const right=ui.strips.find(x=>+x.dataset.strip===q.ans); if(right) tryStrip(right,q.ans); }
+        });
+        return;
+      }
+      st.done=true; q.phase="commit"; ctx.answering(false);
+      s2.style.transition="left .4s,top .4s,opacity .4s";
+      s2.style.left=ui.shield.style.left; s2.style.top=ui.shield.style.top; s2.style.opacity="0";
+      SFX.whoosh();
+      runReveal(ctx,[
+        [420,()=>{ for(let k=0;k<q.ans;k++){
+            T.after(k*240,()=>{ if(!ctx.alive()) return;
+              ui.segs[q.has+k].setAttribute("fill","#ffd75e");
+              ui.segs[q.has+k].setAttribute("stroke","#a3611a");
+              ui.segs[q.has+k].removeAttribute("stroke-dasharray");
+              SFX.count(q.has+k+1); Speech.count(cnS(q.has+k+1),"auto-count"); });
+          } }],
+        [q.ans*240+400,()=>{ // 盾牌旋转飞出又回来
+          ui.shield.style.transition="transform .8s cubic-bezier(.4,.2,.4,1)";
+          ui.shield.style.transform="translate(-50%,-50%) rotate(720deg) scale(1.08)";
+          coreT.textContent="10";
+          SFX.whoosh(); confetti(12); }],
+        [800,()=>{ ui.shield.style.transform="translate(-50%,-50%)";
+          ui.eq=eqBar(ui.L.top,[String(q.has),"+","□","=","10"]);
+          flyNum(ui.shield,q.ans,ui.eq); }]
+      ],{done:()=>{
+        Speech.say(cnQ(q.has)+"和"+cnQ(q.ans)+"，合成十 —— 盾牌完整出击！",{tag:"verify"});
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.shield); });
+      }});
+    }
   }
-  function rightText(){
-    if(q.kind==="add")  return cnQ(q.a)+"加"+cnQ(q.b)+"等于"+cnQ(q.ans)+"！";
-    if(q.kind==="sub")  return cnQ(q.n)+"减"+cnQ(q.k)+"等于"+cnQ(q.ans)+"！";
-    if(q.kind==="missA")return cnQ(q.a)+"加"+cnQ(q.ans)+"等于"+cnQ(q.n)+"！";
-    return "十加"+cnQ(q.b)+"就是"+cnQ(q.ans)+"！";
+
+  /* ---------------- L3 凑十能量炮（三罐选一甩进炮膛） ---------------- */
+  function buildCannon(L){
+    const mk=()=>({kind:"cannon",has:rint(6,8)});
+    q=setQ(Object.assign(fresh(mk,o=>"cn"+o.has,box),{world:"aveng",act:"cannon",phase:"play"}));
+    q.ans=10-q.has;
+    lvlTag(L.top,3,"凑十能量炮");
+    verbBanner(L.top,"充能！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    // 小怪举牌
+    const goon=el("div","cobj",field);
+    goon.style.left="82%"; goon.style.top="34%"; goon.style.width="13%";
+    img(A.pr("goon"),"",goon);
+    goon.style.animation="sway 2s ease-in-out infinite";
+    const sign=el("div","",field);
+    sign.style.cssText="position:absolute;left:82%;top:16%;transform:translate(-50%,-50%);z-index:7;background:#fff;"+
+      "border-radius:10px;padding:.1em .5em;font-weight:900;color:#e2453f;font-size:clamp(22px,5vmin,50px);box-shadow:0 4px 10px rgba(0,0,0,.35)";
+    sign.textContent=String(q.has);
+    ui.goon=goon; ui.sign=sign;
+    // 能量炮 + 10 格仪表
+    const cannon=el("div","",field);
+    cannon.style.cssText="position:absolute;left:30%;top:44%;transform:translate(-50%,-50%);width:26%;aspect-ratio:1.5;z-index:5";
+    cannon.innerHTML='<svg viewBox="0 0 120 80" style="width:100%;height:100%">'+
+      '<rect x="8" y="34" width="70" height="30" rx="12" fill="#5b6ee1" stroke="#2c3a91" stroke-width="4"/>'+
+      '<rect x="66" y="38" width="48" height="22" rx="10" fill="#8b97ee" stroke="#2c3a91" stroke-width="4"/>'+
+      '<circle cx="30" cy="66" r="10" fill="#28304e"/><circle cx="58" cy="66" r="10" fill="#28304e"/></svg>';
+    ui.cannon=cannon;
+    const meter=el("div","",field);
+    meter.style.cssText="position:absolute;left:30%;top:22%;transform:translateX(-50%);display:flex;gap:4px;z-index:7;"+
+      "background:rgba(20,14,50,.7);padding:5px 8px;border-radius:10px";
+    ui.cells=[];
+    for(let i=0;i<10;i++){
+      const c=el("i","",meter);
+      c.style.cssText="width:clamp(13px,2.6vmin,26px);aspect-ratio:1;border-radius:5px;display:block;"+
+        (i<q.has?"background:#7ef0a8":"background:rgba(255,255,255,.14);border:2px dashed rgba(255,255,255,.5)");
+      ui.cells.push(c);
+    }
+    const mlab=el("div","chip",field); mlab.style.left="30%"; mlab.style.right="auto"; mlab.style.top="12%"; mlab.style.transform="translateX(-50%)";
+    mlab.textContent="已充 "; el("b","",mlab).textContent=q.has+"/10";
+    ui.mlab=mlab;
+    // 三只能量罐
+    const opts=shuffle([q.ans,clamp(q.ans+1,1,5),clamp(q.ans-1,1,5)].filter((v,i,a2)=>a2.indexOf(v)===i));
+    while(opts.length<3){ const v=rint(1,5); if(!opts.includes(v)) opts.push(v); }
+    ui.cans=[];
+    opts.slice(0,3).forEach((v,i)=>{
+      const can=el("div","",field); can.dataset.can=String(v);
+      can.style.cssText="position:absolute;left:"+(16+i*22)+"%;top:80%;transform:translate(-50%,-50%);width:12%;aspect-ratio:.9;z-index:8;"+
+        "background:linear-gradient(#8b97ee,#5b6ee1);border-radius:12px;box-shadow:0 5px 12px rgba(0,0,0,.4);"+
+        "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#fff;font-weight:900";
+      const dots=el("div","",can); dots.style.cssText="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;width:82%";
+      for(let k=0;k<v;k++){ const d2=el("i","",dots);
+        d2.style.cssText="width:clamp(8px,1.6vmin,15px);aspect-ratio:1;border-radius:50%;background:#7ef0a8;display:block"; }
+      const num=el("b","",can); num.style.fontSize="clamp(16px,3.4vmin,34px)"; num.textContent=String(v);
+      ui.cans.push(can);
+      draggable(can,{
+        enabled:()=>(!busyState(st)&&q.phase==="play"),
+        zones:()=>[{el:cannon}],
+        onDrop:(elm)=>{ tryCan(elm,v); return true; },
+        onTap:()=>{ if(!busyState(st)&&q.phase==="play") tryCan(can,v); }
+      });
+    });
+    ctx.ask("能量炮要**正好十格**才能发射！已经充了"+cnQ(q.has)+"格 —— 选哪一罐刚好充满？甩进炮膛！",cannon);
+    ctx.answering(true);
+    function tryCan(can,v){
+      const ok=(v===q.ans); record(ctx,st,ok);
+      if(!ok){
+        st.wrongs++; fails.n++;
+        st.locked=true; const my=st;
+        const fill=Math.min(v,q.ans);
+        for(let k=0;k<fill;k++){ ui.cells[q.has+k].style.background="rgba(126,240,168,.4)"; ui.cells[q.has+k].style.border="none"; }
+        SFX.soft();
+        Speech.say(v<q.ans?"还差一格，射不出去！":"溢出来一格！要不多不少。",{tag:"remedy",interrupt:true});
+        T.after(1500,()=>{ if(!ctx.alive()||st!==my) return;
+          for(let k=0;k<fill;k++){ ui.cells[q.has+k].style.background="rgba(255,255,255,.14)"; ui.cells[q.has+k].style.border="2px dashed rgba(255,255,255,.5)"; }
+          st.locked=false;
+          if(st.wrongs>=2||fails.n>=2){ const right=ui.cans.find(x=>+x.dataset.can===q.ans); if(right) tryCan(right,q.ans); }
+        });
+        return;
+      }
+      st.done=true; q.phase="commit"; ctx.answering(false);
+      can.style.transition="left .35s,top .35s,opacity .35s";
+      can.style.left="30%"; can.style.top="46%"; can.style.opacity="0";
+      SFX.whoosh();
+      runReveal(ctx,[
+        [380,()=>{ for(let k=0;k<q.ans;k++){
+            T.after(k*260,()=>{ if(!ctx.alive()) return;
+              const c=ui.cells[q.has+k];
+              c.style.background="#7ef0a8"; c.style.border="none"; c.classList.add("pop");
+              SFX.count(q.has+k+1); Speech.count(cnS(q.has+k+1),"auto-count"); });
+          } }],
+        [q.ans*260+300,()=>{ // 第十格金光 + 发射
+          ui.cells.forEach(c=>{ c.style.background="#ffd75e"; });
+          ui.mlab.querySelector("b").textContent="10/10";
+          SFX.star();
+          const beam=el("div","",ui.field);
+          beam.style.cssText="position:absolute;left:42%;top:43%;height:5%;width:0;z-index:9;border-radius:99px;"+
+            "background:linear-gradient(90deg,#ffd75e,#fff);box-shadow:0 0 18px #ffd75e;transition:width .35s";
+          requestAnimationFrame(()=>requestAnimationFrame(()=>{ beam.style.width="38%"; }));
+          const bt=el("b","",beam);
+          bt.style.cssText="position:absolute;left:50%;top:-120%;transform:translateX(-50%);font-weight:900;color:#fff;"+
+            "font-size:clamp(16px,3.4vmin,34px);text-shadow:0 2px 0 rgba(0,0,0,.5);white-space:nowrap";
+          bt.textContent=q.has+"+"+q.ans+"=10";
+          T.after(900,()=>beam.remove());
+        }],
+        [700,()=>{ // 小怪旋转被弹回传送门
+          ui.goon.style.transition="left .7s ease-in,top .7s,transform .7s,opacity .7s";
+          ui.goon.style.left="104%"; ui.goon.style.transform="translate(-50%,-50%) rotate(340deg) scale(.4)"; ui.goon.style.opacity="0";
+          ui.sign.style.opacity="0";
+          confetti(12); SFX.right(); }],
+        [500,()=>{ ui.eq=eqBar(ui.L.top,[String(q.has),"+","□","=","10"]);
+          flyNum(ui.cannon,q.ans,ui.eq); }]
+      ],{done:()=>{
+        Speech.say(cnQ(q.has)+"加"+cnQ(q.ans)+"凑成十 —— 发射成功！",{tag:"verify"});
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.cannon); });
+      }});
+    }
   }
+
+  /* ---------------- L4 十号仓库（拖十箱 + 点散箱到 13） ---------------- */
+  function buildDepot(L){
+    const mk=()=>({kind:"depot",b:rint(2,5)});
+    q=setQ(Object.assign(fresh(mk,o=>"dp"+o.b,box),{world:"aveng",act:"depot",phase:"ten"}));
+    q.n=10+q.b; q.ans=q.n;
+    lvlTag(L.top,4,"十号仓库");
+    verbBanner(L.top,"装车！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    sideCast(L.top,"l",["ironman"],26);
+    // 卡车
+    const truck=el("div","",field);
+    truck.style.cssText="position:absolute;left:62%;top:56%;transform:translate(-50%,-50%);width:38%;aspect-ratio:2;z-index:5";
+    truck.innerHTML='<svg viewBox="0 0 160 80" style="width:100%;height:100%">'+
+      '<rect x="4" y="14" width="104" height="46" rx="8" fill="#8b97ee" stroke="#2c3a91" stroke-width="4"/>'+
+      '<path d="M108 26 h26 l18 16 v18 h-44 Z" fill="#5b6ee1" stroke="#2c3a91" stroke-width="4"/>'+
+      '<rect x="118" y="30" width="16" height="12" rx="3" fill="#bfe6ff"/>'+
+      '<circle cx="34" cy="64" r="11" fill="#28304e" stroke="#111" stroke-width="3"/>'+
+      '<circle cx="120" cy="64" r="11" fill="#28304e" stroke="#111" stroke-width="3"/></svg>';
+    ui.truck=truck;
+    // 车侧两段屏
+    const screenB=el("div","chip",field);
+    screenB.style.left="62%"; screenB.style.right="auto"; screenB.style.top="30%"; screenB.style.transform="translateX(-50%)";
+    screenB.textContent="装了 "; ui.scr=el("b","",screenB); ui.scr.textContent="0";
+    // 传送带上的十箱
+    const tenbox=el("div","",field); tenbox.dataset.tenbox="1";
+    tenbox.style.cssText="position:absolute;left:14%;top:70%;transform:translate(-50%,-50%);width:17%;aspect-ratio:1.15;z-index:7;"+
+      "background:linear-gradient(#f0a949,#d4842a);border-radius:12px;box-shadow:0 6px 0 #a3611a,0 10px 14px rgba(0,0,0,.35);"+
+      "display:flex;align-items:center;justify-content:center";
+    const grid=el("div","",tenbox);
+    grid.style.cssText="display:grid;grid-template-columns:repeat(5,1fr);gap:9%;width:76%";
+    for(let i=0;i<10;i++){ const d2=el("i","",grid);
+      d2.style.cssText="width:100%;aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.55);display:block"; }
+    const tb=el("b","",tenbox);
+    tb.style.cssText="position:absolute;right:6%;bottom:4%;font-weight:900;color:#5a3c18;font-size:clamp(18px,4vmin,40px)";
+    tb.textContent="10";
+    ui.tenbox=tenbox; ui.loaded=0; ui.singles=0;
+    draggable(tenbox,{
+      enabled:()=>(!busyState(st)&&q.phase==="ten"),
+      zones:()=>[{el:truck}],
+      onDrop:()=>{ loadTen(); return true; },
+      onTap:()=>{ if(!busyState(st)&&q.phase==="ten") loadTen(); }
+    });
+    // 散箱
+    ui.sBoxes=[];
+    for(let i=0;i<q.b;i++){
+      const s2=el("div","",field); s2.dataset.sbox="1";
+      s2.style.cssText="position:absolute;left:"+(34+i*10)+"%;top:82%;transform:translate(-50%,-50%);width:7.5%;aspect-ratio:1;z-index:7;"+
+        "background:linear-gradient(#f7d78a,#e8b25a);border-radius:8px;box-shadow:0 4px 0 #b8863a,0 6px 8px rgba(0,0,0,.3);"+
+        "display:flex;align-items:center;justify-content:center;font-weight:900;color:#7a5316;font-size:clamp(14px,2.8vmin,26px)";
+      s2.textContent="1";
+      s2.style.opacity=".45";
+      ui.sBoxes.push(s2);
+      onTap(s2,()=>{
+        if(busyState(st)||q.phase!=="single"||s2.dataset.on) return;
+        s2.dataset.on="1"; ui.singles++; q.draft=10+ui.singles;
+        s2.style.opacity="1";
+        s2.style.transition="left .4s,top .4s,transform .4s";
+        s2.style.left=(52+ui.singles*6)+"%"; s2.style.top="52%";
+        s2.style.transform="translate(-50%,-50%) scale(.8)";
+        ui.scr.textContent="10 和 "+ui.singles;
+        SFX.count(10+ui.singles); Speech.count(cnS(10+ui.singles),"child-count");
+        if(ui.singles>=q.b){ q.phase="commit"; T.after(700,commit); }
+      });
+    }
+    ctx.ask("发货任务："+cnS(q.n)+"件！先把封好的大十箱拖上卡车 —— 那一箱就是十件！",tenbox);
+    ctx.answering(true);
+    function loadTen(){
+      q.phase="single";
+      tenbox.style.transition="left .5s cubic-bezier(.3,.9,.4,1),top .5s,transform .5s";
+      tenbox.style.left="56%"; tenbox.style.top="52%"; tenbox.style.transform="translate(-50%,-50%) scale(.66)";
+      ui.scr.textContent="10";
+      SFX.count(10); Speech.count("十","child-count");
+      ui.sBoxes.forEach(s2=>s2.style.opacity="1");
+      Speech.say("十件上车！再把散件一件一件点上去，接着数：十一、十二……",{tag:"instruct"});
+    }
+    function commit(){
+      if(st.done) return;
+      st.done=true; record(ctx,st,true); ctx.answering(false);
+      SFX.right();
+      Speech.say("装满"+cnS(q.n)+"件，发车！",{tag:"right",interrupt:true});
+      runReveal(ctx,[
+        [300,()=>{ // 卡车开走 + 十箱透明化露出10件
+          ui.tenbox.style.background="rgba(240,169,73,.25)";
+          ui.tenbox.querySelectorAll("i").forEach(d2=>{ d2.style.background="#fff"; d2.classList.add("pop"); });
+          SFX.star(); }],
+        [800,()=>{ ui.truck.style.transition="left 1.1s ease-in";
+          ui.truck.style.left="130%";
+          ui.tenbox.style.transition="left 1.1s ease-in"; ui.tenbox.style.left="124%";
+          ui.sBoxes.forEach(s2=>{ s2.style.transition="left 1.1s ease-in"; s2.style.left=(120+rnd(8))+"%"; });
+          confetti(12); }],
+        [900,()=>{ ui.eq=eqBar(ui.L.top,["10","+",String(q.b),"=","□"]);
+          flyNum(ui.scr,q.n,ui.eq); }]
+      ],{done:()=>{
+        Speech.say("一个十和"+cnQ(q.b)+"个一 —— 就是"+cnS(q.n)+"！",{tag:"verify"});
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.field); });
+      }});
+    }
+  }
+
   return {
     start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
     repeat:()=>{ if(!q) return "";
-      if(q.kind==="add") return cnQ(q.a)+"加"+cnQ(q.b)+"等于几？";
-      if(q.kind==="sub") return cnQ(q.n)+"减"+cnQ(q.k)+"等于几？";
-      if(q.kind==="missA") return cnQ(q.a)+"加几等于"+cnQ(q.n)+"？";
-      return "十加"+cnQ(q.b)+"是多少？"; },
-    destroy:()=>{ ui=null; q=null; st=null; }
+      if(q.kind==="elev") return "电梯已有五位，点英雄补到"+cnQ(q.n)+"位！";
+      if(q.kind==="shield") return "盾牌缺几片？拖刚好的那条补满十！";
+      if(q.kind==="cannon") return "已充"+cnQ(q.has)+"格，选哪罐正好凑成十？";
+      return "先拖十箱上车，再点散件接着数！"; },
+    destroy:()=>{ Link.clear(); ui=null; q=null; st=null; }
   };
 };
 
