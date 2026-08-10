@@ -701,7 +701,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "6.0.0";
+const VERSION = "6.1.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -2330,242 +2330,470 @@ GAMES.peppa=ctx=>{
 };
 
 /* ============================================================================
-   世界二 · 冒险湾 —— 数字派遣：看数字派狗 → 补派缺口 → 归队减法 → 一对二倍数
+   世界二 · 汪汪队（v6）—— 四个独立小游戏：
+   L1 靠站缆车（到站点） L2 骨头雷达（擦） L3 磁轨救生圈（装弹+瞄准拖） L4 双倍鱼饼机（摇柄）
    ============================================================================ */
 GAMES.paw=ctx=>{
   const T=ctx.T; let st=null,q=null,ui=null; const box={last:null},fails={n:0};
+  const DOGS=["chase","marshall","skye","rubble","zuma","rocky"];
 
-  function spec(){
-    const lv=ctx.level();
-    if(lv===1){ const n=rint(3,7); return {kind:"give",n,ans:n}; }
-    if(lv===2){ const n=rint(5,9),a=rint(1,n-2); return {kind:"more",n,a,ans:n-a}; }
-    if(lv===3){ const n=rint(5,9),k=rint(1,4); return {kind:"back",n,k,ans:n-k}; }
-    const d=rint(2,4); return {kind:"pairs",d,ans:d*2};
-  }
-  const DOGS=["chase","marshall","skye","rubble","zuma","rocky","chase","marshall","skye"];
   function build(retry){
-    st=bindState(newState(retry)); q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.n||o.d)+","+(o.a||o.k||0),box),{world:"paw"}));
+    st=bindState(newState(retry));
+    const lv=ctx.level();
     const L=layout(ctx.root); ui={L};
-    sideCast(L.top,"l",["ryder"],30);
-    if(q.kind==="give"){ lvlTag(L.top,1,"数字警报"); buildSend(L); }
-    else if(q.kind==="more"){ lvlTag(L.top,2,"补队缺口"); buildSend(L); }
-    else if(q.kind==="back"){ lvlTag(L.top,3,"归队点名"); buildBack(L); }
-    else { lvlTag(L.top,4,"海龟双救"); buildPairs(L); }
+    if(lv===1) buildCable(L);
+    else if(lv===2) buildRadar(L);
+    else if(lv===3) buildRing(L);
+    else buildCrank(L);
   }
-  /* 出发区 + 待命狗：点狗出发，点已出发的召回 */
-  function buildSend(L){
-    q.act="dogs";
-    const zone=mkField(L.top,{l:16,r:4,t:14,b:44}); zone.classList.add("dropzone2");
-    zone.style.cssText+=";border:4px dashed rgba(255,255,255,.65);border-radius:16px;background:rgba(0,0,0,.25)";
-    const home=mkField(L.top,{mat:false,l:16,r:4,t:62,b:6});
-    ui.zone=zone; ui.home=home; ui.sent=[];
-    const already=q.kind==="more"?q.a:0;
-    // 已经出发的 a 只（灰底，不可召回）
-    fitObj(zone,9,"row"); fitObj(home,9,"row");
-    const zp=rowFixed(9,9), hp=rowFixed(9,9);
-    ui.fixed=[];
-    for(let i=0;i<already;i++){
-      const o=el("div","cobj",zone); o.style.left=zp[i][0]+"%"; o.style.top="50%";
-      img(A.ch(DOGS[i]),"",o); el("div","tag",o); o.style.filter="saturate(.55)";
-      ui.fixed.push(o);
-    }
-    // L2：缺的位置画成虚线剪影空位 —— "还差几个"变成看得见的空缺
-    if(q.kind==="more"){
-      ui.slots=[];
-      for(let i=already;i<q.n;i++){
-        const s2=el("div","slotghost want",zone);
-        s2.style.cssText+=";position:absolute;left:"+zp[i][0]+"%;top:50%;transform:translate(-50%,-50%);width:var(--obj);aspect-ratio:1";
-        img(A.ch(DOGS[i%DOGS.length]),"",s2);
-        ui.slots.push(s2);
-      }
-    }
+
+  /* ---------------- L1 靠站缆车（DockedTap） ---------------- */
+  function buildCable(L){
+    const mk=()=>({kind:"cable",n:rint(3,5)});
+    q=setQ(Object.assign(fresh(mk,o=>"cb"+o.n,box),{world:"paw",act:"cable",phase:"intro"}));
+    q.ans=q.n;
+    lvlTag(L.top,1,"靠站缆车");
+    verbBanner(L.top,"上车！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    // 缆索
+    const rope=el("div","",field);
+    rope.style.cssText="position:absolute;left:0;right:0;top:24%;height:5px;background:linear-gradient(#7a6a58,#4d4238);z-index:3";
+    // 站台
+    const plat=el("div","",field);
+    plat.style.cssText="position:absolute;left:34%;width:32%;bottom:14%;height:7%;border-radius:10px 10px 4px 4px;"+
+      "background:linear-gradient(#c8a06a,#a37c46);box-shadow:0 5px 0 #7c5a2e,0 8px 12px rgba(0,0,0,.35);z-index:4";
+    ui.alarm=alarmNum(L.top,q.n);
     // 待命狗
-    ui.dogs=[];
-    const nHome=q.kind==="give"?9:9-already;
-    for(let i=0;i<nHome;i++){
-      const o=el("div","cobj",home); o.dataset.dog="1";
-      o.style.left=hp[i][0]+"%"; o.style.top="50%";
-      img(A.ch(DOGS[(i+already)%DOGS.length]),"",o); el("div","tag",o);
-      onTap(o,()=>{
-        if(busyState(st)) return;
-        if(o.dataset.out){ // 召回
-          o.dataset.out=""; o.style.left=o.dataset.hx+"%"; ui.sent.splice(ui.sent.indexOf(o),1);
-          o.style.top="50%"; SFX.tap(); relayout(); upd(); return;
-        }
-        if(already+ui.sent.length>=9) return;
-        o.dataset.out="1"; ui.sent.push(o); SFX.count(already+ui.sent.length);
-        Speech.count(cnS(already+ui.sent.length),"child-count");
-        numPop(o,already+ui.sent.length);
-        relayout(); upd();
-      });
-      o.dataset.hx=hp[i][0];
+    ui.dogs=[]; ui.boarded=0; ui.cabins=[];
+    for(let i=0;i<6;i++){
+      const o=el("div","cobj",field); o.dataset.dog="1";
+      o.style.left=(10+i*9)+"%"; o.style.top="76%"; o.style.width="10%";
+      img(A.ch(DOGS[i]),"",o); el("div","tag",o);
+      onTap(o,()=>boardDog(o));
       ui.dogs.push(o);
     }
-    function relayout(){
-      ui.sent.forEach((o,i)=>{
-        const p=zp[already+i];
-        const zr=zone.getBoundingClientRect(), hr=home.getBoundingClientRect(), st2=L.top.getBoundingClientRect();
-        // 直接把狗挪进出发区坐标系：用绝对定位换父容器
-        if(o.parentNode!==zone){ zone.appendChild(o); }
-        o.style.left=p[0]+"%"; o.style.top="50%";
-      });
-      ui.dogs.forEach(o=>{ if(!o.dataset.out&&o.parentNode!==home){ home.appendChild(o); o.style.left=o.dataset.hx+"%"; o.style.top="50%"; } });
-      if(ui.slots) ui.slots.forEach((s2,i)=>{
-        s2.classList.toggle("fill",i<ui.sent.length);
-        s2.classList.toggle("want",i>=ui.sent.length);
+    fitObj(field,8,"row");
+    ctx.ask("任务警报！要"+cnQ(q.n)+"只狗狗坐缆车过海。车厢停稳了，点一只狗狗上车！",field);
+    const my=st;
+    afterSay(T,600,()=>{ if(ctx.alive()&&st===my){ q.phase="play"; nextCabin(); } });
+
+    function nextCabin(){
+      if(!ctx.alive()) return;
+      const cab=el("div","",ui.field);
+      cab.style.cssText="position:absolute;left:-16%;top:24%;width:14%;aspect-ratio:.92;z-index:5;transition:left .8s cubic-bezier(.3,.8,.4,1)";
+      cab.innerHTML='<svg viewBox="0 0 80 88" style="width:100%;height:100%">'+
+        '<rect x="37" y="0" width="6" height="16" fill="#5b4a35"/>'+
+        '<rect x="8" y="14" width="64" height="60" rx="12" fill="#e2453f" stroke="#9c2b26" stroke-width="4"/>'+
+        '<rect x="16" y="24" width="48" height="26" rx="8" fill="#bfe6ff"/>'+
+        '<rect x="8" y="62" width="64" height="12" rx="6" fill="#9c2b26"/></svg>';
+      const seat=el("div","",cab);
+      seat.style.cssText="position:absolute;left:22%;top:22%;width:56%;height:44%;display:flex;align-items:flex-end;justify-content:center";
+      cab._seat=seat;
+      const num=el("div","",cab);
+      num.style.cssText="position:absolute;left:50%;bottom:-26%;transform:translateX(-50%);font-weight:900;color:#fff;"+
+        "font-size:clamp(15px,3vmin,30px);text-shadow:0 2px 0 rgba(0,0,0,.55);opacity:0";
+      cab._num=num;
+      ui.cab=cab; ui.cabins.push(cab);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{ cab.style.left="43%"; }));
+      T.after(850,()=>{ if(ctx.alive()) ui.docked=true; SFX.tap(); });
+    }
+    function boardDog(o){
+      if(busyState(st)||q.phase!=="play"||!ui.docked||o.dataset.out) return;
+      ui.docked=false; o.dataset.out="1";
+      ui.boarded++; q.draft=ui.boarded;
+      // 狗跳进车厢
+      const cab=ui.cab, s=ui.field.getBoundingClientRect();
+      const cr=cab.getBoundingClientRect();
+      o.style.transition="left .45s cubic-bezier(.4,.9,.5,1),top .45s cubic-bezier(.4,.9,.5,1),transform .45s";
+      o.style.left=((cr.left+cr.width/2-s.left)/s.width*100)+"%";
+      o.style.top="28%"; o.style.transform="translate(-50%,-50%) scale(.72)";
+      SFX.count(ui.boarded); Speech.count(cnS(ui.boarded),"child-count");
+      cab._num.textContent=String(ui.boarded);
+      T.after(520,()=>{
+        if(!ctx.alive()) return;
+        cab._num.style.opacity="1";
+        // 该厢自动发车
+        cab.style.transition="left .8s ease-in";
+        cab.style.left="72%";
+        o.style.transition="left .8s ease-in";
+        o.style.left="79%";
+        T.after(850,()=>{
+          if(!ctx.alive()) return;
+          if(ui.boarded>=q.n) commit();
+          else nextCabin();
+        });
       });
     }
-    const okBtn=bigBtn(L.bot,"出发！","green",()=>submitSend());
-    okBtn.disabled=true; ui.okBtn=okBtn;
-    function upd(){ okBtn.disabled=ui.sent.length===0; }
-    if(q.kind==="give"){
-      ui.alarm=alarmNum(L.top,q.n);       // 红色警报数字，一直脉冲
-      SFX.whoosh();
-      ctx.ask("任务警报！要"+cnQ(q.n)+"只狗狗，点狗狗派它出发，多了点它回来。好了按绿色按钮。",home);
-    }else{
-      ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.n)]);
-      ctx.ask("任务要"+cnQ(q.n)+"只！已经出发了"+cnQ(q.a)+"只，还要再派几只？派好按绿色按钮。",home);
+    function commit(){
+      if(st.done) return;
+      st.done=true; q.phase="commit"; record(ctx,st,true);   // 构造完成型：座位=一一对应
+      ctx.answering(false); if(ui.alarm) ui.alarm.remove();
+      Speech.say("装满"+cnQ(q.n)+"节，出发！",{tag:"right",interrupt:true});
+      runReveal(ctx,[
+        [400,()=>{ SFX.whoosh(); }],
+        [300,()=>{ // 车厢底部 1..n 逐节亮灯唱数
+          ui.cabins.forEach((c,i)=>{ T.after(i*300,()=>{ if(!ctx.alive()) return;
+            c._num.style.opacity="1"; c._num.style.color="#ffd75e";
+            SFX.count(i+1); Speech.count(cnS(i+1),"auto-count"); }); });
+        }],
+        [q.n*300+500,()=>{ confetti(12);
+          ui.eq=eqBar(ui.L.top,["上车","□","只"]);
+          flyNum(ui.cabins[ui.cabins.length-1]||ui.field,q.n,ui.eq); }]
+      ],{done:()=>{ afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(ui.field); }); }});
     }
+  }
+
+  /* ---------------- L2 骨头雷达（ZoneScrub：离散区域，一次穿越锁定） ---------------- */
+  function buildRadar(L){
+    const mk=()=>({kind:"radar",n:rint(4,6)});
+    q=setQ(Object.assign(fresh(mk,o=>"rd"+o.n,box),{world:"paw",act:"radar",phase:"play"}));
+    q.ans=q.n;
+    lvlTag(L.top,2,"骨头雷达");
+    verbBanner(L.top,"挖！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    sideCast(L.top,"l",["rubble"],28);
+    // 雷达屏
+    const radar=el("div","",field);
+    radar.style.cssText="position:absolute;right:2%;top:8%;width:19%;aspect-ratio:1;border-radius:50%;z-index:9;"+
+      "background:radial-gradient(circle,#0a2e18,#06371d 60%,#032010 100%);box-shadow:0 0 0 5px #274,0 6px 14px rgba(0,0,0,.4)";
+    const rnum=el("div","",radar);
+    rnum.style.cssText="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#5aff9c;font-weight:900";
+    rnum.innerHTML='<span style="font-size:clamp(11px,2vmin,18px)">埋着</span><b style="font-size:clamp(26px,6vmin,58px)">'+q.n+'</b><span id="rdGot" style="font-size:clamp(11px,2vmin,18px)">挖到 0</span>';
+    // 沙地光区（种子槽位，互不重叠）
+    ui.zones=[]; ui.found=0;
+    const slots=shuffle([[16,44],[32,58],[48,42],[62,58],[30,78],[52,74],[68,42],[70,76]]).slice(0,q.n);
+    slots.forEach((p,i)=>{
+      const z=el("div","",field);
+      z.style.cssText="position:absolute;left:"+p[0]+"%;top:"+p[1]+"%;width:11%;aspect-ratio:1.4;transform:translate(-50%,-50%);"+
+        "border-radius:50%;background:radial-gradient(ellipse,rgba(255,236,150,.55),rgba(255,236,150,.12) 70%,transparent);z-index:5;"+
+        "animation:holo 1.5s ease-in-out infinite";
+      z.dataset.zone=String(i);
+      ui.zones.push(z);
+    });
+    // 擦刮：pointerdown 后 move 穿过光区即锁定
+    field.style.touchAction="none";
+    let scrubbing=false;
+    field.addEventListener("pointerdown",e=>{ if(q.phase==="play"){ scrubbing=true; SFX.gesture(); Audio2.kick(); dig(e); } },{passive:true});
+    field.addEventListener("pointermove",e=>{ if(scrubbing&&q.phase==="play") dig(e); },{passive:true});
+    ["pointerup","pointercancel"].forEach(ev=>field.addEventListener(ev,()=>{ scrubbing=false; }));
+    function dig(e){
+      ui.zones.forEach(z=>{
+        if(z.dataset.done) return;
+        const r=z.getBoundingClientRect();
+        if(e.clientX>r.left-8&&e.clientX<r.right+8&&e.clientY>r.top-8&&e.clientY<r.bottom+8){
+          z.dataset.done="1"; unearth(z);
+        }
+      });
+    }
+    function unearth(z){
+      ui.found++; q.draft=ui.found;
+      z.style.animation="none";
+      z.innerHTML='<svg viewBox="0 0 60 30" style="position:absolute;inset:12%"><path d="M8 15c-4-8 6-12 9-5 3-7 13-3 9 5 4 8-6 12-9 5-3 7-13 3-9-5z" fill="#fff" stroke="#cbb" stroke-width="2"/><rect x="14" y="12" width="32" height="6" rx="3" fill="#fff" stroke="#cbb" stroke-width="2"/></svg>';
+      z.classList.add("pop");
+      const t=el("div","tag",z); setTag(t,ui.found); t.style.opacity="1";
+      const g=$("#rdGot"); if(g) g.textContent="挖到 "+ui.found;
+      SFX.count(ui.found); Speech.count(cnS(ui.found),"child-count");
+      if(ui.found>=q.n){ q.phase="commit"; T.after(500,commit); }
+    }
+    ctx.ask("雷达说沙滩里埋着"+cnQ(q.n)+"根骨头！用手指来回擦亮亮的地方，把它们全挖出来！",field);
     ctx.answering(true);
-  }
-  function submitSend(){
-    if(st.done) return;
-    const ok=(ui.sent.length===q.ans); record(ctx,st,ok);
-    if(ok){
-      st.done=true; ui.okBtn.disabled=true; ctx.answering(false);
-      if(ui.eq&&q.kind==="more") ui.eq.setHole(q.ans);
-      Speech.say(q.kind==="give"?("正好"+cnQ(q.n)+"只，出发！")
-        :(cnQ(q.a)+"只加"+cnQ(q.ans)+"只，正好"+cnQ(q.n)+"只，出发！"),{tag:"right",interrupt:true});
-      SFX.right();
-      afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.zone); });
-    }else{
-      st.wrongs++; fails.n++; SFX.soft(); ui.zone.classList.add("shake");
-      T.after(500,()=>ui.zone.classList.remove("shake"));
-      ctx.answering(false);
-      if(st.wrongs>=2||fails.n>=2){ revealSend(); return; }
-      const got=ui.sent.length+(q.kind==="more"?q.a:0);
-      Speech.say("现在出发区有"+cnQ(got)+"只，任务要"+cnQ(q.n)+"只，再看看。",{tag:"remedy",interrupt:true});
-      ctx.answering(true);
+    function commit(){
+      if(st.done) return;
+      st.done=true; record(ctx,st,true); ctx.answering(false);
+      Speech.say("全挖到啦！",{tag:"right",interrupt:true});
+      runReveal(ctx,[
+        [300,()=>{ // 骨头搭成 1..n 阶梯塔
+          ui.zones.forEach((z,i)=>{
+            z.style.transition="left .6s,top .6s";
+            z.style.left=(28+i*9)+"%"; z.style.top=(80-i*9)+"%";
+          }); SFX.whoosh(); }],
+        [700,()=>{ ui.zones.forEach((z,i)=>{ z.classList.add("counted"); }); SFX.right(); }],
+        [400,()=>{ confetti(12);
+          ui.eq=eqBar(ui.L.top,["挖到","□","根"]);
+          flyNum(ui.zones[ui.zones.length-1],q.n,ui.eq); }]
+      ],{done:()=>{
+        Speech.say("一根一根搭成小楼梯 —— "+cnQ(q.n)+"根！",{tag:"verify"});
+        afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(ui.field); });
+      }});
     }
   }
-  function revealSend(){
-    st.done=true; ctx.answering(false); ui.okBtn.disabled=true;
-    st.locked=true; const my=st;
-    const target=q.ans;
-    const step=()=>{
-      if(!ctx.alive()||st!==my) return;
-      if(ui.sent.length<target){
-        const o=ui.dogs.find(d=>!d.dataset.out);
-        if(o){ o.dataset.out="1"; ui.sent.push(o); ui.zone.appendChild(o);
-          o.style.left=rowFixed(9,9)[(q.kind==="more"?q.a:0)+ui.sent.length-1][0]+"%"; o.style.top="50%";
-          SFX.count(ui.sent.length); Speech.count(cnS(ui.sent.length),"auto-count"); }
-        T.after(600,step); return;
-      }
-      if(ui.sent.length>target){
-        const o=ui.sent.pop(); o.dataset.out=""; ui.home.appendChild(o);
-        o.style.left=o.dataset.hx+"%"; o.style.top="50%"; SFX.tap();
-        T.after(500,step); return;
-      }
-      Speech.say("这样就是"+cnQ(target)+"只啦！",{tag:"reveal"});
-      afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(ui.zone); });
-    };
-    T.after(600,step);
-  }
-  /* L3 归队点名：n 只在外面，回来 k 只跑回家门，点名板同步划叉 */
-  function buildBack(L){
-    q.act="card";
-    const field=mkField(L.top,{l:16,r:24,t:16,b:40}); ui.field=field;
-    fitObj(field,q.n,"row");
-    const names=Array.from({length:q.n},(x,i)=>DOGS[i%6]);
-    ui.out=[];
-    rowPos(q.n).forEach((p,i)=>{
+
+  /* ---------------- L3 磁轨救生圈（装弹=答案 + 瞄准发射） ---------------- */
+  function buildRing(L){
+    const mk=()=>{ const n=rint(5,7),k=rint(2,n-2); return {kind:"ring",n,k}; };
+    q=setQ(Object.assign(fresh(mk,o=>"rg"+o.n+","+o.k,box),{world:"paw",act:"ring",phase:"load"}));
+    q.ans=q.n-q.k;
+    lvlTag(L.top,3,"救生圈发射器");
+    verbBanner(L.top,"救援！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    sideCast(L.top,"l",["zuma"],26);
+    // 总量条：N 格（岸上 k 灰 + 水中空格）
+    const bar=el("div","",field);
+    bar.style.cssText="position:absolute;left:50%;top:7%;transform:translateX(-50%);display:flex;gap:5px;z-index:9;"+
+      "background:rgba(20,14,50,.7);padding:6px 10px;border-radius:12px";
+    ui.cells=[];
+    for(let i=0;i<q.n;i++){
+      const c=el("i","",bar);
+      c.style.cssText="width:clamp(16px,3vmin,30px);aspect-ratio:1;border-radius:6px;display:block;"+
+        (i<q.k?"background:#8b86a8":"background:rgba(255,255,255,.15);border:2px dashed rgba(255,255,255,.6)");
+      ui.cells.push(c);
+    }
+    // 岸上 k 只已救海龟
+    for(let i=0;i<q.k;i++){
       const o=el("div","cobj",field);
-      o.style.left=p[0]+"%"; o.style.top=p[1]+"%";
-      img(A.ch(names[i]),"",o); el("div","tag",o);
-      ui.out.push(o);
-    });
-    ui.rc=rollcall(L.top,names);                       // 点名板：每只狗一张脸
-    ui.eq=eqBar(L.top,[String(q.n),"−",String(q.k),"=","□"]);
-    ctx.ask(cnQ(q.n)+"只狗狗在外面执行任务，"+cnQ(q.k)+"只先跑回家，点名板上划掉它们！外面还剩几只？",field);
-    const my=st;
-    afterSay(T,1000,()=>{
-      if(!ctx.alive()||st!==my) return;
-      for(let i=0;i<q.k;i++){ const idx=q.n-1-i, o=ui.out[idx];
-        T.after(i*420,()=>{ if(!ctx.alive()||st!==my) return;
-          o.style.transition="left .8s ease-in,transform .8s,opacity .8s";
-          o.style.left="-12%"; o.style.transform="translate(-50%,-50%) scaleX(-1)";  // 转身跑回家
-          o.style.opacity="0";
-          ui.rc.gone(idx); SFX.tap();                   // 点名板划叉
-        });
-      }
-      SFX.whoosh();
-      T.after(q.k*420+900,()=>{ if(!ctx.alive()||st!==my) return;
-        numAnswer(ctx,ui,st,fails,{
-          ans:q.ans,lo:0,hi:10,askText:"外面还剩几只？点数字卡。",
-          rightSay:cnQ(q.n)+"减"+cnQ(q.k)+"，还剩"+cnQ(q.ans)+"只！",
-          revealSay:"是"+cnQ(q.ans)+"只。"+cnQ(q.n)+"减"+cnQ(q.k)+"等于"+cnQ(q.ans)+"。",
-          retry:()=>build(true),
-          onRight:card=>{ ui.eq.setHole(q.ans);
-            autoCount(ctx,ui.out.slice(0,q.ans),0,380,()=>{ if(ctx.alive()) ctx.win(card); }); }
-        });
-      });
-    });
-  }
-  /* L4 一对二倍数：每只狗救两只小海龟 */
-  function buildPairs(L){
-    q.act="card";
-    const field=mkField(L.top,{l:16,r:4,t:12,b:36}); ui.field=field;
-    const d=q.d;
-    fitObj(field,d*3,"row");
+      o.style.left=(12+i*8)+"%"; o.style.top="30%"; o.style.width="8%"; o.style.filter="saturate(.6)";
+      img(A.pr("turtle"),"",o);
+    }
+    const shoreLab=el("div","chip",field); shoreLab.style.left="10%"; shoreLab.style.top="17%"; shoreLab.style.right="auto";
+    shoreLab.textContent="岸上 "; el("b","",shoreLab).textContent=String(q.k);
+    // 水中海龟
     ui.turts=[];
-    const colW=84/d;
-    for(let i=0;i<d;i++){
-      const dog=el("div","cobj",field);
-      dog.style.left=(8+colW*(i+.5))+"%"; dog.style.top="26%";
-      img(A.ch(DOGS[i]),"",dog); el("div","tag",dog);
-      for(let j2=0;j2<2;j2++){
-        const t=el("div","cobj",field);
-        t.style.top="70%";
-        t.style.left=(8+colW*i+colW*(j2?0.68:0.32))+"%";
-        img(A.pr("turtle"),"",t); el("div","tag",t);
-        ui.turts.push(t);
+    for(let i=0;i<q.ans;i++){
+      const o=el("div","cobj",field);
+      o.style.left=(46+i*11)+"%"; o.style.top="56%"; o.style.width="9%";
+      img(A.pr("turtle"),"",o); el("div","tag",o);
+      o.style.animation="sway 2.4s ease-in-out infinite"; o.style.animationDelay=(i*.4)+"s";
+      ui.turts.push(o);
+    }
+    // 发射器 + 圈堆 + 弹舱
+    const launcher=el("div","",field);
+    launcher.dataset.launcher="1";
+    launcher.style.cssText="position:absolute;left:14%;top:66%;width:12%;aspect-ratio:1;z-index:8";
+    launcher.innerHTML='<svg viewBox="0 0 80 80" style="width:100%;height:100%"><rect x="30" y="34" width="44" height="16" rx="8" fill="#5b6ee1" stroke="#2c3a91" stroke-width="4"/><circle cx="26" cy="42" r="18" fill="#8b97ee" stroke="#2c3a91" stroke-width="4"/><circle cx="26" cy="42" r="7" fill="#2c3a91"/></svg>';
+    ui.launcher=launcher;
+    const mag=el("div","",field);
+    mag.style.cssText="position:absolute;left:6%;top:86%;display:flex;gap:6px;z-index:8";
+    ui.mag=mag; ui.loaded=0; ui.fired=0;
+    // 圈堆（可点装弹）
+    const pile=el("div","",field);
+    pile.style.cssText="position:absolute;left:30%;top:82%;width:26%;height:12%;z-index:8;display:flex;gap:4px;align-items:center";
+    for(let i=0;i<8;i++){
+      const r=el("div","",pile);
+      r.style.cssText="width:clamp(26px,5vmin,52px);aspect-ratio:1;border-radius:50%;border:7px solid #ff8a3d;box-shadow:inset 0 0 0 3px #fff,0 3px 6px rgba(0,0,0,.35);cursor:pointer";
+      onTap(r,()=>{
+        if(busyState(st)||q.phase!=="load") return;
+        r.style.visibility="hidden";
+        ui.loaded++; q.draft=ui.loaded;
+        const m=el("i","",mag);
+        m.style.cssText="width:clamp(18px,3.4vmin,34px);aspect-ratio:1;border-radius:50%;border:5px solid #ff8a3d;box-shadow:inset 0 0 0 2px #fff";
+        SFX.count(ui.loaded); Speech.count(cnS(ui.loaded),"child-count");
+        if(!ui.goBtn) ui.goBtn=bigBtn(L.bot,"出发！","green",()=>startFire());
+      });
+    }
+    ctx.ask("水里还有海龟等着救！先想好要装几个救生圈 —— 点圈装进弹舱，装好按出发！",field);
+    ctx.answering(true);
+    function startFire(){
+      if(q.phase!=="load") return;
+      const ok=(ui.loaded===q.ans);
+      record(ctx,st,ok);                 // 装弹数就是答案：这一下记掌握
+      if(!ok&&ui.loaded<q.ans){
+        // 先让孩子把装的发完，空舱咔哒 → 看见还缺
+      }
+      q.phase="fire"; ui.goBtn.disabled=true;
+      Speech.say("发射！拖发射器对准海龟，松手！",{tag:"instruct",interrupt:true});
+      armAim();
+    }
+    function armAim(){
+      draggable(ui.launcher,{
+        enabled:()=>q.phase==="fire",
+        zones:()=>[],
+        onStart:()=>{},
+        onTap:()=>fire(),
+        onBounce:()=>fire(),
+        onDrop:()=>{ fire(); return false; }
+      });
+    }
+    function fire(){
+      if(q.phase!=="fire") return;
+      const target=ui.turts.find(t=>!t.dataset.saved);
+      if(ui.fired>=ui.loaded){
+        // 弹舱空
+        if(target){ SFX.soft();
+          const left=ui.turts.filter(t=>!t.dataset.saved).length;
+          ui.turts.filter(t=>!t.dataset.saved).forEach(t=>t.classList.add("tapme"));
+          Speech.say("咔哒 —— 圈用完了！还有"+cnQ(left)+"只没圈到，再装"+cnQ(left)+"个！",{tag:"remedy",interrupt:true});
+          T.after(1500,()=>ui.turts.forEach(t=>t.classList.remove("tapme")));
+          q.phase="load"; ui.goBtn.disabled=false;
+        }
+        return;
+      }
+      if(!target) return;
+      ui.fired++;
+      if(mag.lastChild) mag.removeChild(mag.lastChild);
+      // 预制贝塞尔：发射器 → 目标
+      const s=ui.field.getBoundingClientRect();
+      const lr=ui.launcher.getBoundingClientRect(), tr=target.getBoundingClientRect();
+      const ring=el("div","",ui.field);
+      ring.style.cssText="position:absolute;width:8%;aspect-ratio:1;border-radius:50%;border:8px solid #ff8a3d;"+
+        "box-shadow:inset 0 0 0 3px #fff;z-index:9;transform:translate(-50%,-50%)";
+      const x0=(lr.left+lr.width/2-s.left)/s.width*100, y0=(lr.top-s.top)/s.height*100;
+      const x1=(tr.left+tr.width/2-s.left)/s.width*100, y1=(tr.top+tr.height/2-s.top)/s.height*100;
+      const cx=(x0+x1)/2, cy=Math.min(y0,y1)-24;
+      const t0=performance.now();
+      const flyR=now=>{
+        const t=Math.min(1,(now-t0)/500);
+        ring.style.left=((1-t)*(1-t)*x0+2*(1-t)*t*cx+t*t*x1)+"%";
+        ring.style.top=((1-t)*(1-t)*y0+2*(1-t)*t*cy+t*t*y1)+"%";
+        if(t<1) requestAnimationFrame(flyR); else landed();
+      };
+      SFX.whoosh();
+      requestAnimationFrame(flyR);
+      function landed(){
+        ring.remove();
+        target.dataset.saved="1";
+        target.style.animation="";
+        target.innerHTML='<div style="position:absolute;inset:-14%;border-radius:50%;border:7px solid #ff8a3d;box-shadow:inset 0 0 0 3px #fff"></div>'+target.innerHTML;
+        const idx=q.k+ui.fired;
+        ui.cells[idx-1].style.cssText+=";background:#37d67a;border:none";
+        setTag(target.querySelector(".tag")||el("div","tag",target),ui.fired);
+        SFX.count(ui.fired); Speech.count(cnS(ui.fired),"auto-count");
+        // 游到岸边
+        target.style.transition="left .8s,top .8s";
+        target.style.left=(12+(q.k+ui.fired-1)*8)+"%"; target.style.top="30%";
+        if(ui.turts.every(t=>t.dataset.saved)) T.after(900,commit);
       }
     }
-    ui.eq=eqBar(L.top,[String(d),"只狗","×","2","=","□"]);
-    const parts=[]; for(let i=0;i<d;i++){ parts.push("2"); if(i<d-1) parts.push("+"); } parts.push("=","□");
-    ui.eq2=eqBar(L.top,parts,12);           // 倍数 = 连加：两条算式同时看
-    ui.lad=ladder(L.top,Array.from({length:d},(x,i)=>(i+1)*2));   // 2/4/6/8 阶梯表
-    ctx.ask("每只狗狗救两只小海龟！"+cnQ(d)+"只狗狗一共救几只海龟？两个两个数！",field);
-    const my=st;
-    afterSay(T,1000,()=>{
-      if(!ctx.alive()||st!==my) return;
-      numAnswer(ctx,ui,st,fails,{
-        ans:q.ans,lo:2,hi:10,askText:"一共几只海龟？点数字卡。",
-        rightSay:"对啦！两个两个数："+Array.from({length:d},(x,i)=>cnS((i+1)*2)).join("、")+"！",
-        revealSay:"两个两个数："+Array.from({length:d},(x,i)=>cnS((i+1)*2)).join("、")+"，是"+cnQ(q.ans)+"只。",
-        retry:()=>build(true),
-        onRight:card=>{ ui.eq.setHole(q.ans); ui.eq2.setHole(q.ans);
-          let i=0; const step=()=>{
-            if(!ctx.alive()) return;
-            if(i>=d){ ctx.win(card); return; }
-            const a=ui.turts[i*2],b=ui.turts[i*2+1];
-            [a,b].forEach(o=>{ o.classList.add("counted","hit"); });
-            setTag(b.querySelector(".tag"),(i+1)*2);
-            ui.lad.on(i+1);                              // 阶梯表亮一级：2→4→6→8
-            SFX.count((i+1)*2); Speech.count(cnS((i+1)*2),"auto-count");
-            i++; T.after(700,step);
-          }; step(); }
-      });
-    });
+    function commit(){
+      if(st.done) return;
+      st.done=true; q.phase="sealed"; ctx.answering(false);
+      Speech.say("全部救上岸啦！",{tag:"right",interrupt:true});
+      runReveal(ctx,[
+        [400,()=>{ SFX.right(); confetti(12); }],
+        [400,()=>{ ui.eq=eqBar(ui.L.top,[String(q.n),"−",String(q.k),"=","□"]);
+          flyNum(ui.mag.parentNode?ui.launcher:ui.field,q.ans,ui.eq); }]
+      ],{done:()=>{
+        Speech.say("一共"+cnQ(q.n)+"只，岸上有"+cnQ(q.k)+"只，你救了"+cnQ(q.ans)+"只 —— 装的圈刚刚好！",{tag:"verify"});
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.field); });
+      }});
+    }
   }
+
+  /* ---------------- L4 双倍鱼饼机（RotaryQuantizer 四扇区） ---------------- */
+  function buildCrank(L){
+    const mk=()=>({kind:"crank",d:pick([4,6])});
+    q=setQ(Object.assign(fresh(mk,o=>"ck"+o.d,box),{world:"paw",act:"crank",phase:"play"}));
+    q.ans=q.d; q.turns=q.d/2;
+    lvlTag(L.top,4,"双倍鱼饼机");
+    verbBanner(L.top,"摇！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    // 机器
+    const mac=el("div","",field);
+    mac.style.cssText="position:absolute;left:6%;top:16%;width:30%;height:56%;border-radius:18px;z-index:5;"+
+      "background:linear-gradient(#8b97ee,#5b6ee1 70%);box-shadow:0 8px 0 #2c3a91,0 12px 18px rgba(0,0,0,.4)";
+    const face=el("div","",mac);
+    face.style.cssText="position:absolute;left:12%;top:10%;width:76%;height:30%;border-radius:12px;background:#20295f;"+
+      "display:flex;align-items:center;justify-content:center;color:#7ef0a8;font-weight:900;font-size:clamp(18px,4vmin,40px)";
+    face.textContent="0";
+    ui.face=face;
+    // 纸带
+    const tape=el("div","",field);
+    tape.style.cssText="position:absolute;left:10%;top:76%;width:22%;min-height:9%;border-radius:8px;background:#fff;z-index:6;"+
+      "box-shadow:0 4px 10px rgba(0,0,0,.3);display:flex;gap:6px;align-items:center;justify-content:center;"+
+      "font-weight:900;color:#2a1f4d;font-size:clamp(15px,3vmin,30px);padding:1%";
+    ui.tape=tape;
+    // 摇柄（四扇区）
+    const crank=el("div","",field);
+    crank.dataset.crank="1";
+    crank.style.cssText="position:absolute;left:40%;top:30%;width:17%;aspect-ratio:1;z-index:7;touch-action:none";
+    crank.innerHTML='<svg viewBox="0 0 100 100" style="width:100%;height:100%">'+
+      '<circle cx="50" cy="50" r="44" fill="#ffd75e" stroke="#a3611a" stroke-width="6"/>'+
+      '<path d="M50 50 L50 6 A44 44 0 0 1 94 50 Z" fill="#ffe89a"/>'+
+      '<circle cx="50" cy="50" r="8" fill="#a3611a"/>'+
+      '<g id="ckArm"><rect x="46" y="8" width="8" height="42" rx="4" fill="#7c4a12"/><circle cx="50" cy="10" r="9" fill="#e2453f" stroke="#7c1f1c" stroke-width="3"/></g></svg>';
+    const arm=crank.querySelector("#ckArm");
+    ui.sector=0; ui.turnsDone=0; ui.fed=0;
+    // 狗队
+    ui.dq=[];
+    for(let i=0;i<q.d;i++){
+      const o=el("div","cobj",field);
+      o.style.left=(64+(i%3)*11)+"%"; o.style.top=(30+Math.floor(i/3)*24)+"%"; o.style.width="10%";
+      img(A.ch(DOGS[i%DOGS.length]),"",o); el("div","tag",o);
+      ui.dq.push(o);
+    }
+    fitObj(field,8,"row");
+    const setArm=()=>{ arm.setAttribute("transform","rotate("+(ui.sector*90)+" 50 50)"); };
+    const tick=()=>{
+      ui.sector=(ui.sector+1)%4; setArm(); SFX.tap();
+      if(ui.sector===0) fullTurn();
+    };
+    // 旋转量化：drag 跨扇区 / 点一下走一扇区
+    let lastAng=null;
+    crank.addEventListener("pointerdown",e=>{
+      if(busyState(st)||q.phase!=="play") return;
+      e.preventDefault(); SFX.gesture(); Audio2.kick();
+      try{ crank.setPointerCapture(e.pointerId); }catch(_){}
+      const r=crank.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+      lastAng=Math.atan2(e.clientY-cy,e.clientX-cx);
+      let acc=0,moved=false;
+      const mv=ev=>{
+        const a=Math.atan2(ev.clientY-cy,ev.clientX-cx);
+        let d=a-lastAng;
+        while(d>Math.PI) d-=2*Math.PI; while(d<-Math.PI) d+=2*Math.PI;
+        if(d>0){ acc+=d; moved=true; }
+        lastAng=a;
+        while(acc>=Math.PI/2){ acc-=Math.PI/2; tick(); }
+      };
+      const up=()=>{
+        crank.removeEventListener("pointermove",mv); crank.removeEventListener("pointerup",up); crank.removeEventListener("pointercancel",up);
+        if(!moved) tick();      // 点按兜底：一点走一扇区
+      };
+      crank.addEventListener("pointermove",mv);
+      crank.addEventListener("pointerup",up);
+      crank.addEventListener("pointercancel",up);
+    },{passive:false});
+    function fullTurn(){
+      if(ui.turnsDone>=q.turns) return;
+      ui.turnsDone++; q.draft=ui.turnsDone;
+      // 吐 2 块鱼饼喂两只狗
+      SFX.right();
+      for(let j=0;j<2;j++){
+        const dog=ui.dq[ui.fed+j]; if(!dog) continue;
+        const fc=el("div","",ui.field);
+        fc.style.cssText="position:absolute;left:34%;top:60%;width:5%;aspect-ratio:1;border-radius:40% 60% 60% 40%/50%;"+
+          "background:#e8b04b;box-shadow:inset -2px -3px 0 rgba(0,0,0,.25);z-index:8;transform:translate(-50%,-50%);"+
+          "transition:left .55s cubic-bezier(.3,.9,.5,1),top .55s cubic-bezier(.3,.9,.5,1)";
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          fc.style.left=dog.style.left; fc.style.top=dog.style.top;
+        }));
+        T.after(580,()=>{ fc.remove(); dog.classList.add("hit"); setTag(dog.querySelector(".tag"),ui.fed+j+1); });
+      }
+      ui.fed+=2;
+      ui.face.textContent=String(ui.fed);
+      const b2=el("b","",ui.tape); b2.textContent=(ui.tape.children.length?"+2":"2");
+      SFX.count(ui.fed); Speech.count(cnS(ui.fed),"child-count");
+      if(ui.fed>=q.d){ q.phase="commit"; T.after(900,commit); }
+    }
+    ctx.ask(cnQ(q.d)+"只狗狗排队等鱼饼！摇一整圈机器就吐两块 —— 摇到人人有份！",crank);
+    ctx.answering(true);
+    function commit(){
+      if(st.done) return;
+      st.done=true; record(ctx,st,true); ctx.answering(false);
+      Speech.say("人人有份！",{tag:"right",interrupt:true});
+      runReveal(ctx,[
+        [300,()=>{ // 纸带撕下变横幅
+          ui.tape.style.transition="top .6s,left .6s,transform .6s";
+          ui.tape.style.top="10%"; ui.tape.style.left="34%"; ui.tape.style.transform="rotate(-3deg) scale(1.25)";
+          const eqTxt=Array.from({length:q.turns},()=>"2").join("+")+"=";
+          const b2=el("b","",ui.tape); b2.textContent="="+q.d;
+          SFX.whoosh(); }],
+        [600,()=>{ confetti(14); SFX.right(); }],
+        [300,()=>{ ui.eq=eqBar(ui.L.top,[String(q.turns),"圈","×","2","=","□"]);
+          flyNum(ui.face,q.d,ui.eq); }]
+      ],{done:()=>{
+        Speech.say("摇了"+cnQ(q.turns)+"圈，每圈两块 —— 一共"+cnQ(q.d)+"块！",{tag:"verify"});
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.field); });
+      }});
+    }
+  }
+
   return {
     start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
     repeat:()=>{ if(!q) return "";
-      if(q.kind==="give") return "任务要"+cnQ(q.n)+"只狗狗，点狗狗派出去。";
-      if(q.kind==="more") return "要"+cnQ(q.n)+"只，已经有"+cnQ(q.a)+"只，还要派几只？";
-      if(q.kind==="back") return cnQ(q.n)+"只在外面，回来"+cnQ(q.k)+"只，还剩几只？";
-      return "每只狗救两只海龟，"+cnQ(q.d)+"只狗救几只？"; },
-    destroy:()=>{ ui=null; q=null; st=null; }
+      if(q.kind==="cable") return "要"+cnQ(q.n)+"只狗狗上缆车，车停稳点狗！";
+      if(q.kind==="radar") return "沙滩里埋着"+cnQ(q.n)+"根骨头，擦亮的地方挖！";
+      if(q.kind==="ring") return "想好装几个救生圈，装好按出发！";
+      return "摇一圈吐两块，喂饱"+cnQ(q.d)+"只狗狗！"; },
+    destroy:()=>{ Link.clear(); ui=null; q=null; st=null; }
   };
 };
 
