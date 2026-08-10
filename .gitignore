@@ -1,0 +1,13 @@
+# GPT Image 2 原始出图（105MB，本地保留用于重新优化，不入库）
+raw/
+# codex 批次指令与日志
+batches/
+# 测试截图与日志（体积大，作为过程证据本地保留）
+shots/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+tools/_index_backup.html
+incoming/
+LOCAL_OVERRIDE.txt

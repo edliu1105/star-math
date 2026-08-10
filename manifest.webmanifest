@@ -1,0 +1,17 @@
+{
+  "name": "星星回家 · 幼儿数感启蒙",
+  "short_name": "星星回家",
+  "description": "给三四岁孩子的数感建构游戏：瞬识、点数、基数、比较、守恒、分解、合并加法与接着数。",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#160d33",
+  "theme_color": "#1b1140",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

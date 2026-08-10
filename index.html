@@ -1,0 +1,2895 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>星星回家</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1b1140">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="星星回家">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="icon" href="assets/icon-192.png">
+<style>
+/* ==================== 基础 ==================== */
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%;width:100%;overflow:hidden;background:#160d33;
+  font-family:"PingFang SC","HarmonyOS Sans SC","Noto Sans SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  touch-action:manipulation;overscroll-behavior:none;position:fixed;inset:0}
+img{-webkit-user-drag:none;pointer-events:none;display:block}
+button{font-family:inherit;border:0;background:none;padding:0;color:inherit;cursor:pointer;touch-action:manipulation}
+canvas{display:block}
+
+:root{
+  --gold:#ffd75e; --paper:#fff8ea; --ink:#2a1f4d;
+  --gap:clamp(6px,1.4vmin,16px);
+  --obj:clamp(46px,8vmin,92px);        /* 计数物统一尺寸（同题内绝不变化） */
+  --bar:clamp(50px,7.6vmin,74px);
+  --w-peppa:#ff7fb0; --w-paw:#f2b01e; --w-bluey:#3fa9f5;
+  --w-hulu:#6fbf4a; --w-aveng:#e2453f; --w-monkey:#ff8a2b;
+  --safeT:env(safe-area-inset-top,0px); --safeB:env(safe-area-inset-bottom,0px);
+  --safeL:env(safe-area-inset-left,0px); --safeR:env(safe-area-inset-right,0px);
+}
+/* 作答期间暂停所有装饰动画，避免与数学内容争夺注意力 */
+#app.answering .deco{animation-play-state:paused!important}
+
+#app{position:fixed;inset:0;overflow:hidden}
+.screen{position:absolute;inset:0;display:none;flex-direction:column}
+.screen.on{display:flex}
+
+/* ==================== 入口 ==================== */
+#gate{background:radial-gradient(120% 100% at 50% 0%,#43267f 0%,#1b1140 60%,#120a2a 100%);
+  align-items:center;justify-content:center;text-align:center;padding:calc(var(--safeT) + 10px) 14px calc(var(--safeB) + 10px)}
+#gateStars{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.twinkle{position:absolute;background:#fff;border-radius:50%;animation:tw 3.2s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1.15)}}
+#gateInner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;
+  gap:clamp(8px,2.2vmin,24px);max-height:100%}
+#gateTitle{font-size:clamp(28px,7vmin,70px);font-weight:900;color:var(--gold);letter-spacing:.14em;
+  text-shadow:0 4px 0 #a2650a,0 0 30px rgba(255,215,94,.55);margin:0}
+#gateSub{font-size:clamp(12px,2.4vmin,21px);color:#d9cfff;margin:0;opacity:.9;letter-spacing:.08em}
+#startBtn{width:clamp(132px,24vmin,220px);height:clamp(132px,24vmin,220px);border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff3bf,#ffd75e 45%,#f0a018 100%);
+  box-shadow:0 12px 0 #b3700a,0 0 60px rgba(255,215,94,.6);
+  display:flex;align-items:center;justify-content:center;position:relative;flex:0 0 auto;
+  animation:breathe 2.2s ease-in-out infinite}
+#startBtn:active{transform:translateY(6px);box-shadow:0 6px 0 #b3700a}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.055)}}
+#startBtn .spk{width:46%;height:46%;position:relative}
+#startBtn .spk::before{content:"";position:absolute;left:2%;top:28%;width:34%;height:44%;background:#7a3d00}
+#startBtn .spk::after{content:"";position:absolute;left:22%;top:6%;width:0;height:0;
+  border-right:34% solid #7a3d00;border-top:44% solid transparent;border-bottom:44% solid transparent}
+#startBtn .wv{position:absolute;right:6%;top:50%;transform:translateY(-50%);width:30%;height:66%}
+#startBtn .wv i{position:absolute;right:0;top:50%;transform:translateY(-50%);border:3.5px solid #7a3d00;
+  border-radius:50%;border-left-color:transparent;border-bottom-color:transparent;border-top-color:transparent;
+  animation:wave 1.5s ease-out infinite}
+#startBtn .wv i:nth-child(1){width:40%;padding-bottom:40%;margin-right:52%}
+#startBtn .wv i:nth-child(2){width:70%;padding-bottom:70%;margin-right:26%;animation-delay:.2s}
+#startBtn .wv i:nth-child(3){width:100%;padding-bottom:100%;animation-delay:.4s}
+@keyframes wave{0%,100%{opacity:.25}50%{opacity:1}}
+#gateCast{display:flex;gap:clamp(2px,.9vmin,10px);align-items:flex-end;justify-content:center;max-width:96vw}
+#gateCast img{height:clamp(44px,10vmin,110px);width:auto;filter:drop-shadow(0 6px 10px rgba(0,0,0,.45))}
+
+/* ==================== 星空地图 ==================== */
+#map{background:#1b1140}
+#skyBox{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+#skyBox img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#constell{position:absolute;inset:0;z-index:2;pointer-events:none}
+#mapHead{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:calc(var(--safeT) + 6px) 12px 2px;position:relative;z-index:3}
+#mapTitle{font-size:clamp(15px,3vmin,28px);font-weight:900;color:var(--gold);letter-spacing:.1em;
+  text-shadow:0 2px 0 #8a5606,0 0 18px rgba(255,215,94,.5)}
+#worlds{flex:1 1 auto;position:relative;z-index:3;display:grid;gap:clamp(5px,1.4vmin,16px);
+  padding:clamp(4px,1vmin,12px) calc(10px + var(--safeR)) calc(8px + var(--safeB)) calc(10px + var(--safeL));
+  grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);min-height:0}
+@media (orientation:portrait){#worlds{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(3,1fr)}}
+.world{position:relative;border-radius:clamp(12px,2.4vmin,24px);overflow:hidden;min-height:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.06));
+  border:3px solid rgba(255,255,255,.35);display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-end;padding:5px;transition:transform .12s}
+.world:active{transform:scale(.965)}
+.world .wbg{position:absolute;inset:0;opacity:.4}
+.world .wbg img{width:100%;height:100%;object-fit:cover}
+.world .wveil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 26%,rgba(0,0,0,.6) 100%)}
+.world .cast{position:relative;flex:1 1 auto;display:flex;align-items:flex-end;justify-content:center;
+  gap:2%;width:100%;min-height:0;padding-bottom:2px}
+.world .cast img{flex:1 1 0;min-width:0;width:100%;height:auto;max-height:86%;object-fit:contain;
+  object-position:bottom;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+.world .cast img.lead{max-height:100%}
+.world .wstars{position:relative;display:flex;gap:2px;justify-content:center;width:100%;padding:3px;
+  border-radius:99px;background:rgba(0,0,0,.4)}
+.world .wstars i{width:clamp(6px,1.3vmin,12px);height:clamp(6px,1.3vmin,12px);border-radius:50%;
+  background:rgba(255,255,255,.3);display:block}
+.world .wstars i.f{background:var(--gold);box-shadow:0 0 6px var(--gold)}
+/* 掌握徽章：菱形、蓝绿色 —— 和金色圆形的"参与星"在形状和颜色上都不一样 */
+.world .mbadge{position:absolute;left:5px;top:5px;display:flex;gap:2px;z-index:5}
+.world .mbadge b{width:clamp(6px,1.2vmin,11px);height:clamp(6px,1.2vmin,11px);display:block;
+  transform:rotate(45deg);background:rgba(255,255,255,.26);border-radius:2px}
+.world .mbadge b.f{background:#37d67a;box-shadow:0 0 6px #37d67a}
+.world.done{border-color:var(--gold);box-shadow:0 0 22px rgba(255,215,94,.55)}
+.world.suggest::after{content:"";position:absolute;inset:0;border-radius:inherit;border:4px solid var(--gold);
+  animation:sug 1.5s ease-in-out infinite;pointer-events:none}
+@keyframes sug{0%,100%{opacity:.25}50%{opacity:1}}
+.world.locked .cast,.world.locked .wbg{filter:grayscale(1) brightness(.55)}
+.world .lock{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:4}
+.world .lock b{width:clamp(26px,5vmin,48px);height:clamp(22px,4.2vmin,40px);background:#cbbde8;
+  border-radius:5px;position:relative;box-shadow:0 3px 0 rgba(0,0,0,.35)}
+.world .lock b::before{content:"";position:absolute;left:50%;top:-72%;transform:translateX(-50%);
+  width:64%;height:82%;border:5px solid #cbbde8;border-bottom:0;border-radius:99px 99px 0 0}
+
+/* ==================== 游戏舞台 ==================== */
+#stage{background:#2a2350}
+#bar{flex:0 0 auto;height:calc(var(--bar) + var(--safeT));padding:var(--safeT) calc(7px + var(--safeR)) 0 calc(7px + var(--safeL));
+  display:flex;align-items:center;gap:clamp(5px,1.2vmin,12px);background:rgba(20,12,45,.66);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);position:relative;z-index:20}
+.rbtn{width:calc(var(--bar) - 12px);height:calc(var(--bar) - 12px);border-radius:50%;background:rgba(255,255,255,.94);
+  box-shadow:0 3px 0 rgba(0,0,0,.28);flex:0 0 auto;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.rbtn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.28)}
+.ico-home{width:54%;height:54%;position:relative}
+.ico-home::before{content:"";position:absolute;left:0;top:6%;width:100%;height:48%;background:#3f3070;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.ico-home::after{content:"";position:absolute;left:19%;top:48%;width:62%;height:46%;background:#3f3070;border-radius:0 0 4px 4px}
+#speakBtn img{width:120%;height:120%;object-fit:contain;object-position:center 10%;transform:translateY(7%)}
+#speakBtn::after{content:"";position:absolute;right:4%;bottom:4%;width:34%;height:34%;border-radius:50%;
+  background:#f2a81b;box-shadow:0 0 0 2px #fff}
+#speakBtn.talking{animation:talk .5s ease-in-out infinite}
+@keyframes talk{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
+#dots{flex:1 1 auto;display:flex;align-items:center;justify-content:center;gap:clamp(4px,1vmin,9px)}
+#dots i{width:clamp(13px,2.7vmin,26px);height:clamp(13px,2.7vmin,26px);border-radius:50%;
+  background:rgba(255,255,255,.22);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35);transition:.2s}
+#dots i.f{background:var(--gold);box-shadow:0 0 12px var(--gold)}
+#starCount{flex:0 0 auto;display:flex;align-items:center;gap:3px;padding:0 8px;height:calc(var(--bar) - 16px);
+  border-radius:99px;background:rgba(0,0,0,.34);color:var(--gold);font-weight:900;font-size:clamp(14px,2.7vmin,26px)}
+#starCount img{width:clamp(18px,3.3vmin,32px);height:clamp(18px,3.3vmin,32px)}
+
+#scene{flex:1 1 auto;position:relative;overflow:hidden;min-height:0;contain:layout paint}
+#sceneBg{position:absolute;inset:0}
+#sceneBg img{width:100%;height:100%;object-fit:cover}
+#sceneBg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,0) 34%,rgba(0,0,0,.14))}
+#play{position:absolute;inset:0;display:flex;flex-direction:column;min-height:0}
+/* 舞台外框：竖屏时不把场景拉高，而是保持横向长宽比并贴住"地面"一侧，
+   这样同一套百分比布局在横竖屏得到完全一致的坐标系。 */
+.ztop{flex:1 1 auto;position:relative;min-height:0;display:flex;align-items:flex-end;justify-content:center}
+.stage{position:relative;width:100%;height:100%;max-height:min(100%,64vw)}
+.zbot{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:clamp(8px,2vmin,24px);
+  padding:clamp(5px,1.2vmin,14px) calc(8px + var(--safeR)) calc(clamp(5px,1.2vmin,14px) + var(--safeB))
+          calc(8px + var(--safeL));flex-wrap:wrap}
+
+/* 通用动效 */
+.pop{animation:pop .34s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes pop{from{transform:scale(0) rotate(-12deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.bounce{animation:bo .5s cubic-bezier(.3,1.4,.5,1)}
+@keyframes bo{0%{transform:translateY(0)}40%{transform:translateY(-24%)}100%{transform:translateY(0)}}
+.shake{animation:sh .5s ease}
+@keyframes sh{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.glow{animation:gl 1.1s ease-in-out infinite}
+@keyframes gl{0%,100%{filter:drop-shadow(0 0 0 rgba(255,215,94,0))}50%{filter:drop-shadow(0 0 12px rgba(255,215,94,1))}}
+
+/* 计数物：同题内尺寸/间距严格一致，不重叠 */
+/* 计数区：绝对定位在画面下半部，两侧留给角色，物体永远落在"地面"上 */
+.field{position:absolute;left:13%;right:13%;top:30%;bottom:4%}
+.cobj{position:absolute;width:var(--obj);aspect-ratio:1;height:auto;transform:translate(-50%,-50%);
+  transition:transform .16s,opacity .2s}
+.cobj img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+.cobj .tag{position:absolute;right:-8%;top:-10%;min-width:40%;height:40%;border-radius:99px;background:#37d67a;
+  color:#fff;font-weight:900;font-size:calc(var(--obj)*.3);display:none;align-items:center;justify-content:center;
+  box-shadow:0 0 0 3px #fff;padding:0 4px}
+.cobj.counted .tag{display:flex}
+.cobj.counted{transform:translate(-50%,-50%) scale(1.07)}
+.cobj.hit{animation:bo2 .45s cubic-bezier(.3,1.4,.5,1)}
+@keyframes bo2{0%{transform:translate(-50%,-50%) scale(1.07)}40%{transform:translate(-50%,-58%) scale(1.14)}100%{transform:translate(-50%,-50%) scale(1.07)}}
+.cobj.tapme,.card.tapme{animation:tapme 1.1s ease-in-out infinite}
+@keyframes tapme{0%,100%{filter:drop-shadow(0 0 0 rgba(255,215,94,0))}50%{filter:drop-shadow(0 0 14px #ffd75e)}}
+.cobj.dimmed{opacity:.28}
+/* 葫芦上方的一小截吊藤：让"挂在藤上"读得出来，且不依赖背景画面 */
+.cobj .hang{position:absolute;left:50%;top:-46%;width:clamp(4px,.8vmin,8px);height:48%;
+  transform:translateX(-50%);border-radius:99px;
+  background:linear-gradient(180deg,#3f7f26,#6cbb42);box-shadow:1px 0 0 rgba(0,0,0,.22)}
+.crow{display:flex;align-items:center;justify-content:center;gap:calc(var(--obj)*.28);flex-wrap:nowrap}
+.crow .cobj{position:relative;transform:none}
+.crow .cobj.counted{transform:scale(1.07)}
+
+/* 卡片 */
+.cards{display:flex;align-items:center;justify-content:center;gap:clamp(7px,1.9vmin,22px);flex-wrap:wrap}
+.card{width:clamp(70px,15vmin,148px);height:clamp(70px,15vmin,148px);border-radius:clamp(11px,2.2vmin,22px);
+  background:var(--paper);box-shadow:0 6px 0 rgba(0,0,0,.28),0 10px 20px rgba(0,0,0,.3);
+  position:relative;flex:0 0 auto;transition:transform .12s;overflow:hidden}
+.card:active{transform:translateY(4px)}
+.card.right{box-shadow:0 0 0 6px #37d67a,0 8px 22px rgba(0,0,0,.35);animation:rg .55s ease}
+@keyframes rg{0%{transform:scale(1)}45%{transform:scale(1.12)}100%{transform:scale(1)}}
+.card.wrong{box-shadow:0 0 0 6px #ff9b3d,0 8px 22px rgba(0,0,0,.35)}
+.card.dim{opacity:.4;filter:grayscale(.6)}
+.card .dotwrap{position:absolute;inset:9%}
+.card .dot{position:absolute;width:20%;height:20%;border-radius:50%;background:#e2453f;
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.16);transform:translate(-50%,-50%)}
+.card .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:clamp(40px,9vmin,92px);font-weight:900;color:#e2453f;line-height:1}
+/* 比较用图示按钮 */
+.card.cmp{background:var(--paper)}
+.card.cmp .side{position:absolute;top:14%;bottom:30%;width:38%;display:flex;flex-wrap:wrap;
+  align-content:center;justify-content:center;gap:9%}
+.card.cmp .side.l{left:5%}.card.cmp .side.r{right:5%}
+.card.cmp .side b{width:26%;padding-bottom:26%;border-radius:50%;background:#3fa9f5;display:block}
+.card.cmp .side.hi b{background:#e2453f}
+.card.cmp .cmpmark{position:absolute;left:0;right:0;bottom:8%;text-align:center;font-weight:900;
+  font-size:clamp(17px,3.6vmin,34px);color:#2a1f4d}
+.card.cmp .vs{position:absolute;left:46%;right:46%;top:20%;bottom:32%;background:rgba(0,0,0,.12);border-radius:2px}
+
+/* 大按钮 */
+.bigbtn{min-width:clamp(96px,17vmin,180px);height:clamp(56px,9.6vmin,96px);padding:0 clamp(14px,3vmin,30px);
+  border-radius:99px;background:linear-gradient(180deg,#ffe27a,#f2a81b);
+  box-shadow:0 7px 0 #ad6f06,0 10px 22px rgba(0,0,0,.32);color:#5b3200;font-weight:900;
+  font-size:clamp(17px,3.4vmin,34px);display:inline-flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.06em}
+.bigbtn:active{transform:translateY(5px);box-shadow:0 2px 0 #ad6f06}
+.bigbtn[disabled]{opacity:.42;filter:grayscale(.5)}
+.bigbtn.blue{background:linear-gradient(180deg,#8ed2ff,#2f8fe0);box-shadow:0 7px 0 #1a5e99;color:#04263f}
+.bigbtn.green{background:linear-gradient(180deg,#a8ec96,#4fb43a);box-shadow:0 7px 0 #2e7a1f;color:#0d3305}
+.bigbtn .chk{width:clamp(20px,3.4vmin,32px);height:clamp(20px,3.4vmin,32px);border-radius:50%;
+  background:#fff;position:relative;flex:0 0 auto}
+.bigbtn .chk::after{content:"";position:absolute;left:28%;top:16%;width:36%;height:58%;
+  border:solid #2e7a1f;border-width:0 4px 4px 0;transform:rotate(42deg)}
+
+/* 两侧角色：贴地站立，不与计数区重叠，且不吃点击 */
+.side{position:absolute;bottom:1%;z-index:3;pointer-events:none;display:flex;align-items:flex-end;
+  gap:2px;height:30%;max-width:22%}
+.side img{width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;
+  filter:drop-shadow(0 5px 7px rgba(0,0,0,.45))}
+.side img.sm{max-height:76%}
+.side.l{left:0}.side.r{right:0}
+/* 宽度受限的角色组（竖屏也不会撑爆） */
+.side.fitw{display:flex;align-items:flex-end;gap:1px}
+.side.fitw img{flex:1 1 0;min-width:0;width:100%;height:auto;max-height:100%;object-fit:contain}
+.side.tap{pointer-events:auto}
+/* 计数垫：稳定前景/背景对比，让数量刺激不受背景干扰 */
+.field.mat{background:rgba(255,250,240,.30);border:3px solid rgba(255,255,255,.55);
+  border-radius:clamp(14px,2.6vmin,26px);box-shadow:0 5px 16px rgba(0,0,0,.2)}
+/* 落区（大目标） */
+.dropzone{position:relative;flex:1 1 0;min-width:0;height:100%;border-radius:clamp(10px,2vmin,20px);
+  border:4px dashed rgba(255,255,255,.85);background:rgba(255,250,240,.26);display:flex;flex-direction:column;
+  align-items:center;justify-content:flex-end;padding:4px;transition:.15s;overflow:hidden}
+.dropzone:active{transform:scale(.98)}
+.dropzone.hot{border-color:var(--gold);background:rgba(255,215,94,.2)}
+.dropzone .zhead{position:absolute;top:4%;left:0;right:0;display:flex;justify-content:center;pointer-events:none}
+.dropzone .zhead img{height:clamp(34px,7vmin,86px);width:auto;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+.dropzone .slot{display:flex;flex-wrap:wrap;justify-content:center;gap:3px;width:100%}
+.dropzone .slot img{height:clamp(30px,6.4vmin,72px);width:auto}
+
+/* 视觉任务卡：把只在语音里的任务（"第几个"、"变长几格"）画出来，
+   这样一个字都不识、一句话都听不见的孩子也知道要做什么 */
+.taskcard{position:absolute;left:50%;top:1%;transform:translateX(-50%);z-index:8;pointer-events:none;
+  display:flex;align-items:center;gap:clamp(4px,.9vmin,9px);
+  padding:clamp(5px,1.1vmin,11px) clamp(9px,2vmin,20px);border-radius:99px;
+  background:rgba(255,248,234,.95);box-shadow:0 4px 0 rgba(0,0,0,.22)}
+.taskcard i{width:clamp(13px,2.6vmin,26px);height:clamp(13px,2.6vmin,26px);border-radius:50%;
+  background:#e2453f;display:block;box-shadow:inset 0 -2px 0 rgba(0,0,0,.16)}
+.taskcard i.ghost{background:#cfc6dd}
+.taskcard i.mark{background:#f2a81b;box-shadow:0 0 0 3px #fff,0 0 10px #f2a81b}
+.taskcard .arw{width:0;height:0;border-left:clamp(6px,1.2vmin,12px) solid transparent;
+  border-right:clamp(6px,1.2vmin,12px) solid transparent;border-top:clamp(9px,1.8vmin,18px) solid #f2a81b}
+.taskcard .who{height:clamp(26px,5vmin,52px)}
+.taskcard .who img{height:100%;width:auto;object-fit:contain}
+
+/* 气泡 / 提示手指 */
+#bubble{position:absolute;left:50%;top:clamp(4px,1.2vmin,14px);transform:translateX(-50%);max-width:88%;
+  padding:clamp(6px,1.3vmin,13px) clamp(12px,2.6vmin,26px);border-radius:99px;background:rgba(255,248,234,.96);
+  color:var(--ink);font-weight:800;font-size:clamp(14px,2.7vmin,27px);box-shadow:0 5px 0 rgba(0,0,0,.22);
+  z-index:15;display:none;text-align:center;line-height:1.25}
+#bubble.on{display:block;animation:pop .3s cubic-bezier(.2,1.5,.4,1) both}
+#finger{position:absolute;width:clamp(38px,6.6vmin,66px);height:clamp(38px,6.6vmin,66px);border-radius:50%;
+  border:5px solid #fff;background:rgba(255,255,255,.32);z-index:30;pointer-events:none;display:none;
+  transform:translate(-50%,-50%);box-shadow:0 0 16px rgba(0,0,0,.5)}
+#finger.on{display:block;animation:fg 1.1s ease-in-out infinite}
+@keyframes fg{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.95}50%{transform:translate(-50%,-50%) scale(.72);opacity:.55}}
+/* 数数时的大数字浮标（视觉通道，语音丢失也不影响） */
+#numpop{position:absolute;z-index:28;font-weight:900;font-size:clamp(38px,8vmin,86px);color:#fff;
+  text-shadow:0 3px 0 #e2453f,0 0 18px rgba(0,0,0,.5);pointer-events:none;display:none;transform:translate(-50%,-50%)}
+#numpop.on{display:block;animation:np .75s ease-out both}
+/* 符号解锁前：数量用圆点堆表示 */
+#numpop.pips{display:none;gap:clamp(3px,.6vmin,6px);flex-wrap:wrap;max-width:clamp(90px,17vmin,180px);
+  justify-content:center;text-shadow:none}
+#numpop.pips.on{display:flex}
+#numpop.pips b{width:clamp(12px,2.4vmin,24px);height:clamp(12px,2.4vmin,24px);border-radius:50%;
+  background:#fff;box-shadow:0 2px 0 #e2453f,0 0 10px rgba(0,0,0,.45);display:block}
+.cobj .tag.pips{display:none;gap:1px;flex-wrap:wrap;max-width:calc(var(--obj)*.6);
+  padding:2px 3px;justify-content:center;align-content:center}
+.cobj.counted .tag.pips{display:flex}
+.cobj .tag.pips b{width:calc(var(--obj)*.09);height:calc(var(--obj)*.09);border-radius:50%;
+  background:#fff;display:block}
+@keyframes np{0%{transform:translate(-50%,-50%) scale(.4);opacity:0}30%{transform:translate(-50%,-90%) scale(1.15);opacity:1}100%{transform:translate(-50%,-160%) scale(1);opacity:0}}
+
+/* 连线画布 */
+#link{position:absolute;inset:0;z-index:4;pointer-events:none}
+
+/* 飞星 / 庆祝 */
+.flystar{position:fixed;z-index:60;width:clamp(28px,5vmin,50px);height:clamp(28px,5vmin,50px);pointer-events:none;
+  transition:transform .95s cubic-bezier(.5,-0.2,.5,1),opacity .3s .72s}
+.flystar img{width:100%;height:100%}
+#cheer{position:absolute;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:clamp(6px,1.8vmin,20px);background:rgba(10,5,28,.72)}
+#cheer.on{display:flex}
+#cheerCast{display:flex;gap:clamp(3px,1.2vmin,14px);align-items:flex-end}
+#cheerCast img{height:clamp(64px,15vmin,170px);width:auto;animation:bo .7s cubic-bezier(.3,1.4,.5,1) infinite;
+  filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
+#cheerCast img:nth-child(2){animation-delay:.12s}#cheerCast img:nth-child(3){animation-delay:.24s}
+#cheerCast img:nth-child(4){animation-delay:.36s}#cheerCast img:nth-child(5){animation-delay:.48s}
+#cheerStars{display:flex;gap:5px;padding:clamp(5px,1vmin,10px) clamp(10px,2.2vmin,22px);
+  border-radius:99px;background:rgba(255,255,255,.16);box-shadow:0 4px 14px rgba(0,0,0,.4)}
+#cheerStars img{width:clamp(22px,4.4vmin,46px);height:clamp(22px,4.4vmin,46px);animation:pop .4s both}
+.confetti{position:absolute;width:11px;height:15px;border-radius:2px;pointer-events:none;z-index:50}
+
+/* ==================== 声音提示 / 家长面板 ==================== */
+#soundHint{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--safeT) + var(--bar) + 4px);z-index:200;
+  display:none;align-items:center;gap:8px;background:#fff2c4;border:3px solid #e0a800;border-radius:99px;
+  padding:5px 14px 5px 8px;box-shadow:0 4px 12px rgba(0,0,0,.4);max-width:94vw}
+#soundHint.on{display:flex}
+#soundHint .spk{width:30px;height:30px;position:relative;flex:0 0 auto;animation:pulse 1.2s ease-in-out infinite}
+#soundHint .spk::before{content:"";position:absolute;left:4%;top:30%;width:36%;height:40%;background:#8a5a00}
+#soundHint .spk::after{content:"";position:absolute;left:24%;top:8%;width:0;height:0;
+  border-right:34% solid #8a5a00;border-top:42% solid transparent;border-bottom:42% solid transparent}
+#soundHint .bar{position:absolute;right:6%;top:14%;width:44%;height:72%;
+  border-right:4px solid #8a5a00;border-radius:0 99px 99px 0}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.16);opacity:1}}
+#soundHint .txt{font-size:clamp(11px,2vmin,15px);font-weight:800;color:#6a4a00;line-height:1.2}
+#parentDot{position:fixed;right:0;bottom:0;width:58px;height:58px;z-index:210;opacity:0}
+#panel{position:fixed;inset:0;z-index:300;background:rgba(12,8,28,.94);display:none;
+  padding:calc(var(--safeT) + 12px) 14px calc(var(--safeB) + 14px);overflow:auto;color:#e8e2ff;font-size:14px;
+  -webkit-user-select:text;user-select:text;-webkit-overflow-scrolling:touch}
+#panel.on{display:block}
+#panel h3{margin:0 0 9px;color:var(--gold);font-size:18px}
+#panel section{background:rgba(255,255,255,.07);border-radius:12px;padding:12px;margin-bottom:11px}
+#panel b{color:#fff}
+#panel .pb{display:inline-block;background:#f2a81b;color:#3a2200;font-weight:800;border-radius:8px;
+  padding:9px 15px;margin:5px 6px 0 0;font-size:14px}
+#panel .pb.warn{background:#e2453f;color:#fff}
+#panel ul{margin:6px 0 0;padding-left:20px;line-height:1.65}
+#panel .vlist{max-height:170px;overflow:auto;background:rgba(0,0,0,.28);border-radius:8px;padding:8px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.6;white-space:pre-wrap}
+#panelClose{position:absolute;right:12px;top:calc(var(--safeT) + 8px);background:#fff;color:#222;border-radius:50%;
+  width:38px;height:38px;font-size:22px;font-weight:900;display:flex;align-items:center;justify-content:center}
+/* 成人验证门 */
+#gateAdult{position:fixed;inset:0;z-index:320;background:rgba(8,5,20,.96);display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff;padding:20px}
+#gateAdult.on{display:flex}
+#gaQ{font-size:clamp(24px,6vmin,52px);font-weight:900;color:var(--gold)}
+#gaTip{font-size:13px;opacity:.75;max-width:22em;text-align:center;line-height:1.6}
+#gaOpts{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+#gaOpts button{min-width:76px;height:64px;border-radius:14px;background:#fff;color:#2a1f4d;
+  font-size:26px;font-weight:900;padding:0 16px}
+#gaCancel{background:none;color:#bbb;text-decoration:underline;font-size:14px}
+#loading{position:fixed;inset:0;z-index:400;background:#160d33;display:flex;align-items:center;justify-content:center;
+  color:var(--gold);font-size:15px;letter-spacing:.2em}
+#loading.off{display:none}
+#busy{position:absolute;inset:0;z-index:35;display:none;align-items:center;justify-content:center;
+  background:rgba(20,12,45,.8);color:var(--gold);font-size:15px;letter-spacing:.16em}
+#busy.on{display:flex}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section id="gate" class="screen on">
+    <div id="gateStars"></div>
+    <div id="gateInner">
+      <h1 id="gateTitle">星星回家</h1>
+      <p id="gateSub">帮朋友们把星星送回天上</p>
+      <button id="startBtn" aria-label="开始听故事">
+        <span class="spk"></span><span class="wv"><i></i><i></i><i></i></span>
+      </button>
+      <div id="gateCast"></div>
+    </div>
+  </section>
+
+  <section id="map" class="screen">
+    <div id="skyBox"><img id="skyImg" alt=""><canvas id="constell"></canvas></div>
+    <div id="mapHead"><div id="mapTitle">选一个世界</div></div>
+    <div id="worlds"></div>
+  </section>
+
+  <section id="stage" class="screen">
+    <div id="bar">
+      <button class="rbtn" id="homeBtn" aria-label="回家"><span class="ico-home"></span></button>
+      <button class="rbtn" id="speakBtn" aria-label="再说一遍"><img id="speakFace" alt=""></button>
+      <div id="dots"></div>
+      <div id="starCount"><img id="scStar" alt=""><span id="scNum">0</span></div>
+    </div>
+    <div id="scene">
+      <div id="sceneBg"><img id="bgImg" alt=""></div>
+      <canvas id="link"></canvas>
+      <div id="play"></div>
+      <div id="bubble"></div>
+      <div id="finger"></div>
+      <div id="numpop"></div>
+      <div id="cheer"><div id="cheerCast"></div><div id="cheerStars"></div></div>
+      <div id="busy">准备中…</div>
+    </div>
+  </section>
+</div>
+
+<button id="soundHint">
+  <span class="spk"><span class="bar"></span></span>
+  <span class="txt">听不到声音？点我再说一遍</span>
+</button>
+<div id="parentDot"></div>
+
+<div id="gateAdult">
+  <div id="gaQ">7 + 6 = ?</div>
+  <div id="gaOpts"></div>
+  <div id="gaTip">这是给爸爸妈妈的入口，请连续答对两题。答错会直接关闭并冷却 30 秒。</div>
+  <button id="gaCancel">取消</button>
+</div>
+
+<div id="panel">
+  <button id="panelClose">×</button>
+  <h3>家长面板 · 语音诊断</h3>
+  <section>
+    <div><b>系统声音总数：</b><span id="dgAll">-</span></div>
+    <div><b>中文声音数量：</b><span id="dgZhN">-</span></div>
+    <div><b>当前所选：</b><span id="dgCur">-</span></div>
+    <div><b>引擎状态：</b><span id="dgState">-</span></div>
+    <div><b>检测到语音引擎活动：</b><span id="dgSeen">-</span></div>
+    <div><b>第一句是否确认发声：</b><span id="dgFirst">-</span></div>
+    <div style="margin-top:8px"><b>中文声音列表：</b><div class="vlist" id="dgZhList">-</div></div>
+    <button class="pb" id="dgTest">测试发声</button>
+    <button class="pb" id="dgReload">重新载入声音</button>
+  </section>
+  <section>
+    <h3 style="font-size:15px">iPad 没声音怎么办</h3>
+    <ul>
+      <li>关掉 iPad 侧边的<b>静音开关</b>（或从控制中心取消静音）</li>
+      <li>调高音量，确认没连着耳机或音箱</li>
+      <li>「设置 → 辅助功能 → 朗读内容 → 声音 → 中文」下载一个中文声音</li>
+      <li>点上面的<b>测试发声</b>确认；没有中文声音时游戏仍可完全用画面玩</li>
+    </ul>
+  </section>
+  <section>
+    <h3 style="font-size:15px">学习进度</h3>
+    <div id="dgProg" class="vlist">-</div>
+    <button class="pb warn" id="dgReset">清空进度（重新开始）</button>
+  </section>
+  <section style="font-size:12px;opacity:.72">
+    版本 <span id="dgVer"></span> · 所有角色形象均为致敬原作风格的原创卡通绘制，仅供家庭学习使用
+  </section>
+</div>
+
+<div id="loading">载入中…</div>
+<audio id="silentLoop" loop playsinline preload="auto"></audio>
+
+<script>
+"use strict";
+/* ============================================================================
+   星星回家 — 幼儿数感建构应用
+   教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
+   ============================================================================ */
+const VERSION = "2.0.0";
+const $  = s => document.querySelector(s);
+const $$ = s => [].slice.call(document.querySelectorAll(s));
+const clamp = (v,a,b) => v<a?a:(v>b?b:v);
+const rnd = n => Math.floor(Math.random()*n);
+const pick = a => a[rnd(a.length)];
+const rint = (a,b) => a + rnd(b-a+1);
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);const t=a[i];a[i]=a[j];a[j]=t}return a}
+function el(tag,cls,parent){const e=document.createElement(tag);if(cls)e.className=cls;if(parent)parent.appendChild(e);return e}
+function img(src,cls,parent){const e=el("img",cls,parent);e.src=src;e.alt="";e.decoding="async";return e}
+const A={ ch:n=>"assets/chars/"+n+".png", th:n=>"assets/thumbs/"+n+".png",
+          pr:n=>"assets/props/"+n+".png", bg:n=>"assets/bg/"+n+".jpg",
+          bgt:n=>"assets/bgthumb/"+n+".jpg" };   // 地图卡专用小图：避免同时解码 7 张 1280px
+/* 中文数词：计数序列用"二"，量词用"两" */
+const CN_SEQ=["零","一","二","三","四","五","六","七","八","九","十"];
+const CN_QTY=["零","一","两","三","四","五","六","七","八","九","十"];
+const cnSeq=n=>CN_SEQ[clamp(n,0,10)], cnQty=n=>CN_QTY[clamp(n,0,10)];
+
+/* ========================= 世界 ========================= */
+const WORLDS=[
+ {id:"peppa", name:"佩奇的泥坑", bg:"bg_peppa", lead:"peppa", skill:"瞬识",
+  cast:["peppa","george","daddypig","mummypig"],
+  intro:"佩奇要跳泥坑啦！看看溅起几个泥点。"},
+ {id:"paw", name:"冒险湾救援", bg:"bg_paw", lead:"chase", skill:"点数与总数",
+  cast:["ryder","chase","marshall","skye","rubble","zuma","rocky"],
+  intro:"汪汪队出发！数一数，再派出正好那么多狗狗。"},
+ {id:"bluey", name:"Bluey 的后院", bg:"bg_bluey", lead:"bluey", skill:"比多少",
+  cast:["bluey","bingo","bandit","chilli"],
+  intro:"要公平才好玩！比一比，谁的多？"},
+ {id:"hulu", name:"葫芦山", bg:"bg_hulu", lead:"hulu1", skill:"分一分",
+  cast:["hulu1","hulu2","hulu3","hulu4","hulu5","hulu6","hulu7","yeye"],
+  intro:"葫芦娃要去救爷爷！"},
+ {id:"aveng", name:"复仇者大厦", bg:"bg_aveng", lead:"ironman", skill:"合起来",
+  cast:["ironman","cap","thor","hulkman","widow","hawkeye","spider","spiderblack","blackpanther"],
+  intro:"英雄集结！两边合起来，一共几个？"},
+ {id:"monkey", name:"花果山", bg:"bg_monkey", lead:"wukong", skill:"接着数",
+  cast:["wukong","tangseng","bajie","shaseng","bailongma"],
+  intro:"金箍棒变长搭座桥，师父要过河啦！"}
+];
+const W_BY_ID={}; WORLDS.forEach(w=>W_BY_ID[w.id]=w);
+const ORDER=WORLDS.map(w=>w.id);
+const ROUNDS=5, STARS_FULL=10, MAXLV=4;
+const HULU_COLORS=["hulu1","hulu2","hulu3","hulu4","hulu5","hulu6","hulu7"];
+const GOURDS=["gourd_r","gourd_o","gourd_y","gourd_g","gourd_c","gourd_b","gourd_p"];
+
+/* ========================= 进度（v2：含掌握证据） ========================= */
+const Store=(()=>{
+  const KEY="kidmath2.progress.v2";
+  // stars = 参与（陪着玩就有，给孩子看）；mast = 掌握（只由"新题+无提示"的首答累计，用于解锁）
+  // hist  = 升/降级的滑动窗口，达成一次窗口就清空
+  // recent= 近期正确率用的滚动历史，**永不清空** —— 两者混用会让全对的孩子永远算不出正确率
+  const mkW=()=>({stars:0,lv:1,hist:[],recent:[],seen:0,tries:0,open:0,mast:0,wins:0,winAt:-1});
+  const def=()=>{const p={v:2,plays:0,sess:0,w:{}};WORLDS.forEach(x=>p.w[x.id]=mkW());return p;};
+  let d=def();
+  const num=(v,f)=>(typeof v==="number"&&isFinite(v))?v:f;
+  function load(){
+    try{
+      const raw=localStorage.getItem(KEY); if(!raw) return;
+      const o=JSON.parse(raw);
+      if(!o||typeof o!=="object"||o.v!==2||!o.w||typeof o.w!=="object") return;
+      const b=def(); b.plays=clamp(num(o.plays,0),0,1e6); b.sess=clamp(num(o.sess,0),0,1e6);
+      WORLDS.forEach(x=>{
+        const s=o.w[x.id]; if(!s||typeof s!=="object") return;
+        const t=b.w[x.id];
+        t.stars=clamp(Math.floor(num(s.stars,0)),0,STARS_FULL);
+        t.lv=clamp(Math.floor(num(s.lv,1)),1,MAXLV);
+        t.seen=num(s.seen,0)?1:0;
+        t.open=num(s.open,0)?1:0;
+        t.mast=clamp(Math.floor(num(s.mast,0)),0,999);
+        t.wins=clamp(Math.floor(num(s.wins,0)),0,999);
+        t.winAt=Math.floor(num(s.winAt,-1));
+        t.tries=clamp(Math.floor(num(s.tries,0)),0,1e6);
+        t.hist=Array.isArray(s.hist)?s.hist.filter(v=>v===0||v===1).slice(-16):[];
+        t.recent=Array.isArray(s.recent)?s.recent.filter(v=>v===0||v===1).slice(-12):[];
+      });
+      d=b; refreshUnlocks();
+    }catch(e){ d=def(); }
+    d.sess=(d.sess|0)+1;      // 一次应用启动 = 一个会话
+    save();
+  }
+  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(d)); }catch(e){} }
+  function W(id){ return d.w[id]||(d.w[id]=mkW()); }
+  /* 世界解锁：前两个默认开放；上一个世界达到 L2 且 ⭐>=4 解锁下一个。
+     解锁是"粘性"的 —— 一旦打开就永久保留，孩子不会因为掉一级而失去已开放的世界。 */
+  /** 最近 10 次"新题+无提示"首答的正确率。用比例而不是累计数：
+      纯乱点的正确率天然只有 1/4～1/3，无论玩多久都跨不过这道门；
+      而真的理解了的孩子会稳定在 0.7 以上。 */
+  function recentRate(w){
+    const h=(w.recent||[]).slice(-12);
+    if(h.length<8) return 0;                  // 样本太少不下结论
+    return h.reduce((a,b)=>a+b,0)/h.length;
+  }
+  function refreshUnlocks(){
+    let changed=false;
+    for(let i=1;i<ORDER.length;i++){
+      const prev=W(ORDER[i-1]), cur=W(ORDER[i]);
+      if(cur.open) continue;
+      // 四个条件同时成立才解锁，全部只看"掌握"，与参与星完全无关：
+      //   难度到 L2 以上 + 累计 >=6 次无提示首答正确 + 最近 10 次正确率 >=0.6
+      //   + **两个来自不同游玩会话的掌握窗口**（单次运气好的连对不算）
+      if(prev.lv>=2 && prev.mast>=6 && prev.wins>=2 && recentRate(prev)>=0.6){
+        cur.open=1; changed=true;
+      }
+    }
+    return changed;
+  }
+  function unlocked(id){
+    const i=ORDER.indexOf(id); if(i<0) return false; if(i<2) return true;
+    return !!W(id).open;
+  }
+  /* 符号（阿拉伯数字）解锁：按课程先修，不是"随便两个世界到 L3"。
+     必须先把量感与关系建立起来：瞬识 + 基数/Give-N + 比较，各自都要有掌握证据。 */
+  function symbols(){
+    const need=["peppa","paw","bluey"];
+    return need.every(id=>{ const w=W(id); return w.lv>=3 && w.mast>=6; });
+  }
+  return {
+    load,save,
+    get data(){return d;},
+    stars:id=>W(id).stars, level:id=>W(id).lv, unlocked, symbols,
+    rate:id=>recentRate(W(id)),
+    wins:id=>W(id).wins,
+    total:()=>WORLDS.reduce((s,x)=>s+W(x.id).stars,0),
+    seen:id=>!!W(id).seen, markSeen(id){W(id).seen=1;save();},
+    addStar(id){const w=W(id);if(w.stars<STARS_FULL){w.stars++;}refreshUnlocks();save();return w.stars<=STARS_FULL;},
+    /** 只有"新题首答、无提示"才写入掌握证据 */
+    mastery:id=>W(id).mast,
+    evidence(id,ok){
+      const w=W(id); w.tries++;
+      if(ok) w.mast++;
+      w.hist.push(ok?1:0); if(w.hist.length>16) w.hist.shift();
+      if(!w.recent) w.recent=[];
+      w.recent.push(ok?1:0); if(w.recent.length>12) w.recent.shift();   // 这一条永不被清空
+      const h=w.hist;
+      if(h.length>=5){
+        const last5=h.slice(-5), s5=last5.reduce((a,b)=>a+b,0);
+        if(s5>=4){
+          // 一个"掌握窗口"完成。必须来自**不同的一次应用启动**才算数 ——
+          // 用 plays（每次进世界就 +1）是错的：同一次坐下来反复进出就能凑出多个"会话"。
+          if(w.winAt!==d.sess){ w.wins++; w.winAt=d.sess; }
+          if(w.lv<MAXLV){ w.lv++; w.hist=[]; refreshUnlocks(); save(); return "up"; }
+          w.hist=[]; refreshUnlocks(); save(); return "";
+        }
+      }
+      if(h.length>=4){
+        const last4=h.slice(-4), s4=last4.reduce((a,b)=>a+b,0);
+        if(s4<=1 && w.lv>1){ w.lv--; w.hist=[]; save(); return "down"; }
+      }
+      refreshUnlocks(); save(); return "";
+    },
+    reset(){ d=def(); save(); }
+  };
+})();
+
+/* ========================= 音效 ========================= */
+const SFX=(()=>{
+  let ctx=null,unlocked=false,master=null;
+  function ensure(){
+    if(ctx) return ctx;
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null;
+    try{ ctx=new AC(); master=ctx.createGain(); master.gain.value=.5; master.connect(ctx.destination); }
+    catch(e){ ctx=null; }
+    return ctx;
+  }
+  function gesture(){
+    const c=ensure(); if(!c) return;
+    if(c.state!=="running"){ try{ c.resume(); }catch(e){} }
+    if(!unlocked){
+      try{ const b=c.createBuffer(1,1,22050),s=c.createBufferSource();
+           s.buffer=b; s.connect(c.destination); s.start(0); unlocked=true; }catch(e){}
+    }
+  }
+  function beep(f,dur,type,vol,delay){
+    const c=ensure(); if(!c) return;
+    if(c.state!=="running"){ try{ c.resume(); }catch(e){} }
+    try{
+      const t0=c.currentTime+(delay||0), o=c.createOscillator(), g=c.createGain();
+      o.type=type||"sine"; o.frequency.setValueAtTime(f,t0);
+      g.gain.setValueAtTime(.0001,t0);
+      g.gain.exponentialRampToValueAtTime(vol==null?.3:vol,t0+.012);
+      g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+      o.connect(g); g.connect(master||c.destination); o.start(t0); o.stop(t0+dur+.03);
+    }catch(e){}
+  }
+  const SC=[523.25,587.33,659.25,698.46,783.99,880,987.77,1046.5,1174.7,1318.5];
+  return { gesture,
+    count:n=>beep(SC[clamp(n-1,0,9)],.16,"triangle",.3,0),
+    tap:()=>beep(660,.07,"sine",.16,0),
+    right:()=>[659.25,783.99,1046.5].forEach((f,i)=>beep(f,.2,"triangle",.28,i*.1)),
+    soft:()=>{beep(392,.16,"sine",.2,0);beep(330,.22,"sine",.15,.11);},
+    star:()=>[880,1046.5,1318.5,1568].forEach((f,i)=>beep(f,.15,"sine",.22,i*.07)),
+    win:()=>[523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>beep(f,.3,"triangle",.28,i*.13)),
+    whoosh:()=>beep(240,.2,"sawtooth",.08,0) };
+})();
+
+/* ========================= 语音（iOS 军规 + 双通道） ========================= */
+const Speech=(()=>{
+  const S=window.speechSynthesis;
+  const OK=!!S && typeof SpeechSynthesisUtterance==="function";
+  const CANCEL_GAP=160;      // 军规2
+  const NO_INTERRUPT=1500;   // 军规7
+  let state="LOCKED";        // LOCKED -> READY
+  let voice=null,tries=0;
+  let lastReqAt=0,lastCancelAt=0;
+  let pendTimer=null,pendItem=null;
+  let keep=[];               // 军规6 防 GC
+  let firstText=null,firstOk=false,firstProbed=false,redoneFirst=false,firstRedoTimer=null;
+  let engineSeen=false;                 // 「检测到引擎有过发声活动」—— 与「首句成功」是两回事
+  let active=false, activeUntil=0;      // 本地忙标记：不能只信 WebKit 的 speaking/pending
+  let chanToken=0;                      // 通道令牌：只有持有当前令牌的回调才能释放通道
+  let epoch=0;                          // 路由作用域，换世界即作废旧的一切
+  const timers=new Set();               // 所有 watchdog / 探针，换 scope 时统一清掉
+  function later(fn,ms){ const id=setTimeout(()=>{ timers.delete(id); fn(); },ms); timers.add(id); return id; }
+  function clearTimers(){ timers.forEach(clearTimeout); timers.clear(); }
+  let serial=0; const subs=[];
+  /* 计数通道（永不 cancel，只保留最新待播） */
+  let cntLatest=null,cntTimer=null;
+  window.__speechLog=[];
+
+  function zhVoices(){ let a=[]; try{a=S.getVoices()||[];}catch(e){}
+    return a.filter(v=>(v.lang||"").toLowerCase().replace("_","-").indexOf("zh")===0); }
+  function score(v){
+    const n=(v.name||"").toLowerCase(), l=(v.lang||"").toLowerCase().replace("_","-");
+    let s=l.indexOf("zh-cn")===0?100:l.indexOf("zh-hans")===0?92:l.indexOf("zh-sg")===0?60:30;
+    if(/ting-?ting|婷婷/.test(n)) s+=55;
+    if(/xiaoxiao|晓晓/.test(n))   s+=52;
+    if(/xiaoyi|yunxi|yunyang|huihui|kangkang/.test(n)) s+=26;
+    if(/li-?mu|lilian|meijia|sinji|tian-?tian/.test(n)) s+=12;
+    if(v.localService) s+=6;
+    return s;
+  }
+  function refreshVoice(){
+    const zh=zhVoices(); tries++;
+    if(!zh.length) return null;
+    zh.sort((a,b)=>score(b)-score(a)); voice=zh[0]; return voice;
+  }
+  function busy(){ try{ return !!(S&&(S.speaking||S.pending)); }catch(e){ return false; } }
+  /** 判忙必须"原生状态 或 本地标记"取或 —— WebKit 的状态位更新可能滞后 */
+  function engineBusy(){ return busy() || (active && Date.now()<activeUntil); }
+  /** 占用通道并返回本次的令牌；释放时必须带回同一个令牌，
+      否则旧 utterance 的 onend 会把新世界正在说的那句"释放"掉。 */
+  function holdChannel(text){
+    active=true; activeUntil=Date.now()+Math.max(2500,(text||"").length*380);
+    return ++chanToken;
+  }
+  function releaseChannel(tok){
+    if(tok!==chanToken) return;                // 严格校验：没带令牌也不许释放
+    active=false; activeUntil=0;
+  }
+  function sinceReq(){ return Date.now()-lastReqAt; }
+  function mk(text,opt){
+    const u=new SpeechSynthesisUtterance(text);
+    // 有的引擎只接受它自己的 SpeechSynthesisVoice 实例，赋错类型会直接抛异常，
+    // 而这句是在入口 click 的同步栈里跑的 —— 一抛整个启动流程就断了。
+    try{ if(voice) u.voice=voice; }catch(e){}
+    u.lang=(voice&&voice.lang)?voice.lang:"zh-CN";
+    u.rate =opt&&opt.rate !=null?opt.rate :0.86;
+    u.pitch=opt&&opt.pitch!=null?opt.pitch:1.12;
+    u.volume=1; keep.push(u); if(keep.length>24) keep.shift();
+    return u;
+  }
+  function fire(item){
+    pendTimer=null; pendItem=null;
+    if(item.ep!==epoch){ item.done=true; return; }     // 换过世界了，这条作废
+    if(!OK){ finish(item); return; }
+    try{ S.resume(); }catch(e){}                       // 军规4
+    const u=mk(item.text,item.opt);
+    const tok=holdChannel(item.text);                  // 立刻占用通道，不等 WebKit 状态位
+    const fin=()=>{ if(!item.done){ releaseChannel(tok); finish(item); } };
+    u.onend=fin; u.onerror=fin;
+    item._to=later(fin, Math.max(2500,item.text.length*380));  // 军规3 超时兜底
+    try{ S.speak(u); }catch(e){ fin(); }
+    later(()=>{                                        // 军规3 轮询判定
+      if(item.ep!==epoch) return;
+      const isFirst=(item.id===1)||item.opt.isFirst===true;
+      if(busy()){ engineSeen=true; hideHint(); if(isFirst) markFirstOk(); }
+      if(isFirst){ firstProbed=true; if(!firstOk) showHint(); }
+      notify();
+    },450);
+  }
+  function finish(item){
+    if(item._to){ clearTimeout(item._to); item._to=null; }
+    if(item.done) return; item.done=true;
+    if(typeof item.opt.onDone==="function"){ try{ item.opt.onDone(); }catch(e){} }
+    notify();
+  }
+  function markFirstOk(){
+    if(firstOk) return;
+    firstOk=true; state="READY";
+    if(firstRedoTimer){ clearTimeout(firstRedoTimer); firstRedoTimer=null; }
+    hideHint(); notify();
+  }
+
+  /** 指令通道：latest-wins，安全打断（军规8） */
+  function say(text,opt){
+    opt=opt||{}; if(!text) return 0;
+    const id=++serial; lastReqAt=Date.now();
+    window.__speechLog.push({id,t:Math.round(performance.now()),text,tag:opt.tag||"say",ch:"say"});
+    if(id===1) firstText=text;
+    if(pendTimer){ clearTimeout(pendTimer); pendTimer=null; }
+    if(pendItem&&!pendItem.done) pendItem.done=true;
+    cntLatest=null;                                    // 指令优先级高于计数补播
+    const item={id,text,opt,done:false,ep:epoch}; pendItem=item;
+    if(engineBusy()){                     // 必须"原生状态 或 本地标记"取或，否则本地 active 形同虚设
+      try{ S.cancel(); }catch(e){} lastCancelAt=Date.now();
+      pendTimer=setTimeout(()=>fire(item),CANCEL_GAP);
+    }else{
+      const gap=Date.now()-lastCancelAt;
+      if(gap<CANCEL_GAP) pendTimer=setTimeout(()=>fire(item),CANCEL_GAP-gap);
+      else fire(item);                                  // 无需打断 → 同步开口
+    }
+    notify(); return id;
+  }
+
+  /** 计数通道：绝不 cancel（避免取消风暴/掐断数词），忙则只保留最新一条待播 */
+  function count(text,tag){
+    lastReqAt=Date.now();
+    window.__speechLog.push({id:++serial,t:Math.round(performance.now()),text,tag:tag||"count",ch:"count"});
+    if(!OK) return;
+    cntLatest=text;
+    if(cntTimer) return;
+    const flush=()=>{
+      cntTimer=null;
+      if(cntLatest==null) return;
+      // 军规②：cancel 之后必须等满 CANCEL_GAP，计数通道也不例外
+      const gap=Date.now()-lastCancelAt;
+      if(gap<CANCEL_GAP){ cntTimer=setTimeout(flush,CANCEL_GAP-gap+10); return; }
+      if(pendTimer){ cntTimer=setTimeout(flush,120); return; } // 有待播指令时让路
+      if(engineBusy()){ cntTimer=setTimeout(flush,120); return; }  // 等空闲，绝不打断
+      const t=cntLatest; cntLatest=null;
+      const ep=epoch;
+      try{ S.resume(); }catch(e){}
+      const u=mk(t,{rate:.95});
+      const tok=holdChannel(t);
+      let released=false;
+      const rel=()=>{ if(released) return; released=true; releaseChannel(tok);
+        if(ep===epoch && cntLatest!=null && !cntTimer) cntTimer=setTimeout(flush,40); };
+      u.onend=u.onerror=rel;
+      try{ S.speak(u); }catch(e){ rel(); }
+      // 计数通道也要有 watchdog：WebKit 不触发 onend 时不能把通道永久占住
+      later(rel, Math.max(1200, t.length*420));
+      later(()=>{ if(ep===epoch && busy()){ engineSeen=true; hideHint(); } },450);
+    };
+    cntTimer=setTimeout(flush,0);
+  }
+  function clearCount(){ cntLatest=null; if(cntTimer){ clearTimeout(cntTimer); cntTimer=null; } }
+
+  /** 军规1：入口 click 同步栈内直接 speak，不 cancel、不 setTimeout */
+  function unlockAndSay(text){
+    const id=++serial; lastReqAt=Date.now(); firstText=text;
+    window.__speechLog.push({id,t:Math.round(performance.now()),text,tag:"unlock",ch:"say"});
+    if(!OK){ showHint(); return id; }
+    refreshVoice();
+    try{ S.resume(); }catch(e){}
+    const u=mk(text,{});
+    const tok=holdChannel(text);
+    u.onend=u.onerror=()=>{ releaseChannel(tok); notify(); };
+    try{ S.speak(u); }catch(e){ releaseChannel(tok); }
+    later(()=>{
+      if(busy()){ engineSeen=true; hideHint(); markFirstOk(); }
+      firstProbed=true; if(!firstOk) showHint(); notify();
+    },450);
+    return id;
+  }
+  /** 军规7：补说 —— 引擎在说就退休；距上次请求<1.5s 不插嘴；节流 */
+  let lastNudge=0;
+  function nudge(text,opt){
+    const now=Date.now();
+    if(engineBusy()) return false;
+    if(sinceReq()<NO_INTERRUPT) return false;
+    if(now-lastNudge<6000) return false;
+    lastNudge=now; say(text,opt||{}); return true;
+  }
+  /** 军规6：voices 晚到 → once-only 补说第一句 */
+  function scheduleFirstRedo(){
+    if(redoneFirst||firstOk||!firstText||firstRedoTimer) return;
+    firstRedoTimer=setTimeout(()=>{
+      firstRedoTimer=null;
+      if(redoneFirst||firstOk) return;
+      // 引擎忙或刚请求过 → **重排**，不是放弃，也绝不把这当成"首句成功"
+      if(engineBusy()||sinceReq()<NO_INTERRUPT){ scheduleFirstRedo(); return; }
+      redoneFirst=true; say(firstText,{tag:"redo-first",isFirst:true});
+    }, Math.max(0,NO_INTERRUPT-sinceReq())+80);
+  }
+  function onVoicesChanged(){
+    const before=voice, v=refreshVoice(); notify();
+    if(!v||redoneFirst||firstOk||!firstText) return;
+    if(before&&before.name===v.name) return;
+    scheduleFirstRedo();
+  }
+  let hintShown=false;
+  function showHint(){ if(hintShown||engineSeen) return; hintShown=true; $("#soundHint").classList.add("on"); }
+  function hideHint(){ $("#soundHint").classList.remove("on"); }
+  function notify(){ subs.forEach(f=>{ try{f();}catch(e){} }); }
+
+  if(OK){
+    try{ S.addEventListener?S.addEventListener("voiceschanged",onVoicesChanged):(S.onvoiceschanged=onVoicesChanged); }catch(e){}
+    refreshVoice();
+    document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ try{S.resume();}catch(e){} } });
+    window.addEventListener("pageshow",()=>{ try{S.resume();}catch(e){} });
+  }
+  /** 用户主动要求重听：安全打断（latest-wins）+ 短节流，防止连点排长队 */
+  let lastReplay=0;
+  function replay(text,opt){
+    const now=Date.now();
+    if(now-lastReplay<800) return 0;
+    lastReplay=now;
+    return say(text,opt||{tag:"replay"});
+  }
+  /** 换世界/回地图：废弃待播、失效旧 watchdog、安全打断当前 */
+  function stopScope(){
+    // 顺序有意为之：**先记下是否在忙**，再清本地状态。
+    // 反过来的话，WebKit 原生 speaking/pending 还没更新时本地标记已被清掉，
+    // 旧语音就不会被 cancel，会跨世界继续播。
+    const wasBusy=engineBusy();
+    epoch++;
+    clearCount();
+    clearTimers();                                  // 所有 watchdog / 探针一并作废
+    if(pendTimer){ clearTimeout(pendTimer); pendTimer=null; }
+    if(pendItem&&!pendItem.done){ pendItem.done=true; if(pendItem._to) clearTimeout(pendItem._to); }
+    pendItem=null;
+    chanToken++;                                    // 让所有在途回调的令牌全部失效
+    active=false; activeUntil=0;
+    try{ if(wasBusy){ S.cancel(); lastCancelAt=Date.now(); } }catch(e){}
+  }
+  return { ok:OK, say, count, clearCount, unlockAndSay, nudge, replay, stopScope,
+    busy, engineBusy, sinceReq, refreshVoice, hideHint,
+    get state(){return state;},
+    onChange:f=>subs.push(f),
+    diag(){ let a=[]; try{a=S?(S.getVoices()||[]):[];}catch(e){}
+      return { all:a.length, zh:zhVoices(),
+        cur:voice?(voice.name+"  ["+voice.lang+"]"):"（无中文声音，画面仍可完整游玩）",
+        speaking:engineBusy(), engineSeen, firstOk, firstProbed, redone:redoneFirst,
+        pendingRedo:!!firstRedoTimer, tries }; }
+  };
+})();
+
+/* ========================= 工具 ========================= */
+let SESSION=0;
+const nextSession=()=>++SESSION;
+const alive=tok=>tok===SESSION;
+
+function onTap(node,fn){
+  if(node.__tapoff){ try{ node.__tapoff(); }catch(e){} }   // 同节点重绑先摘旧的，杜绝监听器堆积
+  let lock=0;
+  const h=e=>{
+    if(e.pointerType==="mouse"&&e.button!==0) return;
+    // 只用于防同一次物理触摸的重复派发；窗口必须足够短，
+    // 否则"连点同一个大按钮加数量"这种核心交互会被静默吞掉。
+    const now=Date.now(); if(now-lock<70) return; lock=now;
+    e.preventDefault(); SFX.gesture(); Audio2.kick();
+    fn(e);
+  };
+  node.addEventListener("pointerdown",h,{passive:false});
+  node.__tapoff=()=>node.removeEventListener("pointerdown",h);
+  return node.__tapoff;
+}
+function Timers(){
+  const t=new Set(),r=new Set();
+  return {
+    after(ms,fn){ const id=setTimeout(()=>{t.delete(id);fn();},ms); t.add(id); return id; },
+    every(ms,fn){ const id=setInterval(fn,ms); r.add(id); return id; },
+    cancel(id){ clearTimeout(id); t.delete(id); },
+    clear(){ t.forEach(clearTimeout); t.clear(); r.forEach(clearInterval); r.clear(); }
+  };
+}
+/* 无声 audio 循环：把页面提升为媒体会话，绕过 iPad 静音开关 */
+const Audio2=(()=>{
+  let started=false;
+  function kick(){
+    const a=$("#silentLoop"); if(!a) return;
+    if(!a.src) a.src="data:audio/wav;base64,"+SILENT_WAV;
+    a.volume=.001;
+    if(a.paused){ const p=a.play(); if(p&&p.catch) p.catch(()=>{}); }
+    started=true;
+  }
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&started) kick(); });
+  return { kick };
+})();
+
+const Bubble={ show(t){const b=$("#bubble");b.textContent=t;b.classList.remove("on");void b.offsetWidth;b.classList.add("on");},
+               hide(){$("#bubble").classList.remove("on");} };
+const Finger={
+  at(elm,delay){ const f=$("#finger"); if(!elm) return;
+    const r=elm.getBoundingClientRect(), s=$("#scene").getBoundingClientRect();
+    f.style.left=(r.left+r.width/2-s.left)+"px"; f.style.top=(r.top+r.height/2-s.top)+"px";
+    f.classList.add("on"); clearTimeout(Finger._t); Finger._t=setTimeout(()=>f.classList.remove("on"),delay||2600); },
+  off(){ $("#finger").classList.remove("on"); clearTimeout(Finger._t); }
+};
+/** 符号未解锁时，"数到几"一律用累计圆点表示，绝不出现阿拉伯数字。
+    符号是量的名字，必须等量感建立之后才引入。 */
+function pipRow(n){
+  n=clamp(n,1,10);
+  let h="";
+  for(let i=0;i<n;i++) h+='<b></b>';
+  return h;
+}
+function numPop(elm,n){
+  const p=$("#numpop"); if(!elm) return;
+  const r=elm.getBoundingClientRect(), s=$("#scene").getBoundingClientRect();
+  if(Store.symbols()){ p.className=""; p.textContent=String(n); }
+  else { p.className="pips"; p.innerHTML=pipRow(n); }
+  p.style.left=(r.left+r.width/2-s.left)+"px"; p.style.top=(r.top+r.height/2-s.top)+"px";
+  p.classList.remove("on"); void p.offsetWidth; p.classList.add("on");
+}
+/** 计数角标：解锁前显示圆点堆，解锁后才显示数字 */
+function setTag(el,n){
+  if(!el) return;
+  if(Store.symbols()){ el.className="tag"; el.textContent=String(n); }
+  else { el.className="tag pips"; el.innerHTML=pipRow(n); }
+}
+/* 点阵图样 */
+const PAT={1:[[50,50]],2:[[30,50],[70,50]],3:[[50,24],[28,72],[72,72]],
+ 4:[[28,28],[72,28],[28,72],[72,72]],5:[[26,26],[74,26],[50,50],[26,74],[74,74]],
+ 6:[[28,22],[72,22],[28,50],[72,50],[28,78],[72,78]],
+ 7:[[28,20],[72,20],[28,50],[72,50],[50,35],[28,80],[72,80]],
+ 8:[[25,20],[50,20],[75,20],[25,50],[75,50],[25,80],[50,80],[75,80]],
+ 9:[[25,20],[50,20],[75,20],[25,50],[50,50],[75,50],[25,80],[50,80],[75,80]],
+ 10:[[22,20],[46,20],[70,20],[86,36],[22,52],[46,52],[70,52],[22,82],[46,82],[70,82]]};
+/** 两种排列在几何上是否"实质不同"：点数少时 dice 与 line 会几乎重合，
+    只比模式名不够，必须比实际坐标。 */
+function patDiffers(n,a,b){
+  if(a===b) return false;
+  const A=dotPos(n,a), B=dotPos(n,b);
+  if(!A||!B||A.length!==B.length) return true;
+  // 必须比"点集"而不是"按下标一一对应"：n=3 时 dice 与 ring 是同一个上尖三角形，
+  // 只是左右两点的顺序相反，按下标比会得出"完全不同"的假阳性。
+  const nearest=(p,S)=>Math.min.apply(null,S.map(q=>Math.hypot(p[0]-q[0],p[1]-q[1])));
+  let h=0;
+  A.forEach(p=>{ h=Math.max(h,nearest(p,B)); });
+  B.forEach(p=>{ h=Math.max(h,nearest(p,A)); });
+  return h>13;                      // Hausdorff 距离（百分比坐标）足够大才算"看起来不一样"
+}
+function pickAnswerPat(n,qpat){
+  const cand=ANSWER_PATS.filter(x=>x!==qpat&&patDiffers(n,qpat,x));
+  if(cand.length) return pick(cand);
+  return n<=2?"group":"ring";            // 兜底：小数量用两组分布，几何上必定不同
+}
+function dotPos(n,pat){
+  n=clamp(n,1,10);
+  if(pat==="line"){ const o=[],st=84/n; for(let i=0;i<n;i++) o.push([8+st*(i+.5),50]); return o; }
+  if(pat==="group"){ const a=Math.min(5,n),b=n-a,o=[];
+    for(let i=0;i<a;i++) o.push([15+(i%2)*20, a>2?(16+Math.floor(i/2)*28):(36+i*24)]);
+    for(let i=0;i<b;i++) o.push([64+(i%2)*20, b>2?(16+Math.floor(i/2)*28):(36+i*24)]); return o; }
+  if(pat==="ring"){ const o=[]; for(let i=0;i<n;i++){const a=-Math.PI/2+i*2*Math.PI/n;
+    o.push([50+34*Math.cos(a),50+34*Math.sin(a)]);} return o; }
+  return PAT[n];
+}
+const ANSWER_PATS=["dice","line","ring","group"];
+/** 视觉任务卡。
+    mode="count" → 画 n 个红点（"要这么多"）
+    mode="ordinal" → 画 n 个点、最后一个金色并带向下箭头（"第 n 个"） */
+function taskCard(host,n,mode,who){
+  const d=el("div","taskcard",host);
+  if(who){ const w=el("div","who",d); img(A.ch(who),"",w); }
+  n=clamp(n,1,10);
+  for(let i=0;i<n;i++){
+    const cell=el("div","",d);
+    cell.style.cssText="display:flex;flex-direction:column;align-items:center;gap:2px";
+    const dot=el("i",(mode==="ordinal"&&i<n-1)?"ghost":(mode==="ordinal"?"mark":""),cell);
+    if(mode==="ordinal"&&i===n-1) el("div","arw",cell);
+  }
+  return d;
+}
+function makeCard(n,pat){
+  const c=el("div","card"); c.dataset.n=n;
+  if(pat==="num"){ el("div","num",c).textContent=String(n); return c; }
+  const w=el("div","dotwrap",c);
+  dotPos(n,pat||"dice").forEach(p=>{ const d=el("div","dot",w); d.style.left=p[0]+"%"; d.style.top=p[1]+"%"; });
+  return c;
+}
+/** 四选一：正确答案 + 3 个邻近干扰 */
+function choices(n,lo,hi,k){
+  k=k||4; const pool=[];
+  for(let d=1;d<=5;d++){ if(n-d>=lo) pool.push(n-d); if(n+d<=hi) pool.push(n+d); }
+  const out=[n];
+  shuffle(pool).forEach(v=>{ if(out.length<k&&out.indexOf(v)<0) out.push(v); });
+  for(let f=lo;f<=hi&&out.length<k;f++) if(out.indexOf(f)<0) out.push(f);
+  return shuffle(out);
+}
+/* 无重叠散布：网格分格 + 格内轻抖动 */
+function scatter(n,cols){
+  cols=cols||Math.ceil(Math.sqrt(n*1.5));
+  const rows=Math.ceil(n/cols), out=[];
+  for(let i=0;i<n;i++){
+    const r=Math.floor(i/cols), c=i%cols;
+    const inRow=Math.min(cols,n-r*cols);
+    const cw=86/inRow, ch=Math.min(72/rows,40);
+    out.push([ 7+cw*(c+.5)+(Math.random()*.26-.13)*cw,
+               16+ch*(r+.5)+(Math.random()*.3-.15)*ch ]);
+  }
+  return out;
+}
+function rowPos(n){ const o=[],st=84/n; for(let i=0;i<n;i++) o.push([8+st*(i+.5),50]); return o; }
+/** 固定间距：按 slots 个槽位的间距摆 n 个 —— 数量越多，排出来就越长 */
+function rowFixed(n,slots){ const o=[],st=84/Math.max(slots,1);
+  for(let i=0;i<n;i++) o.push([8+st*(i+.5),50]); return o; }
+
+function flyStar(from,cb){
+  const tg=$("#scStar").getBoundingClientRect();
+  const r=(from&&from.getBoundingClientRect)?from.getBoundingClientRect():{left:innerWidth/2,top:innerHeight/2,width:0,height:0};
+  const s=el("div","flystar",document.body); img(A.pr("star"),"",s);
+  const sz=s.getBoundingClientRect().width||40;
+  s.style.left=(r.left+r.width/2-sz/2)+"px"; s.style.top=(r.top+r.height/2-sz/2)+"px";
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    s.style.transform="translate("+(tg.left+tg.width/2-(r.left+r.width/2))+"px,"+(tg.top+tg.height/2-(r.top+r.height/2))+"px) scale(.55)";
+    s.style.opacity="0";
+  }));
+  setTimeout(()=>{ s.remove(); if(cb)cb(); },1080);
+}
+function confetti(n){
+  const cols=["#ffd75e","#ff7fb0","#3fa9f5","#6fbf4a","#e2453f","#fff"], host=$("#scene");
+  n=Math.min(n||24,36);
+  for(let i=0;i<n;i++){
+    const c=el("div","confetti",host);
+    c.style.background=pick(cols); c.style.left=(8+rnd(84))+"%"; c.style.top="-6%";
+    const dur=1500+rnd(1100);
+    c.animate([{transform:"translateY(0) rotate(0)",opacity:1},
+               {transform:"translateY("+(70+rnd(50))+"vh) rotate("+(360+rnd(540))+"deg)",opacity:.1}],
+              {duration:dur,easing:"cubic-bezier(.3,.6,.5,1)"});
+    setTimeout(()=>{ if(c.parentNode) c.remove(); },dur+150);
+  }
+}
+/* 连线画布（一一对应演示） */
+const Link=(()=>{
+  const cv=$("#link"); let g=null;
+  function fit(){ const s=$("#scene"); const w=s.clientWidth,h=s.clientHeight;
+    if(!w||!h) return; const dpr=Math.min(devicePixelRatio||1,2);
+    cv.width=w*dpr; cv.height=h*dpr; cv.style.width=w+"px"; cv.style.height=h+"px";
+    g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); }
+  function clear(){ if(!g) fit(); if(g) g.clearRect(0,0,cv.width,cv.height); }
+  function line(a,b,color){
+    if(!g) fit(); if(!g||!a||!b) return;
+    const s=$("#scene").getBoundingClientRect();
+    const ra=a.getBoundingClientRect(), rb=b.getBoundingClientRect();
+    g.save(); g.strokeStyle=color||"#fff"; g.lineWidth=5; g.lineCap="round";
+    g.shadowColor="rgba(0,0,0,.5)"; g.shadowBlur=5;
+    g.beginPath();
+    g.moveTo(ra.left+ra.width/2-s.left, ra.top+ra.height/2-s.top);
+    g.lineTo(rb.left+rb.width/2-s.left, rb.top+rb.height/2-s.top);
+    g.stroke(); g.restore();
+  }
+  return { fit, clear, line };
+})();
+
+/* ========================= 素材预载 ========================= */
+const Assets=(()=>{
+  const done=new Set();
+  function one(src){ return new Promise(res=>{
+    if(done.has(src)) return res();
+    const im=new Image();
+    let fin=false;
+    const end=ok=>{ if(fin) return; fin=true; if(ok) done.add(src); res(); };  // 失败不写成功缓存
+    im.onload=()=>end(true);
+    im.onerror=()=>end(false);
+    setTimeout(()=>end(false),8000);                                          // 超时兜底
+    im.src=src;
+  }); }
+  function load(list){ return Promise.all(list.map(one)); }
+  function worldList(w){
+    const l=[A.bg(w.bg)];
+    w.cast.forEach(c=>l.push(A.ch(c)));
+    l.push(A.pr("star"));
+    (WORLD_PROPS[w.id]||[]).forEach(p=>l.push(A.pr(p)));
+    return l;
+  }
+  return { load, worldList };
+})();
+const WORLD_PROPS={
+  peppa:["mudblob"], paw:["turtle"], bluey:["cookie","icecream","basket"],
+  hulu:GOURDS.slice(), aveng:["goon","portal","quinjet"],
+  monkey:["gubang_seg","gubang_tip","stone"]
+};
+
+/* ========================= 游戏注册表 ========================= */
+const GAMES={};
+
+/* ============================================================================
+   游戏公共部件
+   每题契约：st.recorded 只在"新题 + 未用提示"的首答时写一次掌握证据
+   ============================================================================ */
+function layout(root){
+  root.textContent="";
+  const zt=el("div","ztop",root), bot=el("div","zbot",root);
+  const top=el("div","stage",zt);      // 所有游戏都在这个固定长宽比的舞台里定位
+  return {top,bot,zt};
+}
+/** 暴露当前题目对象，供自动化测试与家长诊断读取 */
+function setQ(o){ window.__q=o; window.__qn=(window.__qn||0)+1; return o; }
+/** 连续两题不重复：最多重掷 8 次，掷不出来就算了（小数值域下必然会撞） */
+function fresh(gen,key,box){
+  let o=gen(), k=key(o), i=0;
+  while(box.last!=null && k===box.last && i<8){ o=gen(); k=key(o); i++; }
+  box.last=k; return o;
+}
+function newState(isRetry){
+  return {isRetry:!!isRetry,hinted:false,wrongs:0,recorded:false,done:false,locked:false,asking:false};
+}
+/** 本题是否已被换掉（纠错结束会 build(true) 生成新 st）——
+    旧定时器必须据此退出，否则会拿旧数据去改新题 */
+function busyState(st){ return !st || st.done || st.locked; }
+/** 本题用过任何形式的帮助（自动提示/重播指令/系统代为摆正）→ 之后作答一律不计掌握 */
+let CUR_STATE=null;
+function bindState(st){ CUR_STATE=st; return st; }
+function markAssisted(){ if(CUR_STATE) CUR_STATE.hinted=true; }
+function record(ctx,st,ok){
+  ctx.clearHint();                       // 已作答 → 停止分级提示，避免在纠错动画里插话
+  if(st.recorded||st.isRetry||st.hinted) return;
+  st.recorded=true; ctx.evidence(!!ok);
+}
+function place(field,n,src,pos,cls){
+  const out=[];
+  for(let i=0;i<n;i++){
+    const o=el("div","cobj"+(cls?" "+cls:""),field);
+    o.style.left=pos[i][0]+"%"; o.style.top=pos[i][1]+"%";
+    img(src,"",o); el("div","tag",o);
+    out.push(o);
+  }
+  return out;
+}
+/** 舞台两侧角色（贴地站立） */
+function sideCast(top,side,names,h,tap){
+  const d=el("div","side "+side+(tap?" tap":""),top);
+  if(h!=null) d.style.height=h+"%";
+  names.forEach(nm=>{ const im=img(A.ch(nm.n||nm),"",d); if(nm.sm) im.classList.add("sm"); });
+  return d;
+}
+/** 计数区：默认落在画面下半部中央，两侧留给角色 */
+function mkField(top,o){
+  o=o||{};
+  const f=el("div","field"+(o.mat===false?"":" mat"),top);
+  if(o.l!=null) f.style.left=o.l+"%";
+  if(o.r!=null) f.style.right=o.r+"%";
+  if(o.t!=null) f.style.top=o.t+"%";
+  if(o.b!=null) f.style.bottom=o.b+"%";
+  return f;
+}
+/** 单独一个角色贴片（用于 Bluey 每一行的头像） */
+function faceAt(top,who,tPct,hPct,rightSide){
+  const d=el("div","",top);
+  d.style.cssText="position:absolute;"+(rightSide?"right:0;":"left:0;")+"top:"+tPct+"%;height:"+hPct+
+    "%;max-width:13%;z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center";
+  img(A.ch(who),"",d).style.cssText="width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))";
+  return d;
+}
+/** 计数物尺寸随数量自适应：同题内严格等大、绝不重叠 */
+function fitObj(field,n,mode){
+  n=Math.max(n,1);
+  let maxPct;
+  if(mode==="row")          maxPct=84/n*0.86;
+  else if(mode==="scatter") maxPct=86/Math.ceil(Math.sqrt(n*1.5))*0.82;
+  else                      maxPct=n<=3?26:(n<=5?22:(n<=7?18:15));
+  field.style.setProperty("--obj","min(clamp(38px,9vmin,104px),"+maxPct.toFixed(2)+"%)");
+}
+/** 四选一答题区；cb(n, cardEl) */
+function askCards(bot,list,pat,cb){
+  bot.textContent="";
+  const wrap=el("div","cards",bot);
+  list.forEach(v=>{
+    const c=makeCard(v,pat);
+    onTap(c,()=>{ if(c.dataset.off) return; cb(v,c,wrap); });
+    wrap.appendChild(c);
+  });
+  return wrap;
+}
+function lockCards(wrap){ [].forEach.call(wrap.children,c=>c.dataset.off="1"); }
+function bigBtn(bot,text,cls,cb){
+  const b=el("button","bigbtn"+(cls?" "+cls:""),bot);
+  if(cls&&cls.indexOf("green")>=0) el("span","chk",b);
+  const s=el("span","",b); s.textContent=text;
+  onTap(b,()=>{ if(b.disabled) return; cb(b); });
+  return b;
+}
+/** 逐个点亮并报数（演示用，非孩子操作） */
+function autoCount(ctx,objs,i,step,done){
+  i=i||0;
+  if(!ctx.alive()) return;
+  if(i>=objs.length){ if(done) done(); return; }
+  const o=objs[i];
+  o.classList.add("counted"); setTag(o.querySelector(".tag"),i+1);
+  o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit");
+  SFX.count(i+1); numPop(o,i+1); Speech.count(cnSeq(i+1),"auto-count");
+  ctx.T.after(step||620,()=>autoCount(ctx,objs,i+1,step,done));
+}
+
+/* ============================================================================
+   世界一 · 佩奇的泥坑 —— 瞬识 Subitizing
+   ============================================================================ */
+GAMES.peppa=ctx=>{
+  const T=ctx.T; let st=null,q=null,ui=null,shownAt=0,fails=0; const box={last:null};
+
+  function spec(){
+    const lv=ctx.level();
+    const cfg=lv===1?{lo:1,hi:3,flash:1500,qpat:"dice"}
+             :lv===2?{lo:2,hi:5,flash:1250,qpat:"dice"}
+             :lv===3?{lo:4,hi:6,flash:1050,qpat:"group"}
+             :       {lo:3,hi:6,flash:1150,qpat:"group"};
+    const n=rint(cfg.lo,cfg.hi);
+    // 答案卡排列必须与题目排列不同 —— 封死"图形匹配"通关
+    const apat=(ctx.symbols()&&lv>=4)?"num":pickAnswerPat(n,cfg.qpat);
+    return {n,cfg,apat};
+  }
+  function build(retry){
+    st=bindState(newState(retry)); q=setQ(fresh(spec,o=>o.n,box));
+    const L=layout(ctx.root);
+    const pig=sideCast(L.top,"l",["peppa"],34,true);
+    sideCast(L.top,"r",["mummypig",{n:"george",sm:1}],28);
+    const field=mkField(L.top,{t:26});
+    ui={L,field,pig,blobs:[]};
+    onTap(pig,()=>{ if(busyState(st)) return; st.hinted=true; flash(); });   // 再看一次 → 记为已提示，不计掌握
+    ctx.ask(retry?"我们再来一次！看好啦，佩奇要跳泥坑！":"佩奇要跳泥坑啦！看好，溅起几个泥点？",pig);
+    T.after(1500,()=>{ if(ctx.alive()) flash(); });
+  }
+  function flash(){
+    if(!ctx.alive()) return;
+    ui.blobs.forEach(b=>b.remove()); ui.blobs=[];
+    ui.pig.classList.remove("bounce"); void ui.pig.offsetWidth; ui.pig.classList.add("bounce");
+    SFX.whoosh(); Bubble.show("看好！");
+    T.after(330,()=>{
+      if(!ctx.alive()) return;
+      fitObj(ui.field,q.n,q.cfg.qpat);
+      ui.blobs=place(ui.field,q.n,A.pr("mudblob"),dotPos(q.n,q.cfg.qpat));
+      ui.blobs.forEach((b,i)=>{ b.classList.add("pop"); b.style.animationDelay=(i*.02)+"s"; });
+      shownAt=Date.now();
+      T.after(q.cfg.flash,()=>{
+        if(!ctx.alive()) return;
+        ui.blobs.forEach(b=>{ b.style.opacity="0"; });
+        T.after(230,()=>{ if(ctx.alive()){ ui.blobs.forEach(b=>b.remove()); ui.blobs=[]; ask(); } });
+      });
+    });
+  }
+  function ask(){
+    Bubble.hide(); ctx.answering(true);
+    const list=choices(q.n,1,7,4);
+    const wrap=askCards(ui.L.bot,list,q.apat,(v,c)=>onPick(v,c,wrap));
+    ctx.ask("刚才有几个泥点呀？点一张卡片。",wrap);
+  }
+  function onPick(v,card,wrap){
+    if(st.done) return;
+    const ok=(v===q.n);
+    record(ctx,st,ok);
+    if(ok){
+      st.done=true; lockCards(wrap); card.classList.add("right"); ctx.answering(false);
+      Speech.say("对啦！"+cnQty(q.n)+"个泥点！",{tag:"right"});
+      // 确认性重现（不是纠错）：让孩子看到量与数词对应
+      fitObj(ui.field,q.n,q.cfg.qpat);
+      ui.blobs=place(ui.field,q.n,A.pr("mudblob"),dotPos(q.n,q.cfg.qpat));
+      autoCount(ctx,ui.blobs,0,430,()=>{ if(ctx.alive()) ctx.win(card); });
+    }else{
+      st.wrongs++; SFX.soft(); card.classList.add("wrong");
+      T.after(420,()=>card.classList.remove("wrong"));
+      fails++;
+      if(st.wrongs>=2||fails>=2){ reveal(wrap); return; }   // 一轮内最多错两次
+      lockCards(wrap); ctx.answering(false);
+      remediate();
+    }
+  }
+  /** 瞬识专用纠错：按"组块"呈现，绝不退化成逐个数 */
+  function remediate(){
+    st.locked=true; const my=st;
+    const n=q.n, a=n<=3?n:(n<=5?n-2:3), b=n-a;
+    ui.blobs.forEach(x=>x.remove());
+    const posA=[],posB=[];
+    for(let i=0;i<a;i++) posA.push([18+ (i%2)*16, 30+Math.floor(i/2)*26]);
+    for(let i=0;i<b;i++) posB.push([64+ (i%2)*16, 30+Math.floor(i/2)*26]);
+    fitObj(ui.field,Math.max(a,b)*2+1,"dice");
+    const A1=place(ui.field,a,A.pr("mudblob"),posA);
+    Speech.say(b>0?("看，这边"+cnQty(a)+"个"):("看，"+cnQty(a)+"个"),{tag:"remedy"});
+    A1.forEach(x=>x.classList.add("pop"));
+    T.after(1400,()=>{
+      if(!ctx.alive()||st!==my) return;
+      if(b>0){
+        const B1=place(ui.field,b,A.pr("mudblob"),posB);
+        B1.forEach(x=>x.classList.add("pop"));
+        Speech.say("这边"+cnQty(b)+"个",{tag:"remedy"});
+        ui.blobs=A1.concat(B1);
+      }else ui.blobs=A1;
+      T.after(1400,()=>{
+        if(!ctx.alive()||st!==my) return;
+        Speech.say("合起来是"+cnQty(n)+"个！我们再看一次新的。",{tag:"remedy"});
+        T.after(1800,()=>{ if(ctx.alive()&&st===my) build(true); });    // 同构新题复测
+      });
+    });
+  }
+  function reveal(wrap){
+    lockCards(wrap); st.done=true; ctx.answering(false);
+    [].forEach.call(wrap.children,c=>{
+      if(+c.dataset.n===q.n){ c.classList.add("right"); Finger.at(c,2600); }
+      else c.classList.add("dim");
+    });
+    Speech.say("是这张哦，"+cnQty(q.n)+"个！",{tag:"reveal"});
+    T.after(2100,()=>{ if(ctx.alive()) ctx.win(wrap); });
+  }
+  return {
+    start:()=>{ fails=0; build(false); }, next:()=>{ fails=0; build(false); },
+    repeat:()=>(ui&&ui.pig)?"佩奇跳泥坑，溅起几个泥点呀？":"",
+    destroy:()=>{ ui=null; q=null; st=null; }
+  };
+};
+
+/* ============================================================================
+   世界二 · 冒险湾 —— 一一对应 / 基数原则 / Give-N
+   ============================================================================ */
+GAMES.paw=ctx=>{
+  const T=ctx.T; let st=null,q=null,ui=null,rt=0,fails=0; const box={last:null};
+  const DOGS=["chase","marshall","skye","rubble","zuma","rocky","chase"];
+
+  function spec(kind){
+    const lv=ctx.level();
+    const cfg=lv===1?{lo:1,hi:3,pat:"row"}:lv===2?{lo:2,hi:5,pat:"row"}
+             :lv===3?{lo:3,hi:6,pat:"scatter"}:{lo:3,hi:6,pat:"scatter"};
+    return {n:rint(cfg.lo,cfg.hi),cfg,kind};
+  }
+  function build(retry,forceKind){
+    st=bindState(newState(retry));
+    const lv=ctx.level();
+    let kind=forceKind;
+    if(!kind){ kind=(rt%2===0)?"count":"given"; if(lv>=4&&rt%3===2) kind="plus1"; }
+    q=setQ(fresh(()=>spec(kind),o=>o.kind+":"+o.n,box));
+    const L=layout(ctx.root); ui={L};
+    sideCast(L.top,"l",["ryder"],32);
+    sideCast(L.top,"r",["marshall"],26);
+    if(kind==="given") buildGiven(L); else buildCount(L);
+  }
+
+  /* ---- 点数 + 基数 ---- */
+  function buildCount(L){
+    const field=mkField(L.top,{t:q.cfg.pat==="row"?38:26});
+    fitObj(field,q.n,q.cfg.pat==="row"?"row":"scatter");
+    const pos=q.cfg.pat==="row"?rowPos(q.n):scatter(q.n);
+    const objs=place(field,q.n,A.pr("turtle"),pos);
+    ui.field=field; ui.objs=objs; ui.counted=0;
+    objs.forEach((o,i)=>onTap(o,()=>tapTurtle(o)));
+    ctx.answering(true);
+    ctx.ask(st.isRetry?"我们再数一次新的！点一点小海龟，数一数。":"沙滩上有小海龟！用手点一点，数一数。",objs[0]);
+  }
+  function tapTurtle(o){
+    if(busyState(st)||o.classList.contains("counted")) return;
+    ui.counted++;
+    o.classList.add("counted"); setTag(o.querySelector(".tag"),ui.counted);
+    o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit");
+    SFX.count(ui.counted); numPop(o,ui.counted);
+    Speech.count(cnSeq(ui.counted),"child-count");       // 计数通道：不打断、不丢
+    if(ui.counted>=q.n) T.after(700,()=>{ if(ctx.alive()&&!st.done) askTotal(); });
+  }
+  function askTotal(){
+    ctx.answering(true);
+    const plus=(q.kind==="plus1");
+    const target=plus?q.n+1:q.n;
+    const apat=(ctx.symbols()&&ctx.level()>=4)?"num":pick(ANSWER_PATS.filter(p=>p!=="line"));
+    const list=choices(target,1,8,4);
+    const wrap=askCards(ui.L.bot,list,apat,(v,c)=>{
+      if(st.done) return;
+      const ok=(v===target); record(ctx,st,ok);
+      if(ok){
+        st.done=true; lockCards(wrap); c.classList.add("right"); ctx.answering(false);
+        Speech.say(plus?("对啦！再来一只就是"+cnQty(target)+"只！"):("对啦！一共"+cnQty(q.n)+"只！"),{tag:"right"});
+        T.after(1200,()=>{ if(ctx.alive()){ rt++; ctx.win(c); } });
+      }else{
+        st.wrongs++; SFX.soft(); c.classList.add("wrong");
+        T.after(420,()=>c.classList.remove("wrong"));
+        lockCards(wrap); fails++;
+        if(st.wrongs>=2||fails>=2){ revealCard(wrap,target); return; }
+        ctx.answering(false); remedyCardinal(plus);
+      }
+    });
+    ctx.ask(plus?"如果再来一只，一共几只呀？":"一共几只呀？点一张卡片。",wrap);
+  }
+  /** 基数专用纠错：重数一遍并强调"最后数到几，就是几只" */
+  function remedyCardinal(plus){
+    st.locked=true; const my=st;
+    ui.objs.forEach(o=>{ o.classList.remove("counted"); o.querySelector(".tag").textContent=""; });
+    Speech.say("我们一起再数一遍。",{tag:"remedy"});
+    T.after(900,()=>{
+      if(!ctx.alive()||st!==my) return;
+      autoCount(ctx,ui.objs,0,620,()=>{
+        if(!ctx.alive()||st!==my) return;
+        Speech.say("最后数到"+cnSeq(q.n)+"，就是"+cnQty(q.n)+"只！",{tag:"remedy"});
+        T.after(2400,()=>{ if(ctx.alive()&&st===my) build(true,plus?"plus1":"count"); });
+      });
+    });
+  }
+  function revealCard(wrap,target){
+    st.done=true; ctx.answering(false);
+    [].forEach.call(wrap.children,c=>{
+      if(+c.dataset.n===target){ c.classList.add("right"); Finger.at(c,2400); } else c.classList.add("dim");
+    });
+    Speech.say("是这张哦！"+cnQty(target)+"个。",{tag:"reveal"});
+    T.after(2000,()=>{ if(ctx.alive()){ rt++; ctx.win(wrap); } });
+  }
+
+  /* ---- Give-N：看着数量卡，派出正好那么多狗 ---- */
+  function buildGiven(L){
+    // 任务卡固定在上方，绝不与出动区重叠
+    const holder=el("div","",L.top);
+    holder.style.cssText="position:absolute;left:50%;top:1%;transform:translateX(-50%);z-index:6;pointer-events:none";
+    const task=makeCard(q.n,pick(["dice","ring"])); task.style.pointerEvents="none";
+    holder.appendChild(task);
+    const zone=mkField(L.top,{t:44,b:3});
+    zone.style.display="flex"; zone.style.alignItems="center";
+    zone.style.justifyContent="center"; zone.style.flexWrap="wrap"; zone.style.gap="2%";
+    // 狗窝
+    const den=el("div","",L.bot);
+    den.style.cssText="display:flex;gap:clamp(3px,1vmin,10px);align-items:flex-end;justify-content:center;flex-wrap:wrap";
+    const sent=[];
+    ui.task=task; ui.zone=zone; ui.sent=sent; ui.dogs=[];
+    for(let i=0;i<6;i++){
+      const d=el("button","",den);
+      d.style.cssText="width:clamp(42px,7.6vmin,86px);height:clamp(42px,7.6vmin,86px);position:relative";
+      img(A.ch(DOGS[i]),"",d).style.cssText="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))";
+      ui.dogs.push(d);
+      onTap(d,()=>{ if(busyState(st)) return; sendDog(i); });
+    }
+    /** 派出第 i 只狗（孩子点击与"带着一起做"的演示共用同一条路径） */
+    function sendDog(i){
+      const d=ui.dogs[i]; if(!d||d.dataset.out) return false;
+      d.dataset.out="1"; d.style.opacity=".25";
+      const c=el("div","",zone);
+      c.style.cssText="width:clamp(40px,7.2vmin,80px);height:clamp(40px,7.2vmin,80px);position:relative";
+      img(A.ch(DOGS[i]),"",c).style.cssText="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))";
+      c.classList.add("pop");
+      sent.push({card:c,dog:d});
+      SFX.count(sent.length); numPop(c,sent.length); Speech.count(cnSeq(sent.length),"child-count");
+      onTap(c,()=>{ if(busyState(st)) return; recall(c); });
+      okBtn.disabled=false;
+      return true;
+    }
+    function recall(c){
+      const i=sent.findIndex(x=>x.card===c); if(i<0) return;
+      sent[i].dog.dataset.out=""; sent[i].dog.style.opacity="1";
+      sent[i].card.remove(); sent.splice(i,1); SFX.tap();
+      okBtn.disabled=sent.length===0;
+    }
+    ui.sendDog=sendDog; ui.recall=recall;
+    const okBtn=bigBtn(L.bot,"好了！","green",()=>submit());
+    okBtn.disabled=true; ui.okBtn=okBtn;
+    ctx.ask(st.isRetry?"再来一次！看看卡片上有几个点，就派几只狗狗。"
+                      :"莱德说：看看卡片上有几个点，就派出正好几只狗狗！派好了按绿色按钮。",task);
+    ctx.answering(true);
+  }
+  function submit(){
+    if(st.done) return;
+    const got=ui.sent.length, ok=(got===q.n);
+    record(ctx,st,ok);
+    if(ok){
+      st.done=true; ctx.answering(false); ui.okBtn.disabled=true;
+      Speech.say("正好够！"+cnQty(q.n)+"只狗狗，"+cnQty(q.n)+"个点！",{tag:"right"});
+      T.after(1400,()=>{ if(ctx.alive()){ rt++; ctx.win(ui.zone); } });
+    }else{
+      st.wrongs++; SFX.soft(); ui.zone.classList.add("shake");
+      T.after(500,()=>ui.zone.classList.remove("shake"));
+      fails++;
+      if(st.wrongs>=2||fails>=2){ giveAnswer(); return; }
+      remedyGiveN(got);
+    }
+  }
+  /** Give-N 专用纠错：数出实际派了几只，与卡片点数并排比较，指出差多少 */
+  function remedyGiveN(got){
+    st.locked=true; const my=st;
+    ctx.answering(false); ui.okBtn.disabled=true;
+    const cards=[].slice.call(ui.zone.children);
+    const objs=cards.map(c=>{ c.classList.add("cobj"); if(!c.querySelector(".tag")) el("div","tag",c); return c; });
+    Speech.say("我们数数你派了几只。",{tag:"remedy"});
+    T.after(900,()=>{
+      if(!ctx.alive()||st!==my) return;
+      autoCount(ctx,objs,0,560,()=>{
+        if(!ctx.alive()||st!==my) return;
+        const diff=q.n-got;
+        ui.task.classList.add("right");
+        Speech.say(diff>0?("你派了"+cnQty(got)+"只，卡片上有"+cnQty(q.n)+"个点，还差"+cnQty(diff)+"只。")
+                         :("你派了"+cnQty(got)+"只，卡片上只有"+cnQty(q.n)+"个点，多了"+cnQty(-diff)+"只。"),{tag:"remedy"});
+        T.after(3000,()=>{
+          if(!ctx.alive()||st!==my) return;
+          ui.task.classList.remove("right");
+          objs.forEach(o=>{ o.classList.remove("counted","cobj"); const t=o.querySelector(".tag"); if(t) t.textContent=""; });
+          build(true,"given");                   // 同构新题复测
+        });
+      });
+    });
+  }
+  function giveAnswer(){
+    st.done=true; ctx.answering(false); ui.okBtn.disabled=true;
+    const need=q.n-ui.sent.length;
+    Speech.say("没关系，我们一起来：要"+cnQty(q.n)+"只。",{tag:"reveal"});
+    let k=0;
+    const step=()=>{
+      if(!ctx.alive()) return;
+      if(need>0&&k<need){
+        const idx=ui.dogs.findIndex(d=>!d.dataset.out);
+        if(idx>=0) ui.sendDog(idx);
+        k++; T.after(650,step); return;
+      }
+      if(need<0&&k< -need){
+        const last=ui.sent.length?ui.sent[ui.sent.length-1].card:null;
+        if(last) ui.recall(last);
+        k++; T.after(650,step); return;
+      }
+      Speech.say("现在正好"+cnQty(q.n)+"只啦！",{tag:"reveal"});
+      T.after(1600,()=>{ if(ctx.alive()){ rt++; ctx.win(ui.zone); } });
+    };
+    T.after(1400,step);
+  }
+
+  return {
+    start:()=>{ rt=0; fails=0; build(false); }, next:()=>{ fails=0; build(false); },
+    repeat:()=>{ if(!q) return "";
+      if(q.kind==="given") return "看看卡片上有几个点，就派出正好几只狗狗。";
+      if(ui&&ui.objs&&ui.counted<q.n) return "点一点小海龟，数一数。";
+      return q.kind==="plus1"?"再来一只，一共几只呀？":"一共几只呀？点一张卡片。"; },
+    destroy:()=>{ ui=null; q=null; st=null; }
+  };
+};
+
+/* ============================================================================
+   世界三 · Bluey 的后院 —— 比较 / 数量守恒
+   ============================================================================ */
+GAMES.bluey=ctx=>{
+  const T=ctx.T; let st=null,q=null,ui=null,fails=0; const box={last:null};
+
+  function spec(){
+    const lv=ctx.level();
+    // lay: "fixed" 长度与数量成正比（知觉比较）；"fill" 两排等长（长度线索被抹掉）
+    if(lv===1){ const a=rint(1,5); let b=a; while(Math.abs(b-a)<2||b<1||b>6) b=rint(1,6);
+                return {a,b,mode:"cmp",spread:false,lay:"fixed"}; }
+    if(lv===2){ const a=rint(3,6); const b=a+(rnd(2)?1:-1);
+                return {a:clamp(a,1,7),b:clamp(b,1,7),mode:"cmp",spread:false,lay:"fill"}; }
+    if(lv===3){ const n=rint(3,6); return {a:n,b:n,mode:"cons",spread:true,lay:"spread"}; } // 守恒：等量、只改间距
+    const n=rint(3,6), miss=rint(1,3);
+    return {a:n,b:Math.max(1,n-miss),mode:"fix",spread:false,lay:"fixed"};
+  }
+  /** 守恒题的两排：同一张图、同一尺寸，只有间距不同 */
+  function rowSpread(n,wide){
+    const span=wide?86:Math.min(46,n*11);
+    const start=wide?7:(50-span/2), st2=span/n;
+    const o=[]; for(let i=0;i<n;i++) o.push([start+st2*(i+.5),50]); return o;
+  }
+  function build(retry){
+    st=bindState(newState(retry)); q=setQ(fresh(spec,o=>o.mode+":"+o.a+","+o.b,box));
+    const layOf=(cnt,wide)=>q.lay==="spread"?rowSpread(cnt,wide)
+                            :q.lay==="fill"?rowPos(cnt)
+                            :rowFixed(cnt,Math.max(q.a,q.b)+(q.mode==="fix"?1:0));
+    const L=layout(ctx.root); ui={L};
+    const wideTop=q.spread?(rnd(2)===0):false;
+    // 两行几何完全相同 —— 比较/守恒的效度要求除间距外没有任何其它差异
+    faceAt(L.top,"bluey",28,32); faceAt(L.top,"bingo",62,32);
+    faceAt(L.top,q.mode==="cons"?"bandit":"chilli",1,20,true);
+    const rowA=mkField(L.top,{l:15,r:4,t:28,b:44});
+    const rowB=mkField(L.top,{l:15,r:4,t:62,b:10});
+    const item=q.mode==="fix"?A.pr("cookie"):pick([A.pr("cookie"),A.pr("icecream")]);
+    ui.item=item;
+    const most=Math.max(q.a,q.b)+(q.mode==="fix"?1:0);
+    fitObj(rowA,most,"row"); fitObj(rowB,most,"row");
+    ui.A=place(rowA,q.a,item,layOf(q.a,wideTop));
+    ui.B=place(rowB,q.b,item,layOf(q.b,!wideTop));
+    ui.rowA=rowA; ui.rowB=rowB;
+    if(q.mode==="fix") buildFix(L); else askWho(L);
+  }
+  /** 谁的多：三个大目标 —— Bluey / 一样多 / Bingo */
+  function askWho(L){
+    ctx.answering(true);
+    const bot=L.bot; bot.textContent="";
+    const wrap=el("div","cards",bot);
+    const mk=(key,label,build2)=>{
+      const c=el("div","card",wrap); build2(c);
+      const t=el("div","",c);
+      t.style.cssText="position:absolute;left:0;right:0;bottom:4%;text-align:center;font-weight:900;color:#2a1f4d;font-size:clamp(11px,2vmin,18px)";
+      t.textContent=label;
+      onTap(c,()=>{ if(st.done) return; pick2(key,c,wrap); });
+      return c;
+    };
+    mk("a","Bluey 多",c=>{ const h=el("div","",c);
+      h.style.cssText="position:absolute;inset:6% 6% 24%;display:flex;align-items:center;justify-content:center";
+      img(A.ch("bluey"),"",h).style.cssText="height:100%;width:auto"; });
+    mk("same","一样多",c=>{
+      const w=el("div","dotwrap",c);
+      [[26,34],[50,34],[74,34],[26,66],[50,66],[74,66]].forEach(p=>{
+        const d=el("div","dot",w); d.style.left=p[0]+"%"; d.style.top=p[1]+"%"; d.style.background="#3fa9f5"; });
+      const eq=el("div","",c);
+      eq.style.cssText="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56%;height:3px;background:#2a1f4d;box-shadow:0 7px 0 #2a1f4d";
+    });
+    mk("b","Bingo 多",c=>{ const h=el("div","",c);
+      h.style.cssText="position:absolute;inset:6% 6% 24%;display:flex;align-items:center;justify-content:center";
+      img(A.ch("bingo"),"",h).style.cssText="height:100%;width:auto"; });
+    ui.wrap=wrap;
+    ctx.ask(st.isRetry?"再看看这一次：谁的多呀？":(q.mode==="cons"?"爸爸把饼干摆得不一样啦！谁的多呀？还是一样多？":"谁的多呀？点一下他。"),
+            wrap);
+  }
+  function truth(){ return q.a>q.b?"a":(q.a<q.b?"b":"same"); }
+  function pick2(key,card,wrap){
+    const ok=(key===truth());
+    record(ctx,st,ok);
+    if(ok){
+      st.done=true; lockCards(wrap); card.classList.add("right"); ctx.answering(false);
+      Speech.say(key==="same"?"对啦！一样多！":"对啦！",{tag:"right"});
+      T.after(500,()=>{ if(ctx.alive()) verify(()=>ctx.win(card)); });
+    }else{
+      st.wrongs++; SFX.soft(); card.classList.add("wrong");
+      T.after(420,()=>card.classList.remove("wrong"));
+      lockCards(wrap); ctx.answering(false);
+      fails++;
+      if(st.wrongs>=2||fails>=2){ verify(()=>{ revealWho(wrap); }); return; }
+      handPair();
+    }
+  }
+  /** 自动一一对应验证（答对后的确认） */
+  function verify(done){
+    st.locked=true; const my=st;
+    Link.clear();
+    const n=Math.min(q.a,q.b); let i=0;
+    const step=()=>{
+      if(!ctx.alive()||st!==my) return;
+      if(i>=n){
+        const extra=q.a>q.b?ui.A.slice(n):(q.b>q.a?ui.B.slice(n):[]);
+        extra.forEach(x=>x.classList.add("tapme"));
+        Speech.say(q.a===q.b?"你看，正好一个对一个，一样多！"
+          :((q.a>q.b?"Bluey":"Bingo")+"多出来"+cnQty(Math.abs(q.a-q.b))+"个！"),{tag:"verify"});
+        T.after(1900,()=>{ if(st!==my) return; st.locked=false;
+          Link.clear(); extra.forEach(x=>x.classList.remove("tapme")); if(done) done(); });
+        return;
+      }
+      Link.line(ui.A[i],ui.B[i],"#fff"); SFX.tap(); i++;
+      T.after(300,step);
+    };
+    step();
+  }
+  /** 守恒专用纠错：孩子亲手一一配对，自己发现结果 */
+  function handPair(){
+    st.locked=false;                      // 这一步要孩子亲手配对，必须可点
+    Link.clear();
+    let selA=null, pairs=0;
+    const maxP=Math.min(q.a,q.b);
+    ui.A.forEach(o=>{ o.classList.add("tapme"); onTap(o,()=>{
+      if(o.dataset.p) return; if(selA) selA.classList.remove("counted");
+      selA=o; o.classList.add("counted"); o.querySelector(".tag").textContent="?"; SFX.tap(); }); });
+    ui.B.forEach(o=>onTap(o,()=>{
+      if(!selA||o.dataset.p) return;
+      o.dataset.p=selA.dataset.p="1";
+      Link.line(selA,o,"#ffd75e");
+      selA.querySelector(".tag").textContent=""; selA.classList.remove("tapme","counted");
+      selA=null; pairs++; SFX.count(pairs);
+      if(pairs>=maxP) T.after(800,()=>{ if(ctx.alive()) pairDone(); });
+    }));
+    ctx.ask("我们一个一个配对看看！先点上面一个，再点下面一个。",ui.A[0]);
+  }
+  function pairDone(){
+    st.locked=true; const my=st;
+    const left=ui.A.filter(o=>!o.dataset.p), right=ui.B.filter(o=>!o.dataset.p);
+    left.concat(right).forEach(o=>o.classList.add("tapme"));
+    Speech.say(q.a===q.b?"每一个都配上对啦 —— 一样多！"
+      :("还有"+cnQty(left.length+right.length)+"个没配上，"+(left.length?"Bluey":"Bingo")+"多！"),{tag:"remedy"});
+    T.after(2600,()=>{
+      if(!ctx.alive()||st!==my) return;
+      Link.clear(); build(true);            // 换新排列的同构题复测
+    });
+  }
+  function revealWho(wrap){
+    st.done=true;
+    const t=truth();
+    [].forEach.call(wrap.children,(c,i)=>{
+      const key=["a","same","b"][i];
+      if(key===t){ c.classList.add("right"); Finger.at(c,2400); } else c.classList.add("dim");
+    });
+    T.after(2000,()=>{ if(ctx.alive()) ctx.win(wrap); });
+  }
+  /** L4：补齐到一样多 */
+  function buildFix(L){
+    ctx.answering(true);
+    const need=q.a-q.b;
+    const basket=el("button","",L.bot);
+    basket.style.cssText="width:clamp(64px,11vmin,120px);height:clamp(64px,11vmin,120px);position:relative";
+    img(A.pr("basket"),"",basket).style.cssText="width:100%;height:100%;object-fit:contain";
+    let added=0;
+    onTap(basket,()=>{
+      if(busyState(st)||q.b+added>=9) return;
+      added++;
+      const o=el("div","cobj pop",ui.rowB); o.style.left="0%"; o.style.top="50%";
+      img(ui.item,"",o); el("div","tag",o);
+      ui.B.push(o);
+      relayoutB();
+      SFX.count(q.b+added); Speech.count(cnSeq(q.b+added),"child-count");
+      onTap(o,()=>{ if(busyState(st)) return; const i=ui.B.indexOf(o); if(i<q.b) return;
+        o.remove(); ui.B.splice(i,1); added--; relayoutB(); SFX.tap(); okBtn.disabled=added===0; });
+      okBtn.disabled=false;
+    });
+    function relayoutB(){
+      const pos=rowFixed(ui.B.length,Math.max(q.a,q.b)+1);
+      ui.B.forEach((o,i)=>{ o.style.left=pos[i][0]+"%"; o.style.top="50%"; });
+    }
+    const okBtn=bigBtn(L.bot,"好了！","green",()=>{
+      if(st.done) return;
+      const ok=(ui.B.length===q.a); record(ctx,st,ok);
+      if(ok){
+        st.done=true; okBtn.disabled=true; ctx.answering(false);
+        Speech.say("公平啦！两边都是"+cnQty(q.a)+"个！",{tag:"right"});
+        T.after(400,()=>{ if(ctx.alive()) verify(()=>ctx.win(basket)); });
+      }else{
+        st.wrongs++; SFX.soft(); ui.rowB.classList.add("shake");
+        T.after(500,()=>ui.rowB.classList.remove("shake"));
+        okBtn.disabled=true; ctx.answering(false);
+        fails++;
+        if(st.wrongs>=2||fails>=2){ verify(()=>{ st.done=true; T.after(300,()=>ctx.win(basket)); }); return; }
+        verify(()=>{ if(ctx.alive()) build(true); });
+      }
+    });
+    okBtn.disabled=true;
+    ctx.ask("Bingo 的饼干少啦！点篮子，给她加到和 Bluey 一样多。加好了按绿色按钮。",basket);
+  }
+  return {
+    start:()=>{ fails=0; build(false); }, next:()=>{ fails=0; build(false); },
+    repeat:()=>(q&&q.mode==="fix")?"点篮子，给 Bingo 加到一样多。":"谁的多呀？",
+    destroy:()=>{ Link.clear(); ui=null; q=null; st=null; }
+  };
+};
+
+/* ============================================================================
+   世界四 · 葫芦山 —— 序数 / 部分-整体（缺失加数）
+   ============================================================================ */
+GAMES.hulu=ctx=>{
+  const T=ctx.T; let st=null,q=null,ui=null,rt=0,fails=0; const box={last:null};
+
+  function build(retry,forceKind){
+    st=bindState(newState(retry));
+    const lv=ctx.level();
+    let kind=forceKind||(lv<=2?"ord":(lv===3?((rt%2===0)?"explore":"missing"):"missing"));
+    const L=layout(ctx.root); ui={L};
+    sideCast(L.top,"l",["yeye"],kind==="ord"?30:20);
+    if(kind==="ord") buildOrd(L,lv); else if(kind==="explore") buildExplore(L,lv); else buildMissing(L,lv);
+  }
+
+  /* ---- 序数：第几个（颜色每轮打乱，杜绝"记颜色"） ---- */
+  function buildOrd(L,lv){
+    const total=lv===1?4:6;
+    const mk=()=>({kind:"ord",total,target:rint(1,lv===1?3:total),cols:shuffle(GOURDS).slice(0,total)});
+    q=setQ(fresh(mk,o=>"ord:"+o.target,box));
+    const target=q.target, cols=q.cols;
+    const field=mkField(L.top,{mat:false,l:10,r:4,t:12,b:38});
+    fitObj(field,total,"row");
+    const pos=rowPos(total).map(p=>[p[0],62]);
+
+    const gs=[];
+    for(let i=0;i<total;i++){
+      const o=el("div","cobj",field);
+      o.style.left=pos[i][0]+"%"; o.style.top=pos[i][1]+"%";
+      img(A.pr(cols[i]),"",o); el("div","tag",o); el("div","hang",o);
+      gs.push(o);
+      onTap(o,()=>tapG(i,o,gs));
+    }
+    ui.gs=gs; ui.field=field;
+    field.dataset.glowall="1";                       // 提示时整排一起亮，绝不指某一个
+    taskCard(L.top,q.target,"ordinal","yeye");       // 画出"第几个"，不再只靠语音
+    ctx.answering(true);
+    ctx.ask((st.isRetry?"再来一次！":"")+"爷爷说：该第"+cnSeq(q.target)+"个葫芦娃出来啦！点一点第"+cnSeq(q.target)+"个葫芦。",field);
+  }
+  function tapG(i,o,gs){
+    if(busyState(st)) return;
+    const ok=(i+1===q.target); record(ctx,st,ok);
+    if(ok){
+      st.done=true; ctx.answering(false);
+      o.classList.add("bounce"); SFX.right();
+      T.after(300,()=>{
+        if(!ctx.alive()) return;
+        o.querySelector("img").src=A.ch(HULU_COLORS[q.target-1]);
+        o.classList.add("pop");
+        Speech.say("对啦！第"+cnSeq(q.target)+"个！",{tag:"right"});
+        T.after(1300,()=>{ if(ctx.alive()){ rt++; ctx.win(o); } });
+      });
+    }else{
+      st.wrongs++; SFX.soft(); o.classList.add("shake");
+      T.after(500,()=>o.classList.remove("shake"));
+      fails++;
+      if(st.wrongs>=2||fails>=2){ ordReveal(gs); return; }
+      ctx.answering(false); ordRemedy(gs);
+    }
+  }
+  /** 序数专用纠错：从左到右逐个报"第几个"，停在目标 */
+  function ordRemedy(gs){
+    st.locked=true; const my=st;          // 演示期间葫芦不可点，旧回调也不能改新题
+    Speech.say("我们从左边开始数：",{tag:"remedy"});
+    let i=0;
+    const step=()=>{
+      if(!ctx.alive()||st!==my) return;
+      if(i>=q.target){
+        gs[q.target-1].classList.add("tapme");
+        Speech.say("这个就是第"+cnSeq(q.target)+"个。我们再试一个新的。",{tag:"remedy"});
+        T.after(2600,()=>{ if(ctx.alive()&&st===my){ gs[q.target-1].classList.remove("tapme"); build(true,"ord"); } });
+        return;
+      }
+      const o=gs[i]; o.classList.add("counted"); o.querySelector(".tag").textContent="第"+cnSeq(i+1);
+      o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit");
+      SFX.count(i+1); Speech.count("第"+cnSeq(i+1),"auto-count");
+      i++; T.after(760,step);
+    };
+    T.after(800,step);
+  }
+  function ordReveal(gs){
+    st.done=true; ctx.answering(false);
+    gs.forEach((o,i)=>{ if(i+1===q.target){ o.classList.add("tapme"); Finger.at(o,2400); } else o.classList.add("dimmed"); });
+    Speech.say("是这个哦，第"+cnSeq(q.target)+"个。",{tag:"reveal"});
+    T.after(2100,()=>{ if(ctx.alive()){ rt++; ctx.win(gs[q.target-1]); } });
+  }
+
+  /* ---- 两条路的公共布局 ---- */
+  function buildPaths(L,N,already){
+    const field=mkField(L.top,{mat:false,l:16,r:6,t:54,b:5});
+    const wrap=el("div","",field);
+    wrap.style.cssText="position:absolute;inset:0;display:flex;gap:3%";
+    const zl=el("button","dropzone",wrap), zr=el("button","dropzone",wrap);
+    const hl=el("div","zhead",zl), hr=el("div","zhead",zr);
+    img(A.ch("shejing"),"",hl); img(A.ch("xiezijing"),"",hr);
+    const sl=el("div","slot",zl), sr=el("div","slot",zr);
+    ui.zl=zl; ui.zr=zr; ui.sl=sl; ui.sr=sr; ui.field=field;
+    ui.left=[]; ui.right=[];
+    for(let i=0;i<(already||0);i++){ const im=img(A.ch(HULU_COLORS[i%7]),"",sl); ui.left.push(im); }
+    return {zl,zr,sl,sr};
+  }
+  function addTo(side){
+    const arr=side==="l"?ui.left:ui.right, slot=side==="l"?ui.sl:ui.sr;
+    const im=img(A.ch(HULU_COLORS[(ui.left.length+ui.right.length)%7]),"",slot);
+    im.classList.add("pop"); arr.push(im);
+    SFX.count(arr.length); Speech.count(cnSeq(arr.length),"child-count");
+  }
+  function popFrom(side){
+    const arr=side==="l"?ui.left:ui.right;
+    if(!arr.length) return; const im=arr.pop(); im.remove(); SFX.tap();
+  }
+  /** 底部小条：待命的葫芦娃 / 目标格 */
+  function strip(bot){
+    const d=el("div","",bot);
+    d.style.cssText="display:flex;gap:clamp(2px,.7vmin,6px);align-items:center;"+
+      "padding:clamp(4px,1vmin,10px) clamp(6px,1.4vmin,14px);border-radius:99px;background:rgba(0,0,0,.4)";
+    return d;
+  }
+
+  /* ---- 自由探索分解（不计掌握，探索"合起来还是那么多"） ---- */
+  function buildExplore(L,lv){
+    const N=rint(4,5); q=setQ({kind:"explore",N});
+    buildPaths(L,N,0);
+    let pool=N;
+    const bar=strip(L.bot), chips=[];
+    for(let i=0;i<N;i++){
+      const c=el("div","",bar);
+      c.style.cssText="width:clamp(26px,5vmin,54px);height:clamp(26px,5vmin,54px);transition:opacity .2s";
+      img(A.ch(HULU_COLORS[i%7]),"",c).style.cssText="width:100%;height:100%;object-fit:contain";
+      chips.push(c);
+    }
+    const upd=()=>{
+      chips.forEach((c,i)=>c.style.opacity=i<pool?"1":".18");
+      okBtn.disabled=!(pool===0&&ui.left.length>0&&ui.right.length>0);
+    };
+    onTap(ui.zl,()=>{ if(busyState(st)||pool<=0) return; pool--; addTo("l"); upd(); });
+    onTap(ui.zr,()=>{ if(busyState(st)||pool<=0) return; pool--; addTo("r"); upd(); });
+    onTap(ui.sl,()=>{ if(busyState(st)||!ui.left.length) return; popFrom("l"); pool++; upd(); });
+    onTap(ui.sr,()=>{ if(busyState(st)||!ui.right.length) return; popFrom("r"); pool++; upd(); });
+    const okBtn=bigBtn(L.bot,"出发！","green",()=>{
+      if(st.done) return;
+      st.done=true; okBtn.disabled=true;
+      const a=ui.left.length,b=ui.right.length;
+      Speech.say("左边"+cnQty(a)+"个，右边"+cnQty(b)+"个 —— 合起来还是"+cnQty(N)+"个！",{tag:"right"});
+      SFX.right();
+      T.after(2400,()=>{ if(ctx.alive()){ rt++; ctx.win(ui.zl); } });
+    });
+    okBtn.disabled=true; upd();
+    ctx.answering(true);
+    ctx.ask("要"+cnQty(N)+"个葫芦娃去救爷爷！两条路都要有人，你来分！点山洞或者山顶。",ui.zl);
+  }
+
+  /* ---- 缺失加数（唯一答案，计掌握） ---- */
+  function buildMissing(L,lv){
+    const mk=()=>{ const N=lv>=4?rint(5,6):rint(4,5), a=rint(1,N-1); return {kind:"missing",N,a,need:N-a}; };
+    const qq=fresh(mk,o=>"miss:"+o.N+","+o.a,box); q=setQ(qq);
+    const N=qq.N, a=qq.a;
+    buildPaths(L,N,a);
+    const bar=strip(L.bot);
+    ui.slots=[];
+    for(let i=0;i<N;i++){
+      const sl2=el("div","",bar);
+      sl2.style.cssText="width:clamp(24px,4.6vmin,48px);height:clamp(24px,4.6vmin,48px);border-radius:8px;"+
+        "border:3px solid rgba(255,255,255,.9);transition:background .2s;background:"+
+        (i<a?"#6fbf4a":"rgba(0,0,0,.35)");
+      ui.slots.push(sl2);
+    }
+    const upd=()=>{
+      ui.slots.forEach((x,i)=>{ x.style.background=i<a?"#6fbf4a":(i<a+ui.right.length?"#ffd75e":"rgba(0,0,0,.35)"); });
+      okBtn.disabled=ui.right.length===0;
+    };
+    onTap(ui.zr,()=>{ if(busyState(st)||ui.right.length>=7) return; addTo("r"); upd(); });
+    onTap(ui.sr,()=>{ if(busyState(st)||!ui.right.length) return; popFrom("r"); upd(); });
+    const okBtn=bigBtn(L.bot,"出发！","green",()=>submit());
+    okBtn.disabled=true; ui.okBtn=okBtn;
+    ctx.answering(true);
+    ctx.ask((st.isRetry?"再来一次！":"")+"要"+cnQty(N)+"个葫芦娃！山洞里已经有"+cnQty(a)+"个了，山顶还要几个？点山顶派人，好了按绿色按钮。",ui.zr);
+    function submit(){
+      if(st.done) return;
+      const ok=(ui.right.length===q.need); record(ctx,st,ok);
+      if(ok){
+        st.done=true; okBtn.disabled=true; ctx.answering(false);
+        Speech.say("对啦！"+cnQty(a)+"个和"+cnQty(q.need)+"个，合起来正好"+cnQty(N)+"个！",{tag:"right"});
+        SFX.right();
+        T.after(2000,()=>{ if(ctx.alive()){ rt++; ctx.win(ui.zr); } });
+      }else{
+        st.wrongs++; SFX.soft(); ui.zr.classList.add("shake");
+        T.after(500,()=>ui.zr.classList.remove("shake"));
+        okBtn.disabled=true; ctx.answering(false);
+        fails++;
+        if(st.wrongs>=2||fails>=2){ missReveal(); return; }
+        missRemedy();
+      }
+    }
+  }
+  /** 部分-整体专用纠错：已有部分保持不动，只闪烁"还差的空位" */
+  function missRemedy(){
+    st.locked=true; const my=st;
+    ui.right.forEach(im=>im.remove()); ui.right=[];
+    ui.slots.forEach((x,i)=>{ x.style.background=i<q.a?"#6fbf4a":"rgba(0,0,0,.35)"; });
+    Speech.say("看，一共要"+cnQty(q.N)+"格。山洞已经有"+cnQty(q.a)+"个了。",{tag:"remedy"});
+    T.after(1400,()=>{
+      if(!ctx.alive()||st!==my) return;
+      let k=0;
+      const blink=()=>{
+        if(!ctx.alive()||st!==my) return;
+        if(k>=q.need){
+          Speech.say("还差"+cnQty(q.need)+"个。我们再试一个新的！",{tag:"remedy"});
+          T.after(2000,()=>{ if(ctx.alive()&&st===my) build(true,"missing"); });
+          return;
+        }
+        ui.slots[q.a+k].style.background="#ffd75e";
+        SFX.count(k+1); Speech.count(cnSeq(k+1),"auto-count");
+        k++; T.after(600,blink);
+      };
+      blink();
+    });
+  }
+  function missReveal(){
+    st.done=true; ctx.answering(false); ui.okBtn.disabled=true;
+    ui.right.forEach(im=>im.remove()); ui.right=[];
+    let k=0;
+    const step=()=>{
+      if(!ctx.alive()) return;
+      if(k>=q.need){
+        Speech.say("要"+cnQty(q.need)+"个才够！",{tag:"reveal"});
+        T.after(1800,()=>{ if(ctx.alive()){ rt++; ctx.win(ui.zr); } });
+        return;
+      }
+      addTo("r"); ui.slots[q.a+k].style.background="#ffd75e"; k++; T.after(700,step);
+    };
+    T.after(1200,step);
+  }
+
+  return {
+    start:()=>{ rt=0; fails=0; build(false); }, next:()=>{ fails=0; build(false); },
+    repeat:()=>{ if(!q) return "";
+      return q.kind==="ord"?("点一点第"+cnSeq(q.target)+"个葫芦。")
+        :q.kind==="missing"?("山洞有"+cnQty(q.a)+"个，一共要"+cnQty(q.N)+"个，山顶还要几个？")
+        :"两条路都要有人，你来分！"; },
+    destroy:()=>{ ui=null; q=null; st=null; }
+  };
+};
+
+/* ============================================================================
+   世界五 · 复仇者大厦 —— 合并加法(count-all / count-on) + 一一对应
+   ============================================================================ */
+GAMES.aveng=ctx=>{
+  const T=ctx.T; let st=null,q=null,ui=null,rt=0,fails=0; const box={last:null};
+  const HEROES=["ironman","cap","thor","hulkman","widow","hawkeye","spider","spiderblack","blackpanther"];
+
+  function build(retry,forceKind){
+    st=bindState(newState(retry));
+    const lv=ctx.level();
+    let kind=forceKind||((lv>=2&&rt%3===1)?"pair":"add");
+    const L=layout(ctx.root); ui={L};
+    if(kind==="pair") buildPair(L,lv); else buildAdd(L,lv);
+  }
+
+  /* ---- 合并加法 ---- */
+  function buildAdd(L,lv){
+    const cap=lv===1?5:lv===2?6:8;
+    const mk=()=>{ const a=rint(1,Math.min(4,cap-1)); const b=rint(1,Math.min(4,cap-a));
+                   return {kind:"add",a,b,n:a+b,lv}; };
+    const qq=fresh(mk,o=>"add:"+o.a+","+o.b,box); q=setQ(qq);
+    const a=qq.a, b=qq.b;
+    const field=mkField(L.top,{l:4,r:4,t:14,b:4}); ui.field=field;
+    fitObj(field,Math.max(q.n,4),"row");
+    const jet=el("div","",field);
+    jet.style.cssText="position:absolute;left:2%;top:3%;width:clamp(36px,6.4vmin,74px);pointer-events:none";
+    img(A.pr("quinjet"),"",jet).style.cssText="width:100%;height:auto";
+    const por=el("div","",field);
+    por.style.cssText="position:absolute;right:2%;top:3%;width:clamp(36px,6.4vmin,74px);pointer-events:none";
+    img(A.pr("portal"),"",por).style.cssText="width:100%;height:auto";
+    const names=shuffle(HEROES);
+    ui.A=[]; ui.B=[];
+    const posA=[],posB=[];
+    for(let i=0;i<a;i++) posA.push([14+(i%2)*15, 44+Math.floor(i/2)*25]);
+    for(let i=0;i<b;i++) posB.push([71+(i%2)*15, 44+Math.floor(i/2)*25]);
+    for(let i=0;i<a;i++){ const o=el("div","cobj",field);
+      o.style.left=posA[i][0]+"%"; o.style.top=posA[i][1]+"%";
+      img(A.ch(names[i]),"",o); el("div","tag",o); o.style.opacity="0"; ui.A.push(o); }
+    for(let i=0;i<b;i++){ const o=el("div","cobj",field);
+      o.style.left=posB[i][0]+"%"; o.style.top=posB[i][1]+"%";
+      img(A.ch(names[(i+a)%HEROES.length]),"",o); el("div","tag",o); o.style.opacity="0"; ui.B.push(o); }
+    let k=0;
+    const drop=()=>{
+      if(!ctx.alive()) return;
+      const all=ui.A.concat(ui.B);
+      if(k>=all.length){ afterDrop(); return; }
+      all[k].style.opacity="1"; all[k].classList.add("pop"); SFX.tap(); k++;
+      T.after(260,drop);
+    };
+    T.after(900,drop);
+    function afterDrop(){
+      // L3+ count-on：给左队一个"已经有 a 个"的整体标记
+      if(lv>=3){
+        const badge=makeCard(a,"dice");
+        badge.style.cssText="position:absolute;left:1%;top:30%;width:clamp(42px,7vmin,74px);height:clamp(42px,7vmin,74px);z-index:6;pointer-events:none";
+        field.appendChild(badge); ui.badge=badge;
+      }
+      const btn=bigBtn(L.bot,"集结！","",()=>assemble(btn));
+      ui.btn=btn;
+      ctx.answering(true);
+      ctx.ask(lv>=3?("这边已经有"+cnQty(a)+"个英雄啦！按黄色按钮，让他们集合。")
+                   :"英雄要集结啦！按黄色按钮，让他们合到一起。",btn);
+    }
+  }
+  function assemble(btn){
+    if(st.assembled) return; st.assembled=true;
+    btn.disabled=true; SFX.whoosh();
+    const all=ui.A.concat(ui.B), pos=rowPos(q.n);
+    all.forEach((o,i)=>{ o.style.transition="left .6s cubic-bezier(.3,1,.4,1),top .6s cubic-bezier(.3,1,.4,1)";
+      o.style.left=pos[i][0]+"%"; o.style.top="58%"; });
+    if(ui.badge){ ui.badge.style.transition="left .6s,top .6s"; ui.badge.style.left="2%"; ui.badge.style.top="58%"; }
+    T.after(750,()=>{
+      if(!ctx.alive()) return;
+      ui.merged=all; ui.counted=0;
+      const startFrom=(q.lv>=3)?q.a:0;
+      ui.startFrom=startFrom;
+      if(startFrom>0){
+        for(let i=0;i<startFrom;i++){ const o=all[i];
+          o.classList.add("counted"); setTag(o.querySelector(".tag"),i+1); o.style.pointerEvents="none"; }
+        ui.counted=startFrom;
+      }
+      all.forEach((o,i)=>{ if(i>=startFrom) onTap(o,()=>tapHero(o)); });
+      ctx.answering(true);
+      ctx.ask(startFrom>0?("已经有"+cnQty(startFrom)+"个啦，接着数下去！点一点后面的英雄。")
+                          :"一起数一数！点一点每一个英雄。",all[startFrom]);
+    });
+  }
+  function tapHero(o){
+    if(busyState(st)||o.classList.contains("counted")) return;
+    ui.counted++;
+    o.classList.add("counted"); setTag(o.querySelector(".tag"),ui.counted);
+    o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit");
+    SFX.count(ui.counted); numPop(o,ui.counted); Speech.count(cnSeq(ui.counted),"child-count");
+    if(ui.counted>=q.n) T.after(700,()=>{ if(ctx.alive()&&!st.done) askTotal(); });
+  }
+  function askTotal(){
+    ctx.answering(true);
+    const apat=(ctx.symbols()&&ctx.level()>=4)?"num":pick(ANSWER_PATS.filter(p=>p!=="line"));
+    const list=choices(q.n,1,10,4);
+    const wrap=askCards(ui.L.bot,list,apat,(v,c)=>{
+      if(st.done) return;
+      const ok=(v===q.n); record(ctx,st,ok);
+      if(ok){
+        st.done=true; lockCards(wrap); c.classList.add("right"); ctx.answering(false);
+        Speech.say(cnQty(q.a)+"个和"+cnQty(q.b)+"个，合起来一共"+cnQty(q.n)+"个！",{tag:"right"});
+        T.after(1800,()=>{ if(ctx.alive()){ rt++; ctx.win(c); } });
+      }else{
+        st.wrongs++; SFX.soft(); c.classList.add("wrong");
+        T.after(420,()=>c.classList.remove("wrong"));
+        lockCards(wrap); fails++;
+        if(st.wrongs>=2||fails>=2){
+          st.done=true; ctx.answering(false);
+          [].forEach.call(wrap.children,x=>{ if(+x.dataset.n===q.n){x.classList.add("right");Finger.at(x,2300);} else x.classList.add("dim"); });
+          Speech.say("是这张，一共"+cnQty(q.n)+"个！",{tag:"reveal"});
+          T.after(2100,()=>{ if(ctx.alive()){ rt++; ctx.win(wrap); } });
+          return;
+        }
+        ctx.answering(false); remedyAdd();
+      }
+    });
+    ctx.ask("一共几个英雄呀？点一张卡片。",wrap);
+  }
+  /** 合并专用纠错：拆回两堆再合一次，重新点数 */
+  function remedyAdd(){
+    st.locked=true; const my=st;          // 演示期间英雄不可点，旧回调也不能改新题
+    const all=ui.merged, posA=[],posB=[];
+    for(let i=0;i<q.a;i++) posA.push([12+(i%2)*14, 34+Math.floor(i/2)*24]);
+    for(let i=0;i<q.b;i++) posB.push([74+(i%2)*14, 34+Math.floor(i/2)*24]);
+    all.forEach((o,i)=>{ o.classList.remove("counted"); o.querySelector(".tag").textContent="";
+      const p=i<q.a?posA[i]:posB[i-q.a]; o.style.left=p[0]+"%"; o.style.top=p[1]+"%"; });
+    Speech.say("我们再看一次：这边"+cnQty(q.a)+"个，那边"+cnQty(q.b)+"个。",{tag:"remedy"});
+    T.after(2000,()=>{
+      if(!ctx.alive()||st!==my) return;
+      const pos=rowPos(q.n);
+      all.forEach((o,i)=>{ o.style.left=pos[i][0]+"%"; o.style.top="58%"; });
+      SFX.whoosh();
+      T.after(800,()=>{
+        if(!ctx.alive()||st!==my) return;
+        autoCount(ctx,all,0,560,()=>{
+          if(!ctx.alive()||st!==my) return;
+          Speech.say("合起来一共"+cnQty(q.n)+"个！我们再来一次新的。",{tag:"remedy"});
+          T.after(2600,()=>{ if(ctx.alive()&&st===my) build(true,"add"); });
+        });
+      });
+    });
+  }
+
+  /* ---- 一一对应：够不够 ---- */
+  function buildPair(L,lv){
+    const mk=()=>{ const n2=rint(2,5), m2=clamp(n2+pick([-1,0,1]),1,6);
+                   return {kind:"pair",n:n2,m:m2,truth:m2<n2?"less":(m2>n2?"more":"same")}; };
+    const qq=fresh(mk,o=>"pair:"+o.n+","+o.m,box); q=setQ(qq);
+    const n=qq.n, m=qq.m;
+    const field=mkField(L.top,{l:4,r:4,t:10,b:4}); ui.field=field;
+    fitObj(field,Math.max(n,m),"row");
+    const names=shuffle(HEROES);
+    ui.H=[]; ui.G=[];
+    const hp=rowPos(m).map(p=>[p[0],30]), gp=rowPos(n).map(p=>[p[0],74]);
+    for(let i=0;i<m;i++){ const o=el("div","cobj",field);
+      o.style.left=hp[i][0]+"%"; o.style.top=hp[i][1]+"%";
+      img(A.ch(names[i%HEROES.length]),"",o); el("div","tag",o); ui.H.push(o); }
+    for(let i=0;i<n;i++){ const o=el("div","cobj",field);
+      o.style.left=gp[i][0]+"%"; o.style.top=gp[i][1]+"%";
+      img(A.pr("goon"),"",o); el("div","tag",o); ui.G.push(o); }
+    let sel=null,pairs=0;
+    const maxP=Math.min(n,m);
+    ui.H.forEach(o=>onTap(o,()=>{
+      if(st.done||o.dataset.p) return;
+      if(sel) sel.classList.remove("counted");
+      sel=o; o.classList.add("counted"); o.querySelector(".tag").textContent="?"; SFX.tap();
+    }));
+    ui.G.forEach(o=>onTap(o,()=>{
+      if(st.done||!sel||o.dataset.p) return;
+      o.dataset.p=sel.dataset.p="1";
+      Link.line(sel,o,"#fff");
+      sel.querySelector(".tag").textContent=""; sel.classList.remove("counted"); sel.classList.add("dimmed");
+      o.classList.add("dimmed"); sel=null; pairs++; SFX.count(pairs);
+      if(pairs>=maxP) T.after(800,()=>{ if(ctx.alive()&&!st.done) askEnough(); });
+    }));
+    ctx.answering(true);
+    ctx.ask((st.isRetry?"再来一次！":"")+"每个英雄抓一个坏蛋！先点一个英雄，再点一个坏蛋。",ui.H[0]);
+  }
+  function askEnough(){
+    const bot=ui.L.bot; bot.textContent="";
+    const wrap=el("div","cards",bot);
+    const mk=(key,label,hi)=>{
+      const c=el("div","card",wrap);
+      const w=el("div","dotwrap",c);
+      const top=hi==="more"?4:3, bot2=hi==="less"?4:3;
+      for(let i=0;i<top;i++){ const d=el("div","dot",w); d.style.left=(20+i*20)+"%"; d.style.top="28%"; d.style.background="#2f8fe0"; }
+      for(let i=0;i<bot2;i++){ const d=el("div","dot",w); d.style.left=(20+i*20)+"%"; d.style.top="62%"; d.style.background="#7a6f99"; }
+      const t=el("div","",c);
+      t.style.cssText="position:absolute;left:0;right:0;bottom:3%;text-align:center;font-weight:900;color:#2a1f4d;font-size:clamp(11px,2vmin,18px)";
+      t.textContent=label;
+      onTap(c,()=>{ if(st.done) return; judge(key,c,wrap); });
+    };
+    mk("less","英雄不够","less"); mk("same","正好","same"); mk("more","英雄多了","more");
+    ctx.answering(true);
+    ctx.ask("英雄够不够呀？",wrap);
+  }
+  function judge(key,card,wrap){
+    const ok=(key===q.truth); record(ctx,st,ok);
+    if(ok){
+      st.done=true; lockCards(wrap); card.classList.add("right"); ctx.answering(false);
+      Speech.say(q.truth==="same"?"对啦！正好一个对一个！":(q.truth==="less"?"对啦！英雄不够，还差坏蛋没人抓。":"对啦！英雄多出来了。"),{tag:"right"});
+      T.after(1700,()=>{ if(ctx.alive()){ rt++; ctx.win(card); } });
+    }else{
+      st.wrongs++; SFX.soft(); card.classList.add("wrong");
+      T.after(420,()=>card.classList.remove("wrong"));
+      lockCards(wrap); ctx.answering(false); fails++;
+      if(st.wrongs>=2||fails>=2){
+        st.done=true;
+        [].forEach.call(wrap.children,(x,i)=>{ const k=["less","same","more"][i];
+          if(k===q.truth){x.classList.add("right");Finger.at(x,2300);} else x.classList.add("dim"); });
+        T.after(2100,()=>{ if(ctx.alive()){ rt++; ctx.win(wrap); } });
+        return;
+      }
+      // 一一对应专用纠错：把没配上的高亮出来
+      const leftH=ui.H.filter(o=>!o.dataset.p), leftG=ui.G.filter(o=>!o.dataset.p);
+      leftH.concat(leftG).forEach(o=>{ o.classList.remove("dimmed"); o.classList.add("tapme"); });
+      Speech.say(leftG.length?("你看，还有"+cnQty(leftG.length)+"个坏蛋没人抓 —— 英雄不够。")
+        :leftH.length?("你看，还有"+cnQty(leftH.length)+"个英雄没事做 —— 英雄多了。")
+        :"你看，每一个都配上对了 —— 正好。",{tag:"remedy"});
+      const myp=st; st.locked=true;
+      T.after(3000,()=>{ if(ctx.alive()&&st===myp){ Link.clear(); build(true,"pair"); } });
+    }
+  }
+
+  return {
+    start:()=>{ rt=0; fails=0; build(false); }, next:()=>{ fails=0; build(false); },
+    repeat:()=>{ if(!q) return "";
+      if(q.kind==="pair") return "先点一个英雄，再点一个坏蛋。";
+      if(!st||!st.assembled) return "按黄色按钮，让两边的英雄合到一起。";
+      if(ui&&ui.merged&&ui.counted<q.n) return "点一点每一个英雄，数一数。";
+      return "一共几个英雄呀？点一张卡片。"; },
+    destroy:()=>{ Link.clear(); ui=null; q=null; st=null; }
+  };
+};
+
+/* ============================================================================
+   世界六 · 花果山 —— 数轴 / 接着数 Count-On / 缺失加数
+   ============================================================================ */
+GAMES.monkey=ctx=>{
+  const T=ctx.T; let st=null,q=null,ui=null,fails=0,posWrong=0; const box={last:null};
+  const CELLS=8, X0=13, XW=56;   // 数轴左起点与总宽(%)，右侧留给对岸师徒
+
+  function build(retry){
+    st=bindState(newState(retry)); posWrong=0;
+    const lv=ctx.level();
+    const mk=()=>{
+      let pre=0,need=0,mode="grow";
+      if(lv===1){ pre=0; need=rint(1,3); }
+      else if(lv===2){ pre=rint(1,3); need=rint(1,3); }
+      else { pre=rint(1,4); need=rint(2,4); mode="reach"; }
+      return {pre,need,target:pre+need,lv,mode};
+    };
+    q=setQ(fresh(mk,o=>o.pre+","+o.need,box));
+    const L=layout(ctx.root); ui={L,len:0};
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+
+    // 石墩 = 数轴刻度
+    fitObj(field,CELLS+2,"row");
+    const pos=[],stones=[];
+    for(let i=0;i<CELLS;i++) pos.push([X0+(XW/CELLS)*(i+.5),66]);
+    for(let i=0;i<CELLS;i++){
+      const o=el("div","cobj",field);
+      o.style.left=pos[i][0]+"%"; o.style.top=pos[i][1]+"%";
+      img(A.pr("stone"),"",o); el("div","tag",o); o.style.zIndex="6";
+      if(ctx.symbols()&&lv>=4){ const n=el("div","",o);
+        n.style.cssText="position:absolute;left:50%;bottom:-34%;transform:translateX(-50%);font-weight:900;color:#fff;font-size:calc(var(--obj)*.34);text-shadow:0 2px 0 rgba(0,0,0,.55)";
+        n.textContent=String(i+1); }
+      stones.push(o);
+      onTap(o,()=>tapStone(i));
+    }
+    ui.stones=stones; ui.pos=pos;
+    // 金箍棒（背景平铺 + 棒头）
+    const staff=el("div","",field);
+    staff.style.cssText="position:absolute;left:"+X0+"%;top:58%;height:clamp(14px,2.6vmin,26px);"+
+      "width:0;background:url("+A.pr("gubang_seg")+") repeat-x center/auto 100%;transition:width .3s cubic-bezier(.3,1.3,.5,1);z-index:5";
+    const tip=el("div","",field);
+    tip.style.cssText="position:absolute;top:56%;height:clamp(18px,3.2vmin,32px);width:clamp(12px,2.2vmin,22px);"+
+      "background:url("+A.pr("gubang_tip")+") no-repeat center/contain;transition:left .3s cubic-bezier(.3,1.3,.5,1);z-index:6;opacity:0";
+    ui.staff=staff; ui.tip=tip; ui.x0=X0; ui.cw=XW/CELLS;
+    // 岸边角色
+    const wk=el("div","",field);
+    wk.style.cssText="position:absolute;left:0;bottom:4%;height:30%;max-width:13%;z-index:7;pointer-events:none;display:flex;align-items:flex-end;justify-content:center";
+    img(A.ch("wukong"),"",wk).style.cssText="width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))";
+    const far=el("div","side r fitw",field);
+    far.style.cssText="position:absolute;right:0;bottom:28%;width:26%;height:24%;z-index:7;pointer-events:none;display:flex;align-items:flex-end;gap:1px";
+    ["tangseng","bajie","shaseng","bailongma"].forEach(c=>
+      img(A.ch(c),"",far).style.cssText="flex:1 1 0;min-width:0;width:100%;height:auto;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))");
+    ui.far=far;
+    // 目标旗（L3+ 明示要到第几个石墩）
+    if(q.mode==="reach"){
+      const flag=el("div","",field);
+      flag.style.cssText="position:absolute;left:"+pos[q.target-1][0]+"%;top:56%;transform:translate(-50%,-50%);pointer-events:none;"+
+        "width:clamp(22px,4vmin,40px);height:clamp(22px,4vmin,40px);border-radius:50%;background:#ffd75e;"+
+        "box-shadow:0 0 0 4px #fff,0 0 18px #ffd75e;z-index:8";
+      ui.flag=flag;
+    }
+    const okBtn=bigBtn(L.bot,"过河！","green",()=>submit());
+    okBtn.disabled=true; ui.okBtn=okBtn;
+    // reach 模式的目标由亮着的石墩表示；grow 模式的"变长几格"原来只在语音里 → 补任务卡
+    if(q.mode!=="reach") ui.task=taskCard(L.top,q.need,"count","wukong");
+    ctx.answering(true);
+
+    if(q.pre>0){
+      st.locked=true; const my=st;          // 预置动画期间禁止抢点，否则长度会被孩子提前改掉
+      Speech.say("悟空先把金箍棒变长"+cnQty(q.pre)+"格！",{tag:"g:monkey"});
+      let k=0;
+      const pre=()=>{
+        if(!ctx.alive()||st!==my) return;
+        if(k>=q.pre){ T.after(500,()=>{ if(ctx.alive()&&st===my){ st.locked=false; askNow(); } }); return; }
+        grow(true); k++; T.after(680,pre);
+      };
+      T.after(1200,pre);
+    }else T.after(1200,askNow);
+
+    function askNow(){
+      if(!ctx.alive()) return;
+      const t=q.mode==="reach"
+        ? ("桥要正好搭到亮着的那个石墩！现在有"+cnQty(q.pre)+"格，接着往前点，好了按绿色按钮。")
+        : (q.pre>0 ? ("已经有"+cnQty(q.pre)+"格啦！再变长"+cnQty(q.need)+"格，好了按绿色按钮。")
+                   : ("把金箍棒变长"+cnQty(q.need)+"格！点石墩，好了按绿色按钮。"));
+      ctx.ask(t,()=>ui.stones[Math.min(ui.len,CELLS-1)]);
+      ui.stones[Math.min(ui.len,CELLS-1)].classList.add("tapme");
+    }
+  }
+  function grow(silentCount){
+    if(ui.len>=CELLS) return;
+    ui.len++;
+    render();
+    SFX.count(ui.len); numPop(ui.stones[ui.len-1],ui.len);
+    Speech.count(cnSeq(ui.len),silentCount?"auto-count":"child-count");
+  }
+  function shrinkTo(k){
+    if(k<0||k===ui.len) return;
+    ui.len=k; render(); SFX.tap();
+  }
+  function render(){
+    ui.staff.style.width=(ui.cw*ui.len)+"%";
+    ui.tip.style.opacity=ui.len>0?"1":"0";
+    ui.tip.style.left=(ui.x0+ui.cw*ui.len)+"%";
+    ui.stones.forEach((o,i)=>{
+      o.classList.toggle("counted",i<ui.len);
+      const t=o.querySelector(".tag");
+      if(i<ui.len) setTag(t,i+1); else { t.className="tag"; t.textContent=""; }
+      o.classList.remove("tapme");
+    });
+    if(ui.len<CELLS) ui.stones[ui.len].classList.add("tapme");
+    if(ui.okBtn) ui.okBtn.disabled=(ui.len<=q.pre);
+  }
+  function tapStone(i){
+    if(busyState(st)||st.asking) return;
+    if(i<ui.len){ if(i+1>=q.pre) shrinkTo(i+1); return; }   // 点已铺的格子 → 缩回（不能缩掉预置部分）
+    if(i>ui.len) return;                                     // 只能一格一格前进 —— 强制真的在数
+    grow(false);
+  }
+  function submit(){
+    if(st.done||st.asking) return;
+    /* L3/L4：先把桥点到亮着的石墩（这是操作，不计证据），
+       再答"你一共加了几格"（这才是缺失加数，证据记在这一题） */
+    if(q.mode==="reach"){
+      if(ui.len!==q.target){
+        SFX.soft(); ui.staff.classList.add("shake");
+        T.after(500,()=>ui.staff.classList.remove("shake"));
+        posWrong++;
+        if(posWrong>=2){ autoFix(); return; }
+        Speech.say("桥还没有正好搭到亮着的那个石墩，再看看。",{tag:"g:monkey"});
+        return;
+      }
+      askHowMany(); return;
+    }
+    const ok=(ui.len===q.target); record(ctx,st,ok);
+    if(ok){
+      st.done=true; ui.okBtn.disabled=true; ctx.answering(false);
+      ui.stones.forEach(o=>o.classList.remove("tapme"));
+      Speech.say(q.pre>0?(cnQty(q.pre)+"格再加"+cnQty(q.need)+"格，一共"+cnQty(q.target)+"格，正好！")
+                        :("正好"+cnQty(q.target)+"格！"),{tag:"right"});
+      SFX.right(); cross();
+    }else{
+      st.wrongs++; SFX.soft(); ui.staff.classList.add("shake");
+      T.after(500,()=>ui.staff.classList.remove("shake"));
+      ui.okBtn.disabled=true; ctx.answering(false);
+      fails++;
+      if(st.wrongs>=2||fails>=2){ reveal(); return; }
+      remedy();
+    }
+  }
+  /** 位置连着两次不对 —— 带着孩子把桥放到位，再进入提问 */
+  function autoFix(){
+    markAssisted();                        // 系统代为摆正 → 本题不计掌握
+    st.asking=true; ui.okBtn.disabled=true; ctx.answering(false);
+    ui.stones.forEach(o=>o.classList.remove("tapme"));
+    const step=()=>{
+      if(!ctx.alive()) return;
+      if(ui.len<q.target){ grow(true); T.after(620,step); return; }
+      if(ui.len>q.target){ shrinkTo(ui.len-1); T.after(520,step); return; }
+      Speech.say("好啦，正好搭到啦！",{tag:"g:monkey"});
+      T.after(1200,()=>{ if(ctx.alive()){ st.asking=false; askHowMany(); } });
+    };
+    T.after(700,step);
+  }
+  /** 缺失加数的真正判定：从起点接着数，一共加了几格？ */
+  function askHowMany(){
+    st.asking=true;
+    ui.okBtn.disabled=true;
+    ui.stones.forEach(o=>o.classList.remove("tapme"));
+    ctx.answering(true);
+    const apat=(ctx.symbols()&&ctx.level()>=4)?"num":pick(["dice","ring","line"]);
+    const list=choices(q.need,1,8,4);
+    const wrap=askCards(ui.L.bot,list,apat,(v,c)=>{
+      if(st.done) return;
+      const ok=(v===q.need); record(ctx,st,ok);
+      if(ok){
+        st.done=true; lockCards(wrap); c.classList.add("right"); ctx.answering(false);
+        Speech.say("对啦！从"+cnSeq(q.pre)+"接着数"+cnQty(q.need)+"格，正好到"+cnSeq(q.target)+"！",{tag:"right"});
+        SFX.right();
+        T.after(1700,cross);
+      }else{
+        st.wrongs++; fails++; SFX.soft(); c.classList.add("wrong");
+        T.after(420,()=>c.classList.remove("wrong"));
+        lockCards(wrap); ctx.answering(false);
+        if(st.wrongs>=2||fails>=2){
+          st.done=true;
+          [].forEach.call(wrap.children,x=>{
+            if(+x.dataset.n===q.need){ x.classList.add("right"); Finger.at(x,2300); } else x.classList.add("dim"); });
+          Speech.say("是这张，加了"+cnQty(q.need)+"格！",{tag:"reveal"});
+          T.after(2100,cross);
+          return;
+        }
+        remedyCountOn();
+      }
+    });
+    ctx.ask("你一共加了几格呀？点一张卡片。",wrap);
+  }
+  /** 接着数专用纠错：已有的那几格保持不动，只把"新增的"重新逐格点亮报数 */
+  function remedyCountOn(){
+    st.asking=true; st.locked=true; const my=st;
+    shrinkTo(q.pre);
+    Speech.say("已经有的"+cnQty(q.pre)+"格不用再数，我们从"+cnSeq(q.pre)+"接着数。",{tag:"remedy"});
+    T.after(1900,()=>{
+      if(!ctx.alive()||st!==my) return;
+      let k=0;
+      const step=()=>{
+        if(!ctx.alive()||st!==my) return;
+        if(k>=q.need){
+          Speech.say("一共加了"+cnQty(q.need)+"格。我们再试一个新的！",{tag:"remedy"});
+          T.after(1900,()=>{ if(ctx.alive()&&st===my) build(true); });
+          return;
+        }
+        grow(true); k++; T.after(680,step);
+      };
+      step();
+    });
+  }
+  /** 接着数专用纠错：已有部分保持不动，只把新增部分逐格演示 */
+  function remedy(){
+    st.locked=true; const my=st;          // 演示期间石墩不可点
+    shrinkTo(q.pre);
+    Speech.say(q.pre>0?("已经有的"+cnQty(q.pre)+"格不用再数啦，我们从"+cnSeq(q.pre)+"接着数。")
+                      :"我们一格一格数。",{tag:"remedy"});
+    T.after(2200,()=>{
+      if(!ctx.alive()||st!==my) return;
+      let k=0;
+      const step=()=>{
+        if(!ctx.alive()||st!==my) return;
+        if(k>=q.need){
+          Speech.say("看，就是这样。我们再试一个新的！",{tag:"remedy"});
+          T.after(1900,()=>{ if(ctx.alive()&&st===my) build(true); });
+          return;
+        }
+        grow(true); k++; T.after(760,step);
+      };
+      step();
+    });
+  }
+  function reveal(){
+    st.done=true; st.asking=true; ctx.answering(false); ui.okBtn.disabled=true;
+    shrinkTo(q.pre);
+    let k=0;
+    const step=()=>{
+      if(!ctx.alive()) return;
+      if(k>=q.need){ Speech.say("正好"+cnQty(q.target)+"格！",{tag:"reveal"}); T.after(1200,cross); return; }
+      grow(true); k++; T.after(700,step);
+    };
+    T.after(1200,step);
+  }
+  function cross(){
+    ui.stones.forEach(o=>o.classList.remove("tapme"));
+    confetti(16);
+    const kids=[].slice.call(ui.far.children);
+    kids.forEach((im,i)=>{
+      im.style.transition="transform 1s cubic-bezier(.4,0,.5,1)";
+      setTimeout(()=>{ im.style.transform="translateX(-"+(30+i*8)+"vw)"; },i*220);
+    });
+    Speech.say("师父他们过河啦！谢谢你！",{tag:"win"});
+    T.after(1900,()=>{ if(ctx.alive()) ctx.win(ui.staff); });
+  }
+  return {
+    start:()=>{ fails=0; build(false); }, next:()=>{ fails=0; build(false); },
+    repeat:()=>{ if(!q) return "";
+      if(st&&st.asking) return "你一共加了几格呀？点一张卡片。";
+      return q.mode==="reach"?"桥要搭到亮着的那个石墩，接着往前点。"
+        :(q.pre>0?("已经有"+cnQty(q.pre)+"格，再变长"+cnQty(q.need)+"格。")
+                 :("把金箍棒变长"+cnQty(q.need)+"格。")); },
+    destroy:()=>{ ui=null; q=null; st=null; }
+  };
+};
+
+/* ========================= 主控 ========================= */
+const App=(()=>{
+  let cur=null,curW=null,round=0,tok=0;
+  let hintTimer=null,hintStage=0,hintText="",hintTarget=null;
+  const T=Timers();
+
+  const show=id=>$$(".screen").forEach(s=>s.classList.toggle("on",s.id===id));
+
+  /* ---------- 地图 ---------- */
+  /** 只刷新状态，不重建 DOM —— 避免反复进出时中止仍在加载的缩略图请求 */
+  function refreshMap(){
+    const host=$("#worlds"), sug=suggest();
+    WORLDS.forEach(w=>{
+      const b=host.querySelector('[data-w="'+w.id+'"]'); if(!b) return;
+      const n=Store.stars(w.id), un=Store.unlocked(w.id);
+      b.classList.toggle("done",n>=STARS_FULL);
+      b.classList.toggle("suggest",w.id===sug);
+      b.classList.toggle("locked",!un);
+      const st=b.querySelector(".wstars");
+      if(st) [].forEach.call(st.children,(d,i)=>d.classList.toggle("f",i<n));
+      const mb=b.querySelector(".mbadge"); const m=Store.mastery(w.id);
+      if(mb) [].forEach.call(mb.children,(d,i)=>d.classList.toggle("f",i<Math.min(m,6)));
+      const lk=b.querySelector(".lock");
+      if(un && lk) lk.remove();
+      else if(!un && !lk){ const l=el("div","lock",b); el("b","",l); }
+    });
+    drawConstell();
+  }
+  function buildMap(){
+    const host=$("#worlds");
+    if(host.children.length===WORLDS.length){ refreshMap(); return; }
+    host.textContent="";
+    $("#skyImg").src=A.bgt("bg_sky");
+    const sug=suggest();
+    WORLDS.forEach(w=>{
+      const n=Store.stars(w.id), un=Store.unlocked(w.id);
+      const b=el("button","world",host);
+      b.setAttribute("aria-label",w.name); b.dataset.w=w.id;
+      if(n>=STARS_FULL) b.classList.add("done");
+      if(w.id===sug) b.classList.add("suggest");
+      if(!un) b.classList.add("locked");
+      const bw=el("div","wbg",b); img(A.bgt(w.bg),"",bw);
+      el("div","wveil",b);
+      const cast=el("div","cast",b);
+      w.cast.slice(0,3).forEach((c,i)=>img(A.th(c),i===0?"lead":"",cast));
+      const st=el("div","wstars",b);
+      for(let i=0;i<STARS_FULL;i++) el("i",i<n?"f":"",st);
+      const badge=el("div","mbadge",b);   // 掌握徽章：与参与星完全分开的另一套指示
+      badge.innerHTML="";
+      for(let i=0;i<6;i++) el("b","",badge);   // 与门槛 mast>=6 一致
+      if(!un){ const lk=el("div","lock",b); el("b","",lk); }
+      onTap(b,()=>{
+        if(!Store.unlocked(w.id)){
+          SFX.soft();
+          const prev=W_BY_ID[ORDER[ORDER.indexOf(w.id)-1]];
+          Speech.say("这里还没打开哦，先去"+prev.name+"帮帮忙吧！",{tag:"locked"});
+          const pb=host.querySelector('[data-w="'+prev.id+'"]');
+          if(pb){ pb.classList.add("suggest"); Finger.at(pb,2600); }
+          return;
+        }
+        enter(w.id);
+      });
+    });
+    drawConstell();
+  }
+  function suggest(){ for(const w of WORLDS){ if(Store.unlocked(w.id)&&Store.stars(w.id)<STARS_FULL) return w.id; } return null; }
+  function drawConstell(){
+    const cv=$("#constell"),box=$("#skyBox");
+    const w=box.clientWidth,h=box.clientHeight; if(!w||!h) return;
+    const dpr=Math.min(devicePixelRatio||1,2);
+    cv.width=w*dpr; cv.height=h*dpr; cv.style.width=w+"px"; cv.style.height=h+"px";
+    const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
+    const SH={peppa:[[.10,.15],[.16,.09],[.23,.14],[.20,.23],[.12,.24]],
+      paw:[[.36,.09],[.44,.07],[.50,.14],[.44,.21],[.37,.18]],
+      bluey:[[.62,.11],[.70,.08],[.77,.15],[.70,.22]],
+      hulu:[[.86,.11],[.92,.17],[.87,.25],[.81,.19]],
+      aveng:[[.13,.38],[.21,.34],[.27,.42],[.19,.47]],
+      monkey:[[.74,.38],[.82,.35],[.88,.43],[.80,.49]]};
+    WORLDS.forEach(wd=>{
+      if(Store.stars(wd.id)<STARS_FULL) return;
+      const pts=SH[wd.id]; if(!pts) return;
+      g.save(); g.strokeStyle="rgba(255,215,94,.75)"; g.lineWidth=2;
+      g.shadowColor="#ffd75e"; g.shadowBlur=10; g.beginPath();
+      pts.forEach((p,i)=>{const x=p[0]*w,y=p[1]*h;i?g.lineTo(x,y):g.moveTo(x,y);});
+      g.closePath(); g.stroke(); g.fillStyle="#fff6cf";
+      pts.forEach(p=>{g.beginPath();g.arc(p[0]*w,p[1]*h,3.6,0,7);g.fill();});
+      g.restore();
+    });
+  }
+
+  /* ---------- 进入世界 ---------- */
+  function enter(id){
+    const w=W_BY_ID[id]; if(!w||!GAMES[id]) return;
+    tok=nextSession(); const my=tok;
+    curW=w; round=0;
+    $("#speakFace").src=A.ch(w.lead);
+    $("#scStar").src=A.pr("star");
+    $("#scNum").textContent=String(Store.stars(id));
+    const dots=$("#dots"); dots.textContent="";
+    for(let i=0;i<ROUNDS;i++) el("i","",dots);
+    $("#cheer").classList.remove("on");
+    $("#play").textContent=""; Link.clear();
+    show("stage"); $("#busy").classList.add("on");
+    Store.data.plays++; Store.save();
+
+    Assets.load(Assets.worldList(w)).then(()=>{
+      if(!alive(my)) return;
+      $("#busy").classList.remove("on");
+      $("#bgImg").src=A.bg(w.bg);
+      Link.fit();
+      const first=!Store.seen(id); Store.markSeen(id);
+      Speech.say(w.intro,{tag:"world-intro"});
+      cur=GAMES[id](makeCtx(w,my,first));
+      cur.start();
+      if(first){
+        // 第一次来这个世界：等题目摆好后做一次手势示范（本题自动标记为"用过帮助"，不计掌握）
+        T.after(2600,()=>{
+          if(!alive(my)||!curW||curW.id!==id) return;
+          markAssisted();
+          const t=typeof hintTarget==="function"?hintTarget():hintTarget;
+          if(t&&t.classList){
+            if(t.classList.contains("cards")||t.dataset.glowall==="1")
+              [].forEach.call(t.children,c=>c.classList.add("tapme"));
+            else { t.classList.add("tapme"); Finger.at(t,2800); }
+            SFX.tap();
+            T.after(3000,()=>$$(".tapme").forEach(e=>e.classList.remove("tapme")));
+          }
+        });
+      }
+    });
+  }
+  function makeCtx(w,my,firstTime){
+    return {
+      root:$("#play"), world:w, T, firstTime,
+      level:()=>Store.level(w.id),
+      symbols:()=>Store.symbols(),
+      alive:()=>alive(my)&&curW&&curW.id===w.id,
+      say:(t,o)=>{ o=o||{}; o.tag=o.tag||("g:"+w.id); return Speech.say(t,o); },
+      /** 指令：说 + 武装分级提示 */
+      ask:(t,target)=>{ armHint(t,target); return Speech.say(t,{tag:"instruct"}); },
+      count:(t)=>Speech.count(t),
+      answering:on=>$("#app").classList.toggle("answering",!!on),
+      win:(from,ev)=>roundWin(from,ev),
+      evidence:ok=>Store.evidence(w.id,ok),
+      clearHint
+    };
+  }
+  function leave(){
+    clearHint(); Speech.stopScope(); Finger.off(); Bubble.hide();
+    if(cur&&cur.destroy){ try{ cur.destroy(); }catch(e){} }
+    cur=null; curW=null; tok=nextSession();
+    T.clear(); $("#play").textContent=""; Link.clear();
+    $("#bgImg").removeAttribute("src");
+    $("#cheer").classList.remove("on"); $("#cheerCast").textContent=""; $("#cheerStars").textContent="";
+    $("#busy").classList.remove("on"); $("#app").classList.remove("answering");
+    buildMap(); show("map");
+  }
+
+  /* ---------- 回合 ---------- */
+  function roundWin(from,ev){
+    if(!curW) return;
+    clearHint(); $("#app").classList.remove("answering");
+    SFX.right();
+    Store.addStar(curW.id);
+    $("#scNum").textContent=String(Store.stars(curW.id));
+    const d=$("#dots").children[round]; if(d) d.classList.add("f");
+    flyStar(from||$("#scene")); SFX.star();
+    round++;
+    T.after(1500,()=>{
+      if(!curW) return;
+      if(round>=ROUNDS) finishSession();
+      else if(cur&&cur.next) cur.next();
+    });
+  }
+  function finishSession(){
+    const w=curW; if(!w) return;
+    clearHint();
+    const cast=$("#cheerCast"),stars=$("#cheerStars");
+    cast.textContent=""; stars.textContent="";
+    w.cast.slice(0,5).forEach(c=>img(A.ch(c),"",cast));
+    for(let i=0;i<ROUNDS;i++){ const s=img(A.pr("star"),"",stars); s.style.animationDelay=(i*.12)+"s"; }
+    $("#cheer").classList.add("on"); SFX.win(); confetti(30);
+    const full=Store.stars(w.id)>=STARS_FULL;
+    Speech.say(full?"太棒啦！星星全都回家了，天上出现了新的星座！":"谢谢你！星星回到天上啦！",{tag:"session-end"});
+    onTap($("#cheer"),()=>{ if(curW) leave(); });
+    T.after(full?4200:3200,()=>{ if(curW) leave(); });
+  }
+
+  /* ---------- 分级提示：发光 → 重播 → 手势演示 ---------- */
+  function armHint(text,target){
+    clearHint(); hintText=text; hintTarget=target||null; hintStage=0;
+    hintTimer=setInterval(()=>{
+      if(!curW){ clearHint(); return; }
+      if(Speech.engineBusy()) return;           // 引擎在说 → 退休
+      if(Speech.sinceReq()<1500) return;        // 不插嘴
+      hintStage++;
+      const t=typeof hintTarget==="function"?hintTarget():hintTarget;
+      // 选择题：只提示"在这一排里选一张"，绝不指向具体某一张
+      // （手指指到第一张卡就等于手把手教孩子点错误答案）
+      const isChoice=!!(t&&t.classList&&(t.classList.contains("cards")||t.dataset.glowall==="1"));
+      const glow=()=>{
+        if(!t||!t.classList) return;
+        if(isChoice) [].forEach.call(t.children,c=>c.classList.add("tapme"));
+        else t.classList.add("tapme");
+      };
+      markAssisted();                       // 自动提示已经给了帮助 → 本题不计掌握
+      if(hintStage===1){ glow(); SFX.tap(); }
+      else if(hintStage===2){ Speech.nudge(hintText,{tag:"hint-repeat"}); }
+      else if(hintStage===3){
+        if(isChoice){ glow(); SFX.tap(); }        // 不出手指，只让整排卡片一起亮
+        else if(t) Finger.at(t,3000);
+      }else{ hintStage=2; }
+    },5200);                                    // 三岁半等不了 9 秒：5 / 10 / 15 秒逐级推进
+  }
+  function clearHint(){
+    if(hintTimer){ clearInterval(hintTimer); hintTimer=null; }
+    hintStage=0; hintText=""; hintTarget=null;
+    $$(".tapme").forEach(e=>e.classList.remove("tapme")); Finger.off();
+  }
+
+  /* ---------- 成人门 ---------- */
+  let gaAnswer=0, gaStreak=0, gaAnswered=false, gaCooldownUntil=0, gaLast="";
+  function openAdultGate(reset){
+    if(reset!==false) gaStreak=0;
+    gaAnswered=false;                       // 每道新题重置"本题已作答"
+    // 连续两题不能是同一道，否则"第二题必须换新"这件事无从判断
+    let a=rint(6,9), b=rint(5,9), guard=0;
+    while(gaLast===a+"+"+b && guard++<12){ a=rint(6,9); b=rint(5,9); }
+    gaLast=a+"+"+b; gaAnswer=a+b;
+    $("#gaQ").textContent=a+" + "+b+" = ?";
+    const box=$("#gaOpts"); box.textContent="";
+    const opts=shuffle([gaAnswer,gaAnswer+1,gaAnswer-2,gaAnswer+3]);
+    opts.forEach(v=>{
+      const btn=el("button","",box); btn.textContent=String(v);
+      onTap(btn,()=>{
+        if(gaAnswered) return;              // 本题已作答，后续点击一律无效
+        gaAnswered=true;
+        // 同步禁用整排按钮：否则换题前的这几百毫秒里还能在同一道题上再点一次凑 streak
+        [].forEach.call(box.children,x=>{ x.disabled=true; x.style.opacity=".45"; });
+        if(v===gaAnswer){
+          gaStreak++;
+          if(gaStreak>=2){ $("#gateAdult").classList.remove("on"); gaStreak=0; openPanel(); return; }
+          $("#gaTip").textContent="再答对一题就好。";
+          setTimeout(()=>{ if($("#gateAdult").classList.contains("on")) openAdultGate(false); },350);
+          return;
+        }
+        // 答错：立刻关门 + 30 秒冷却。这样"固定位置反复猜"在时间成本上不可行。
+        gaStreak=0;
+        gaCooldownUntil=Date.now()+30000;
+        btn.style.background="#ffb3b3";
+        $("#gateAdult").classList.remove("on");
+      });
+    });
+    $("#gateAdult").classList.add("on");
+  }
+  function openPanel(){ refreshPanel(); $("#panel").classList.add("on"); }
+
+  /* ---------- 启动 ---------- */
+  function boot(){
+    Store.load();
+    const gs=$("#gateStars");
+    for(let i=0;i<40;i++){
+      const s=el("div","twinkle deco",gs), sz=1.5+Math.random()*3;
+      s.style.width=sz+"px"; s.style.height=sz+"px";
+      s.style.left=Math.random()*100+"%"; s.style.top=Math.random()*100+"%";
+      s.style.animationDelay=(Math.random()*3.2)+"s";
+    }
+    const gc=$("#gateCast");
+    ["wukong","hulu1","ironman","chase","bluey","peppa"].forEach(c=>img(A.th(c),"",gc));
+
+    /* 军规1 + 军规5：click 抬起手势，同一同步栈内完成 首句speak + AudioContext + 无声buffer + 无声audio循环 */
+    let started=false;
+    $("#startBtn").addEventListener("click",function(){
+      if(started) return; started=true;      // 防重入：重复点击不能再调一次 unlockAndSay
+      // 顺序有意为之：TTS 首句最脆弱，放在同步栈最前；
+      // AudioContext 解锁与无声 audio 循环紧随其后，三者同属这一次 click 任务。
+      Speech.unlockAndSay("欢迎来到星星回家！我们一起帮朋友们把星星送回天上吧！");
+      SFX.gesture();
+      Audio2.kick();
+      buildMap(); show("map"); SFX.star();
+    });
+
+    onTap($("#homeBtn"),()=>leave());
+    onTap($("#speakBtn"),()=>{
+      const b=$("#speakBtn"); b.classList.add("talking");
+      setTimeout(()=>b.classList.remove("talking"),1400);
+      markAssisted();                      // 重听指令也是帮助 → 本题不计掌握
+      // repeat() 只负责返回"当前这一步该说什么"，实际播报统一走受控 replay()
+      const txt=(cur&&cur.repeat&&cur.repeat())||(curW&&curW.intro);
+      if(txt) Speech.replay(txt,{tag:"repeat"});
+    });
+    onTap($("#soundHint"),()=>{
+      SFX.gesture(); Audio2.kick(); Speech.refreshVoice();
+      Speech.replay("你好呀！听得到我说话吗？",{tag:"hint-retry"});
+    });
+
+    let lp=null; const pd=$("#parentDot");
+    pd.addEventListener("pointerdown",e=>{ e.preventDefault();
+      if(Date.now()<gaCooldownUntil) return;      // 答错后的冷却期内长按无效
+      lp=setTimeout(openAdultGate,3000); },{passive:false});
+    ["pointerup","pointercancel","pointerleave"].forEach(ev=>
+      pd.addEventListener(ev,()=>{ if(lp){clearTimeout(lp);lp=null;} }));
+
+    document.addEventListener("contextmenu",e=>e.preventDefault());
+    document.addEventListener("gesturestart",e=>e.preventDefault());
+    let lt=0;
+    document.addEventListener("touchend",e=>{ const n=Date.now(); if(n-lt<320) e.preventDefault(); lt=n; },{passive:false});
+    let rz=null;
+    addEventListener("resize",()=>{ clearTimeout(rz); rz=setTimeout(()=>{ drawConstell(); Link.fit(); },180); });
+    addEventListener("orientationchange",()=>setTimeout(()=>{ drawConstell(); Link.fit(); },320));
+
+    buildPanel();
+    $("#loading").classList.add("off");
+    window.__ready=true;
+  }
+
+  function buildPanel(){
+    $("#dgVer").textContent=VERSION;
+    onTap($("#panelClose"),()=>$("#panel").classList.remove("on"));
+    onTap($("#gaCancel"),()=>$("#gateAdult").classList.remove("on"));
+    onTap($("#dgTest"),()=>{ SFX.gesture(); Audio2.kick();
+      Speech.say("一，二，三。你好，我是语音测试。",{tag:"diag-test"}); setTimeout(refreshPanel,700); });
+    onTap($("#dgReload"),()=>{ Speech.refreshVoice(); refreshPanel(); });
+    let armed=false;
+    onTap($("#dgReset"),()=>{
+      const b=$("#dgReset");
+      if(!armed){ armed=true; b.textContent="再点一次确认清空"; setTimeout(()=>{armed=false;b.textContent="清空进度（重新开始）";},4000); return; }
+      Store.reset(); armed=false; b.textContent="已清空"; refreshMap(); refreshPanel();
+      setTimeout(()=>b.textContent="清空进度（重新开始）",1500);
+    });
+    Speech.onChange(()=>{ if($("#panel").classList.contains("on")) refreshPanel(); });
+  }
+  function refreshPanel(){
+    const d=Speech.diag();
+    $("#dgAll").textContent=d.all; $("#dgZhN").textContent=d.zh.length; $("#dgCur").textContent=d.cur;
+    $("#dgState").textContent=(d.speaking?"正在发声":"空闲")+(Speech.ok?"":"（本浏览器不支持语音合成）");
+    $("#dgSeen").textContent=d.engineSeen?"是 ✅":"否 ⚠️";
+    $("#dgFirst").textContent=d.firstOk?"是 ✅"
+      :(d.pendingRedo?"待用新声音补说…":(d.redone?"已补说一次":(d.firstProbed?"未检测到发声 ⚠️":"尚未检测")));
+    $("#dgZhList").textContent=d.zh.length?d.zh.map(v=>v.name+"  ["+v.lang+"]"+(v.localService?"  本地":"")).join("\n")
+      :"（系统里没有中文语音：设置 → 辅助功能 → 朗读内容 → 声音 → 中文 下载一个）";
+    $("#dgProg").textContent=WORLDS.map(w=>{
+      const lock=Store.unlocked(w.id)?"":"（未解锁）";
+      return w.name+" · "+w.skill+"：参与⭐"+Store.stars(w.id)+"/"+STARS_FULL
+        +"　掌握◆"+Store.mastery(w.id)
+        +"（近期正确率 "+Math.round(Store.rate(w.id)*100)+"%，跨启动掌握窗口 "+Store.wins(w.id)+"/2）"+"　难度 L"+Store.level(w.id)
+        +"　答题 "+Store.data.w[w.id].tries+lock;
+    }).join("\n")+"\n合计 ⭐"+Store.total()+"/"+(STARS_FULL*WORLDS.length)
+      +"　数字符号："+(Store.symbols()?"已解锁":"未解锁")+"　游玩 "+Store.data.plays+" 次";
+  }
+
+  return { boot, buildMap, refreshMap, drawConstell, leave, enter, openPanel };
+})();
+
+const SILENT_WAV="UklGRvQHAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YdAHAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
+
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",App.boot);
+else App.boot();
+if("serviceWorker" in navigator) addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+</script>
+</body>
+</html>
