@@ -203,6 +203,8 @@ canvas{display:block}
 .card.wrong{box-shadow:0 0 0 6px #ff9b3d,0 8px 22px rgba(0,0,0,.35)}
 .card.dim{opacity:.4;filter:grayscale(.6)}
 .card .dotwrap{position:absolute;inset:9%}
+.card .cardnum{position:absolute;right:5%;top:3%;font-weight:900;color:#2a1f4d;opacity:.85;
+  font-size:clamp(15px,3.4vmin,30px);text-shadow:0 1px 0 #fff}
 .card .dot{position:absolute;width:20%;height:20%;border-radius:50%;background:#e2453f;
   box-shadow:inset 0 -3px 0 rgba(0,0,0,.16);transform:translate(-50%,-50%)}
 .card .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -445,6 +447,18 @@ canvas{display:block}
     </ul>
   </section>
   <section>
+    <h3 style="font-size:15px">游戏设置</h3>
+    <div><b>难度（点一下，对全部世界生效）：</b></div>
+    <div id="dgLvRow" style="display:flex;gap:8px;margin-top:6px">
+      <button class="pb" data-lv="1">L1 入门</button>
+      <button class="pb" data-lv="2">L2</button>
+      <button class="pb" data-lv="3">L3</button>
+      <button class="pb" data-lv="4">L4 最难</button>
+    </div>
+    <div style="margin-top:10px"><b>卡片上显示数字：</b><button class="pb" id="dgNum">-</button></div>
+    <button class="pb" id="dgUnlockAll">解锁全部世界</button>
+  </section>
+  <section>
     <h3 style="font-size:15px">学习进度</h3>
     <div id="dgProg" class="vlist">-</div>
     <button class="pb warn" id="dgReset">清空进度（重新开始）</button>
@@ -463,7 +477,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -494,7 +508,7 @@ const WORLDS=[
   intro:"要公平才好玩！比一比，谁的多？"},
  {id:"hulu", name:"葫芦山", bg:"bg_hulu", lead:"hulu1", skill:"分一分",
   cast:["hulu1","hulu2","hulu3","hulu4","hulu5","hulu6","hulu7","yeye"],
-  intro:"葫芦娃要去救爷爷！"},
+  intro:"葫芦娃要去救爷爷！听好要做什么哦。"},
  {id:"aveng", name:"复仇者大厦", bg:"bg_aveng", lead:"ironman", skill:"合起来",
   cast:["ironman","cap","thor","hulkman","widow","hawkeye","spider","spiderblack","blackpanther"],
   intro:"英雄集结！两边合起来，一共几个？"},
@@ -515,7 +529,8 @@ const Store=(()=>{
   // hist  = 升/降级的滑动窗口，达成一次窗口就清空
   // recent= 近期正确率用的滚动历史，**永不清空** —— 两者混用会让全对的孩子永远算不出正确率
   const mkW=()=>({stars:0,lv:1,hist:[],recent:[],seen:0,tries:0,open:0,mast:0,wins:0,winAt:-1});
-  const def=()=>{const p={v:2,plays:0,sess:0,w:{}};WORLDS.forEach(x=>p.w[x.id]=mkW());return p;};
+  // set = 家长设置：num 卡片显示数字（默认开），minlv 难度下限（对全部世界生效）
+  const def=()=>{const p={v:2,plays:0,sess:0,set:{num:1,minlv:1},w:{}};WORLDS.forEach(x=>p.w[x.id]=mkW());return p;};
   let d=def();
   const num=(v,f)=>(typeof v==="number"&&isFinite(v))?v:f;
   function load(){
@@ -524,6 +539,10 @@ const Store=(()=>{
       const o=JSON.parse(raw);
       if(!o||typeof o!=="object"||o.v!==2||!o.w||typeof o.w!=="object") return;
       const b=def(); b.plays=clamp(num(o.plays,0),0,1e6); b.sess=clamp(num(o.sess,0),0,1e6);
+      if(o.set&&typeof o.set==="object"){
+        b.set.num=num(o.set.num,1)?1:0;
+        b.set.minlv=clamp(Math.floor(num(o.set.minlv,1)),1,MAXLV);
+      }
       WORLDS.forEach(x=>{
         const s=o.w[x.id]; if(!s||typeof s!=="object") return;
         const t=b.w[x.id];
@@ -573,16 +592,21 @@ const Store=(()=>{
     const i=ORDER.indexOf(id); if(i<0) return false; if(i<2) return true;
     return !!W(id).open;
   }
-  /* 符号（阿拉伯数字）解锁：按课程先修，不是"随便两个世界到 L3"。
-     必须先把量感与关系建立起来：瞬识 + 基数/Give-N + 比较，各自都要有掌握证据。 */
-  function symbols(){
-    const need=["peppa","paw","bluey"];
-    return need.every(id=>{ const w=W(id); return w.lv>=3 && w.mast>=6; });
-  }
+  /* 符号（阿拉伯数字）：家长设置直接控制，默认显示。
+     （原来的课程门槛对已经认识数字的孩子完全不合适，已改为家长开关。） */
+  function symbols(){ return !!(d.set&&d.set.num); }
   return {
     load,save,
     get data(){return d;},
-    stars:id=>W(id).stars, level:id=>W(id).lv, unlocked, symbols,
+    stars:id=>W(id).stars,
+    level:id=>clamp(Math.max(W(id).lv,(d.set&&d.set.minlv)||1),1,MAXLV),
+    unlocked, symbols,
+    setNum(on){ d.set.num=on?1:0; save(); },
+    minLv:()=>((d.set&&d.set.minlv)||1),
+    setMinLv(v){ v=clamp(Math.floor(v)||1,1,MAXLV); d.set.minlv=v;
+      WORLDS.forEach(x=>{ const w=W(x.id); w.lv=v; w.hist=[]; });   // 直接把全部世界调到该难度
+      refreshUnlocks(); save(); },
+    unlockAll(){ WORLDS.forEach(x=>{ W(x.id).open=1; }); save(); },
     rate:id=>recentRate(W(id)),
     wins:id=>W(id).wins,
     total:()=>WORLDS.reduce((s,x)=>s+W(x.id).stars,0),
@@ -664,11 +688,10 @@ const Speech=(()=>{
   const OK=!!S && typeof SpeechSynthesisUtterance==="function";
   const CANCEL_GAP=160;      // 军规2
   const NO_INTERRUPT=1500;   // 军规7
-  const WAIT_MAX=4000;       // 新指令最多等正在说的话 4s，之后才允许打断
   let state="LOCKED";        // LOCKED -> READY
   let voice=null,tries=0;
   let lastReqAt=0,lastCancelAt=0;
-  let pendTimer=null,pendItem=null;
+  let pendTimer=null,queue=[];
   let keep=[];               // 军规6 防 GC
   let firstText=null,firstOk=false,firstProbed=false,redoneFirst=false,firstRedoTimer=null;
   let engineSeen=false;                 // 「检测到引擎有过发声活动」—— 与「首句成功」是两回事
@@ -726,7 +749,7 @@ const Speech=(()=>{
     return u;
   }
   function fire(item){
-    pendTimer=null; pendItem=null;
+    pendTimer=null;
     if(item.ep!==epoch){ item.done=true; return; }     // 换过世界了，这条作废
     if(!OK){ finish(item); return; }
     try{ S.resume(); }catch(e){}                       // 军规4
@@ -748,7 +771,7 @@ const Speech=(()=>{
     if(item._to){ clearTimeout(item._to); item._to=null; }
     if(item.done) return; item.done=true;
     if(typeof item.opt.onDone==="function"){ try{ item.opt.onDone(); }catch(e){} }
-    notify();
+    notify(); pump();                     // 这句说完了 → 播队列里的下一句
   }
   function markFirstOk(){
     if(firstOk) return;
@@ -757,42 +780,26 @@ const Speech=(()=>{
     hideHint(); notify();
   }
 
-  /** 指令通道：latest-wins，安全打断（军规8） */
+  /** 指令通道：顺序队列 —— 每句说完再说下一句，绝不掐断正在说的话。
+      积压保护：待播最多 3 条，超了丢最旧的（它的语境早已被后面的话覆盖）。 */
+  function pump(){
+    if(pendTimer) return;
+    while(queue.length&&(queue[0].done||queue[0].ep!==epoch)) queue.shift();
+    if(!queue.length) return;
+    if(engineBusy()){ pendTimer=setTimeout(()=>{ pendTimer=null; pump(); },120); return; }
+    const gap=Date.now()-lastCancelAt;
+    if(gap<CANCEL_GAP){ pendTimer=setTimeout(()=>{ pendTimer=null; pump(); },CANCEL_GAP-gap); return; }
+    fire(queue.shift());                                // 空闲 → 同步开口（军规1 同样受益）
+  }
   function say(text,opt){
     opt=opt||{}; if(!text) return 0;
     const id=++serial; lastReqAt=Date.now();
     window.__speechLog.push({id,t:Math.round(performance.now()),text,tag:opt.tag||"say",ch:"say"});
     if(id===1) firstText=text;
-    if(pendTimer){ clearTimeout(pendTimer); pendTimer=null; }
-    if(pendItem&&!pendItem.done) pendItem.done=true;
     cntLatest=null;                                    // 指令优先级高于计数补播
-    const item={id,text,opt,done:false,ep:epoch}; pendItem=item;
-    if(engineBusy()){                     // 必须"原生状态 或 本地标记"取或，否则本地 active 形同虚设
-      /* 不再立刻掐掉正在说的话（刚开口就被下一步打断很难受）：
-         等引擎空闲再播这条最新的；等待有上限，超时才强制打断，流程不会被卡死的引擎拖住。 */
-      const waitStart=Date.now();
-      const poll=()=>{
-        pendTimer=null;
-        if(item.done||item.ep!==epoch) return;
-        if(!engineBusy()){
-          const gap=Date.now()-lastCancelAt;
-          if(gap<CANCEL_GAP){ pendTimer=setTimeout(poll,CANCEL_GAP-gap); return; }
-          fire(item); return;
-        }
-        if(Date.now()-waitStart>=WAIT_MAX){
-          try{ S.cancel(); }catch(e){} lastCancelAt=Date.now();
-          pendTimer=setTimeout(()=>fire(item),CANCEL_GAP);
-          return;
-        }
-        pendTimer=setTimeout(poll,120);
-      };
-      pendTimer=setTimeout(poll,120);
-    }else{
-      const gap=Date.now()-lastCancelAt;
-      if(gap<CANCEL_GAP) pendTimer=setTimeout(()=>fire(item),CANCEL_GAP-gap);
-      else fire(item);                                  // 无需打断 → 同步开口
-    }
-    notify(); return id;
+    queue.push({id,text,opt,done:false,ep:epoch});
+    while(queue.length>3){ const old=queue.shift(); old.done=true; }
+    pump(); notify(); return id;
   }
 
   /** 计数通道：绝不 cancel（避免取消风暴/掐断数词），忙则只保留最新一条待播 */
@@ -808,7 +815,7 @@ const Speech=(()=>{
       // 军规②：cancel 之后必须等满 CANCEL_GAP，计数通道也不例外
       const gap=Date.now()-lastCancelAt;
       if(gap<CANCEL_GAP){ cntTimer=setTimeout(flush,CANCEL_GAP-gap+10); return; }
-      if(pendTimer){ cntTimer=setTimeout(flush,120); return; } // 有待播指令时让路
+      if(pendTimer||queue.length){ cntTimer=setTimeout(flush,120); return; } // 有待播指令时让路
       if(engineBusy()){ cntTimer=setTimeout(flush,120); return; }  // 等空闲，绝不打断
       const t=cntLatest; cntLatest=null;
       const ep=epoch;
@@ -900,8 +907,8 @@ const Speech=(()=>{
     clearCount();
     clearTimers();                                  // 所有 watchdog / 探针一并作废
     if(pendTimer){ clearTimeout(pendTimer); pendTimer=null; }
-    if(pendItem&&!pendItem.done){ pendItem.done=true; if(pendItem._to) clearTimeout(pendItem._to); }
-    pendItem=null;
+    queue.forEach(it=>{ it.done=true; if(it._to) clearTimeout(it._to); });
+    queue.length=0;
     chanToken++;                                    // 让所有在途回调的令牌全部失效
     active=false; activeUntil=0;
     try{ if(wasBusy){ S.cancel(); lastCancelAt=Date.now(); } }catch(e){}
@@ -1050,6 +1057,7 @@ function makeCard(n,pat){
   if(pat==="num"){ el("div","num",c).textContent=String(n); return c; }
   const w=el("div","dotwrap",c);
   dotPos(n,pat||"dice").forEach(p=>{ const d=el("div","dot",w); d.style.left=p[0]+"%"; d.style.top=p[1]+"%"; });
+  if(Store.symbols()) el("div","cardnum",c).textContent=String(n);   // 点阵卡角标数字：帮认得数字的孩子建立"量↔符号"对应
   return c;
 }
 /** 四选一：正确答案 + 3 个邻近干扰 */
@@ -1665,7 +1673,9 @@ GAMES.bluey=ctx=>{
       h.style.cssText="position:absolute;inset:6% 6% 24%;display:flex;align-items:center;justify-content:center";
       img(A.ch("bingo"),"",h).style.cssText="height:100%;width:auto"; });
     ui.wrap=wrap;
-    ctx.ask(st.isRetry?"再看看这一次：谁的多呀？":(q.mode==="cons"?"爸爸把饼干摆得不一样啦！谁的多呀？还是一样多？":"谁的多呀？点一下他。"),
+    ctx.ask(st.isRetry?"再看看这一次：上面是 Bluey 的，下面是 Bingo 的，谁的多呀？"
+        :(q.mode==="cons"?"爸爸把饼干摆得不一样啦！上面一排是 Bluey 的，下面一排是 Bingo 的。谁的多呀？还是一样多？"
+        :"上面一排是 Bluey 的，下面一排是 Bingo 的。谁的多呀？点下面的卡片告诉我。"),
             wrap);
   }
   function truth(){ return q.a>q.b?"a":(q.a<q.b?"b":"same"); }
@@ -1790,7 +1800,7 @@ GAMES.bluey=ctx=>{
   }
   return {
     start:()=>{ fails=0; build(false); }, next:()=>{ fails=0; build(false); },
-    repeat:()=>(q&&q.mode==="fix")?"点篮子，给 Bingo 加到一样多。":"谁的多呀？",
+    repeat:()=>(q&&q.mode==="fix")?"点篮子，给 Bingo 加到一样多。":"上面是 Bluey 的，下面是 Bingo 的，谁的多呀？",
     destroy:()=>{ Link.clear(); ui=null; q=null; st=null; }
   };
 };
@@ -1944,7 +1954,7 @@ GAMES.hulu=ctx=>{
     });
     okBtn.disabled=true; upd();
     ctx.answering(true);
-    ctx.ask("要"+cnQty(N)+"个葫芦娃去救爷爷！两条路都要有人，你来分！点山洞或者山顶。",ui.zl);
+    ctx.ask("要"+cnQty(N)+"个葫芦娃去救爷爷！把他们分到两条路：点左边或者点右边，两边都要有人。分好了按绿色的出发按钮！",ui.zl);
   }
 
   /* ---- 缺失加数（唯一答案，计掌握） ---- */
@@ -1971,7 +1981,7 @@ GAMES.hulu=ctx=>{
     const okBtn=bigBtn(L.bot,"出发！","green",()=>submit());
     okBtn.disabled=true; ui.okBtn=okBtn;
     ctx.answering(true);
-    ctx.ask((st.isRetry?"再来一次！":"")+"要"+cnQty(N)+"个葫芦娃！山洞里已经有"+cnQty(a)+"个了，山顶还要几个？点山顶派人，好了按绿色按钮。",ui.zr);
+    ctx.ask((st.isRetry?"再来一次！":"")+"一共要"+cnQty(N)+"个葫芦娃！左边已经有"+cnQty(a)+"个了，右边还要几个？点右边派人，好了按绿色按钮。",ui.zr);
     function submit(){
       if(st.done) return;
       const ok=(ui.right.length===q.need); record(ctx,st,ok);
@@ -2872,6 +2882,10 @@ const App=(()=>{
     onTap($("#dgTest"),()=>{ SFX.gesture(); Audio2.kick();
       Speech.say("一，二，三。你好，我是语音测试。",{tag:"diag-test"}); setTimeout(refreshPanel,700); });
     onTap($("#dgReload"),()=>{ Speech.refreshVoice(); refreshPanel(); });
+    $$("#dgLvRow .pb").forEach(b=>onTap(b,()=>{ Store.setMinLv(+b.dataset.lv); refreshMap(); refreshPanel(); }));
+    onTap($("#dgNum"),()=>{ Store.setNum(!Store.symbols()); refreshPanel(); });
+    onTap($("#dgUnlockAll"),()=>{ Store.unlockAll(); refreshMap(); refreshPanel();
+      const b=$("#dgUnlockAll"); b.textContent="已全部解锁 ✅"; setTimeout(()=>b.textContent="解锁全部世界",1500); });
     let armed=false;
     onTap($("#dgReset"),()=>{
       const b=$("#dgReset");
@@ -2882,6 +2896,10 @@ const App=(()=>{
     Speech.onChange(()=>{ if($("#panel").classList.contains("on")) refreshPanel(); });
   }
   function refreshPanel(){
+    $$("#dgLvRow .pb").forEach(b=>{
+      b.style.outline=(+b.dataset.lv===Store.minLv())?"3px solid #ffd75e":"none";
+    });
+    $("#dgNum").textContent=Store.symbols()?"开着（点击隐藏）":"关着（点击显示）";
     const d=Speech.diag();
     $("#dgAll").textContent=d.all; $("#dgZhN").textContent=d.zh.length; $("#dgCur").textContent=d.cur;
     $("#dgState").textContent=(d.speaking?"正在发声":"空闲")+(Speech.ok?"":"（本浏览器不支持语音合成）");
@@ -2897,7 +2915,7 @@ const App=(()=>{
         +"（近期正确率 "+Math.round(Store.rate(w.id)*100)+"%，跨启动掌握窗口 "+Store.wins(w.id)+"/2）"+"　难度 L"+Store.level(w.id)
         +"　答题 "+Store.data.w[w.id].tries+lock;
     }).join("\n")+"\n合计 ⭐"+Store.total()+"/"+(STARS_FULL*WORLDS.length)
-      +"　数字符号："+(Store.symbols()?"已解锁":"未解锁")+"　游玩 "+Store.data.plays+" 次";
+      +"　数字显示："+(Store.symbols()?"开":"关")+"　游玩 "+Store.data.plays+" 次";
   }
 
   return { boot, buildMap, refreshMap, drawConstell, leave, enter, openPanel };
