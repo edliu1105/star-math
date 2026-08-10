@@ -525,7 +525,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "3.1.0";
+const VERSION = "3.2.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -776,14 +776,29 @@ const Speech=(()=>{
   function engineBusy(){ return busy() || (active && Date.now()<activeUntil); }
   /** 占用通道并返回本次的令牌；释放时必须带回同一个令牌，
       否则旧 utterance 的 onend 会把新世界正在说的那句"释放"掉。 */
-  function holdChannel(text){
+  let curCh=null;                              // 正在发声的是哪个通道："say" / "count"
+  function holdChannel(text,ch){
     active=true; activeUntil=Date.now()+Math.max(2500,(text||"").length*380);
+    curCh=ch||"say";
     return ++chanToken;
   }
   function releaseChannel(tok){
     if(tok!==chanToken) return;                // 严格校验：没带令牌也不许释放
-    active=false; activeUntil=0;
+    active=false; activeUntil=0; curCh=null;
   }
+  /** 用户动作打断：待播队列全部作废；正在念的"指令/讲解"立刻停。
+      计数播报（孩子自己数数的回声）不掐 —— 掐数词比多念半句指令难受得多。 */
+  function cutSay(){
+    queue.forEach(it=>{ it.done=true; if(it._to) clearTimeout(it._to); });
+    queue.length=0;
+    if(pendTimer){ clearTimeout(pendTimer); pendTimer=null; }
+    if(curCh==="say"&&engineBusy()){
+      try{ S.cancel(); }catch(e){} lastCancelAt=Date.now();
+      active=false; activeUntil=0; curCh=null; chanToken++;
+    }
+  }
+  /** 页面节奏用：还有话没说完吗（在说 或 排着队） */
+  function talking(){ return engineBusy()||queue.length>0; }
   function sinceReq(){ return Date.now()-lastReqAt; }
   function mk(text,opt){
     const u=new SpeechSynthesisUtterance(text);
@@ -802,7 +817,7 @@ const Speech=(()=>{
     if(!OK){ finish(item); return; }
     try{ S.resume(); }catch(e){}                       // 军规4
     const u=mk(item.text,item.opt);
-    const tok=holdChannel(item.text);                  // 立刻占用通道，不等 WebKit 状态位
+    const tok=holdChannel(item.text,"say");            // 立刻占用通道，不等 WebKit 状态位
     const fin=()=>{ if(!item.done){ releaseChannel(tok); finish(item); } };
     u.onend=fin; u.onerror=fin;
     item._to=later(fin, Math.max(2500,item.text.length*380));  // 军规3 超时兜底
@@ -841,6 +856,7 @@ const Speech=(()=>{
   }
   function say(text,opt){
     opt=opt||{}; if(!text) return 0;
+    if(opt.interrupt) cutSay();                        // 用户主动操作 → 旧话立刻让路
     const id=++serial; lastReqAt=Date.now();
     window.__speechLog.push({id,t:Math.round(performance.now()),text,tag:opt.tag||"say",ch:"say"});
     if(id===1) firstText=text;
@@ -850,11 +866,13 @@ const Speech=(()=>{
     pump(); notify(); return id;
   }
 
-  /** 计数通道：绝不 cancel（避免取消风暴/掐断数词），忙则只保留最新一条待播 */
+  /** 计数通道：绝不 cancel（避免取消风暴/掐断数词），忙则只保留最新一条待播。
+      child-count = 孩子亲手在数 → 正在念的指令立刻让路，数数的回声不能等。 */
   function count(text,tag){
     lastReqAt=Date.now();
     window.__speechLog.push({id:++serial,t:Math.round(performance.now()),text,tag:tag||"count",ch:"count"});
     if(!OK) return;
+    if(tag==="child-count") cutSay();
     cntLatest=text;
     if(cntTimer) return;
     const flush=()=>{
@@ -869,7 +887,7 @@ const Speech=(()=>{
       const ep=epoch;
       try{ S.resume(); }catch(e){}
       const u=mk(t,{rate:.95});
-      const tok=holdChannel(t);
+      const tok=holdChannel(t,"count");
       let released=false;
       const rel=()=>{ if(released) return; released=true; releaseChannel(tok);
         if(ep===epoch && cntLatest!=null && !cntTimer) cntTimer=setTimeout(flush,40); };
@@ -891,7 +909,7 @@ const Speech=(()=>{
     refreshVoice();
     try{ S.resume(); }catch(e){}
     const u=mk(text,{});
-    const tok=holdChannel(text);
+    const tok=holdChannel(text,"say");
     u.onend=u.onerror=()=>{ releaseChannel(tok); notify(); };
     try{ S.speak(u); }catch(e){ releaseChannel(tok); }
     later(()=>{
@@ -937,13 +955,14 @@ const Speech=(()=>{
     document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ try{S.resume();}catch(e){} } });
     window.addEventListener("pageshow",()=>{ try{S.resume();}catch(e){} });
   }
-  /** 用户主动要求重听：安全打断（latest-wins）+ 短节流，防止连点排长队 */
+  /** 用户主动要求重听：立刻打断正在说的 + 短节流，防止连点排长队 */
   let lastReplay=0;
   function replay(text,opt){
     const now=Date.now();
     if(now-lastReplay<800) return 0;
     lastReplay=now;
-    return say(text,opt||{tag:"replay"});
+    opt=opt||{tag:"replay"}; opt.interrupt=true;
+    return say(text,opt);
   }
   /** 换世界/回地图：废弃待播、失效旧 watchdog、安全打断当前 */
   function stopScope(){
@@ -958,10 +977,11 @@ const Speech=(()=>{
     queue.forEach(it=>{ it.done=true; if(it._to) clearTimeout(it._to); });
     queue.length=0;
     chanToken++;                                    // 让所有在途回调的令牌全部失效
-    active=false; activeUntil=0;
+    active=false; activeUntil=0; curCh=null;
     try{ if(wasBusy){ S.cancel(); lastCancelAt=Date.now(); } }catch(e){}
   }
   return { ok:OK, say, count, clearCount, unlockAndSay, nudge, replay, stopScope,
+    cut:cutSay, talking,
     busy, engineBusy, sinceReq, refreshVoice, hideHint,
     get state(){return state;},
     onChange:f=>subs.push(f),
@@ -1402,6 +1422,14 @@ function barModel(host,maxN,nameA,nameB){
   }
   return { el:w, set, flashDiff(){ w.classList.add("showdiff"); } };
 }
+/** 页面节奏跟着语音走：至少等 minMs，之后还要等话说完才继续（9 秒兜底防死锁） */
+function afterSay(T,minMs,fn){
+  const t0=Date.now();
+  T.after(minMs,function chk(){
+    if(!Speech.talking()||Date.now()-t0>minMs+9000) fn();
+    else T.after(180,chk);
+  });
+}
 /** 通用四选一数字卡答题。
     o={ans,lo,hi,onRight(card),rightSay,revealSay,remedy()} ；remedy 缺省=直接揭示 */
 function numAnswer(ctx,ui,st,failsBox,o){
@@ -1412,9 +1440,9 @@ function numAnswer(ctx,ui,st,failsBox,o){
     const ok=(v===o.ans); record(ctx,st,ok);
     if(ok){
       st.done=true; lockCards(wrap); c.classList.add("right"); ctx.answering(false);
-      if(o.rightSay) Speech.say(o.rightSay,{tag:"right"});
+      if(o.rightSay) Speech.say(o.rightSay,{tag:"right",interrupt:true});   // 孩子答了 → 立刻回应
       SFX.right();
-      ctx.T.after(o.rightWait||1600,()=>{ if(ctx.alive()) o.onRight(c); });
+      afterSay(ctx.T,o.rightWait||900,()=>{ if(ctx.alive()) o.onRight(c); });
     }else{
       st.wrongs++; failsBox.n++; SFX.soft(); c.classList.add("wrong");
       ctx.T.after(420,()=>c.classList.remove("wrong"));
@@ -1423,15 +1451,15 @@ function numAnswer(ctx,ui,st,failsBox,o){
         st.done=true;
         [].forEach.call(wrap.children,x=>{
           if(+x.dataset.n===o.ans){ x.classList.add("right"); Finger.at(x,2300); } else x.classList.add("dim"); });
-        if(o.revealSay) Speech.say(o.revealSay,{tag:"reveal"});
-        ctx.T.after(2200,()=>{ if(ctx.alive()) o.onRight(wrap); });
+        if(o.revealSay) Speech.say(o.revealSay,{tag:"reveal",interrupt:true});
+        afterSay(ctx.T,1400,()=>{ if(ctx.alive()) o.onRight(wrap); });
         return;
       }
       if(o.remedy) o.remedy(wrap); else{
         // 缺省纠错：把正确卡亮出来讲一遍，然后换同构新题
         st.locked=true;
-        if(o.revealSay) Speech.say(o.revealSay,{tag:"remedy"});
-        ctx.T.after(2400,()=>{ if(ctx.alive()&&o.retry) o.retry(); });
+        if(o.revealSay) Speech.say(o.revealSay,{tag:"remedy",interrupt:true});
+        afterSay(ctx.T,1400,()=>{ if(ctx.alive()&&o.retry) o.retry(); });
       }
     }
   });
@@ -1459,23 +1487,20 @@ GAMES.peppa=ctx=>{
     sideCast(L.top,"r",["mummypig",{n:"george",sm:1}],28);
     const field=mkField(L.top,{t:26});
     ui={L,field,pig,blobs:[]};
-    onTap(pig,()=>{ if(busyState(st)) return; st.hinted=true; show(); });   // 再看一次 → 不计掌握
+    onTap(pig,()=>{ if(busyState(st)) return; st.hinted=true; Speech.cut(); show(); });   // 再看一次 → 不计掌握
     if(q.kind==="flash"){
       ctx.ask("看好啦！泥点闪一下就藏起来，数不过来就要用眼睛抓住它！",pig);
-      T.after(1400,show);
     }else if(q.kind==="add"){
       ui.eq=eqBar(L.top,[String(q.a),"+",String(q.b),"=","□"]);
       ctx.ask("佩奇跳两次泥坑！先看"+cnQ(q.a)+"个，再来"+cnQ(q.b)+"个，一共溅了几个泥点？",pig);
-      T.after(1600,show);
     }else if(q.kind==="sub"){
       ui.eq=eqBar(L.top,[String(q.n),"−",String(q.k),"=","□"]);
       ctx.ask("有"+cnQ(q.n)+"个泥点，雨水会冲掉"+cnQ(q.k)+"个，剩下几个？",pig);
-      T.after(1600,show);
     }else{
       ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.n)]);
       ctx.ask("一共"+cnQ(q.n)+"个泥点，看得见的有"+cnQ(q.a)+"个，藏起来的有几个？",pig);
-      T.after(1600,show);
     }
+    afterSay(T,800,show);                 // 指令说完才开始闪，孩子不会漏看
   }
   function splash(n,posArr){
     fitObj(ui.field,Math.max(n,4),"scatter");
@@ -1501,13 +1526,13 @@ GAMES.peppa=ctx=>{
         fitObj(ui.field,Math.max(q.ans,4),"scatter");
         A1.forEach(b=>b.classList.add("pop"));
         Speech.say(cnQ(q.a)+"个！",{tag:"g:peppa"});
-        T.after(q.flash,()=>{ if(!ctx.alive()||st!==my) return;
+        afterSay(T,q.flash,()=>{ if(!ctx.alive()||st!==my) return;
           A1.forEach(b=>b.style.opacity=".35");
           const B1=place(ui.field,q.b,A.pr("mudblob"),scatter(q.b).map(p=>[p[0],p[1]*0.42+55]));
           B1.forEach(b=>{ b.classList.add("pop"); b.style.filter="hue-rotate(40deg)"; });
           Speech.say("又来"+cnQ(q.b)+"个！",{tag:"g:peppa"});
           ui.blobs=A1.concat(B1);
-          T.after(q.flash,()=>{ if(ctx.alive()&&st===my) ask(cnQ(q.a)+"加"+cnQ(q.b)+"等于几？"); });
+          afterSay(T,q.flash,()=>{ if(ctx.alive()&&st===my) ask(cnQ(q.a)+"加"+cnQ(q.b)+"等于几？"); });
         });
       });
     }else if(q.kind==="sub"){
@@ -1517,14 +1542,14 @@ GAMES.peppa=ctx=>{
           for(let i=0;i<q.k;i++){ const b=ui.blobs[ui.blobs.length-1-i]; b.style.transition="opacity .5s,transform .5s"; b.style.opacity="0"; b.style.transform="translate(-50%,-50%) scale(.2)"; }
           SFX.whoosh();
           Speech.say("冲掉了"+cnQ(q.k)+"个！",{tag:"g:peppa"});
-          T.after(900,()=>{ if(ctx.alive()&&st===my) ask(cnQ(q.n)+"减"+cnQ(q.k)+"等于几？"); });
+          afterSay(T,900,()=>{ if(ctx.alive()&&st===my) ask(cnQ(q.n)+"减"+cnQ(q.k)+"等于几？"); });
         });
       });
     }else{ // miss：先闪总数，再只留 a 个
       T.after(320,()=>{ if(!ctx.alive()||st!==my) return;
         ui.blobs=splash(q.n); ui.blobs.forEach(b=>b.classList.add("pop"));
         Speech.say("一共"+cnQ(q.n)+"个，记住哦！",{tag:"g:peppa"});
-        T.after(q.flash,()=>{ if(!ctx.alive()||st!==my) return;
+        afterSay(T,q.flash,()=>{ if(!ctx.alive()||st!==my) return;
           ui.blobs.forEach((b,i)=>{ if(i>=q.a) b.style.opacity="0"; });
           T.after(400,()=>{ if(ctx.alive()&&st===my) ask("藏起来几个？"); });
         });
@@ -1675,16 +1700,16 @@ GAMES.paw=ctx=>{
       st.done=true; ui.okBtn.disabled=true; ctx.answering(false);
       if(ui.eq&&q.kind==="more") ui.eq.setHole(q.ans);
       Speech.say(q.kind==="give"?("正好"+cnQ(q.n)+"只，出发！")
-        :(cnQ(q.a)+"只加"+cnQ(q.ans)+"只，正好"+cnQ(q.n)+"只，出发！"),{tag:"right"});
+        :(cnQ(q.a)+"只加"+cnQ(q.ans)+"只，正好"+cnQ(q.n)+"只，出发！"),{tag:"right",interrupt:true});
       SFX.right();
-      T.after(1800,()=>{ if(ctx.alive()) ctx.win(ui.zone); });
+      afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.zone); });
     }else{
       st.wrongs++; fails.n++; SFX.soft(); ui.zone.classList.add("shake");
       T.after(500,()=>ui.zone.classList.remove("shake"));
       ctx.answering(false);
       if(st.wrongs>=2||fails.n>=2){ revealSend(); return; }
       const got=ui.sent.length+(q.kind==="more"?q.a:0);
-      Speech.say("现在出发区有"+cnQ(got)+"只，任务要"+cnQ(q.n)+"只，再看看。",{tag:"remedy"});
+      Speech.say("现在出发区有"+cnQ(got)+"只，任务要"+cnQ(q.n)+"只，再看看。",{tag:"remedy",interrupt:true});
       ctx.answering(true);
     }
   }
@@ -1707,7 +1732,7 @@ GAMES.paw=ctx=>{
         T.after(500,step); return;
       }
       Speech.say("这样就是"+cnQ(target)+"只啦！",{tag:"reveal"});
-      T.after(1500,()=>{ if(ctx.alive()) ctx.win(ui.zone); });
+      afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(ui.zone); });
     };
     T.after(600,step);
   }
@@ -1720,7 +1745,7 @@ GAMES.paw=ctx=>{
     ui.eq=eqBar(L.top,[String(q.n),"−",String(q.k),"=","□"]);
     ctx.ask(cnQ(q.n)+"只狗狗在外面执行任务，"+cnQ(q.k)+"只先回家了，外面还剩几只？",field);
     const my=st;
-    T.after(2600,()=>{
+    afterSay(T,1000,()=>{
       if(!ctx.alive()||st!==my) return;
       for(let i=0;i<q.k;i++){ const o=ui.out[q.n-1-i];
         o.style.transition="transform .8s,opacity .8s"; o.style.transform="translate(-50%,-50%) translateY(70%) scale(.5)"; o.style.opacity="0"; }
@@ -1762,7 +1787,7 @@ GAMES.paw=ctx=>{
     ui.eq2=eqBar(L.top,parts,12);           // 倍数 = 连加：两条算式同时看
     ctx.ask("每只狗狗救两只小海龟！"+cnQ(d)+"只狗狗一共救几只海龟？两个两个数！",field);
     const my=st;
-    T.after(2400,()=>{
+    afterSay(T,1000,()=>{
       if(!ctx.alive()||st!==my) return;
       numAnswer(ctx,ui,st,fails,{
         ans:q.ans,lo:2,hi:10,askText:"一共几只海龟？点数字卡。",
@@ -1834,7 +1859,7 @@ GAMES.bluey=ctx=>{
     const moreName=q.a>q.b?"Bluey":"Bingo";
     ctx.ask("上面一排是 Bluey 的，下面一排是 Bingo 的。"+moreName+"的多 —— 多几个呢？",ui.rowA);
     const my=st;
-    T.after(2800,()=>{
+    afterSay(T,1200,()=>{
       if(!ctx.alive()||st!==my) return;
       numAnswer(ctx,ui,st,fails,{
         ans:q.ans,lo:1,hi:6,askText:moreName+"多几个？点数字卡。",
@@ -1851,7 +1876,7 @@ GAMES.bluey=ctx=>{
               extra.forEach(x=>x.classList.add("tapme"));
               ui.bm.flashDiff();            // 条形图上把"差"那一段圈出来
               Speech.say("配对以后，多出来的就是这"+cnQ(q.ans)+"个！条上多出来的那段也是"+cnQ(q.ans)+"！",{tag:"verify"});
-              T.after(1900,()=>{ if(ctx.alive()){ Link.clear(); ctx.win(card); } });
+              afterSay(T,1000,()=>{ if(ctx.alive()){ Link.clear(); ctx.win(card); } });
               return;
             }
             Link.line(ui.A[i],ui.B[i],"#fff"); SFX.tap(); i++; T.after(280,step);
@@ -1890,9 +1915,9 @@ GAMES.bluey=ctx=>{
       const ok=(ui.B.length===q.a); record(ctx,st,ok);
       if(ok){
         st.done=true; okBtn.disabled=true; ctx.answering(false);
-        Speech.say("公平啦！两边都是"+cnQ(q.a)+"个 —— 你加了"+cnQ(q.ans)+"个！",{tag:"right"});
+        Speech.say("公平啦！两边都是"+cnQ(q.a)+"个 —— 你加了"+cnQ(q.ans)+"个！",{tag:"right",interrupt:true});
         SFX.right();
-        T.after(1900,()=>{ if(ctx.alive()) ctx.win(basket); });
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(basket); });
       }else{
         st.wrongs++; fails.n++; SFX.soft(); ui.rowB.classList.add("shake");
         T.after(500,()=>ui.rowB.classList.remove("shake"));
@@ -1902,12 +1927,12 @@ GAMES.bluey=ctx=>{
             if(!ctx.alive()||st!==my) return;
             if(ui.B.length<q.a){ const o=el("div","cobj pop",ui.rowB); img(ui.item,"",o); el("div","tag",o); ui.B.push(o); relayout(); ui.bm.set(q.a,ui.B.length); SFX.count(ui.B.length); Speech.count(cnS(ui.B.length),"auto-count"); T.after(600,step); return; }
             Speech.say("现在两边都是"+cnQ(q.a)+"个，公平啦！",{tag:"reveal"});
-            T.after(1600,()=>{ if(ctx.alive()) ctx.win(basket); });
+            afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(basket); });
           };
           T.after(500,step);
           return;
         }
-        Speech.say("还不一样多哦，比一比，Bingo 还差几个？",{tag:"remedy"});
+        Speech.say("还不一样多哦，比一比，Bingo 还差几个？",{tag:"remedy",interrupt:true});
       }
     });
     okBtn.disabled=true;
@@ -1936,6 +1961,7 @@ GAMES.bluey=ctx=>{
   }
   function pickOdd(v,card,wrap){
     if(st.done) return;
+    Speech.cut();                       // 孩子已作答，别再念题
     const ok=(v===q.ans); record(ctx,st,ok);
     lockCards(wrap);
     if(ok){ st.done=true; card.classList.add("right"); ctx.answering(false); SFX.right(); }
@@ -1958,7 +1984,7 @@ GAMES.bluey=ctx=>{
         }else{
           Speech.say(cnQ(q.n)+"是双数！两个两个分，正好分完，公平！",{tag:"verify"});
         }
-        T.after(2400,()=>{ if(ctx.alive()&&st===my){ Link.clear();
+        afterSay(T,1200,()=>{ if(ctx.alive()&&st===my){ Link.clear();
           if(ok) ctx.win(card); else build(true); } });
         return;
       }
@@ -1976,7 +2002,7 @@ GAMES.bluey=ctx=>{
     ui.eq=eqBar(L.top,[String(q.n),"分成两份","=","□","+","□"]);
     ctx.ask(cnQ(q.n)+"块点心平分给 Bluey 和 Bingo，每人分到几块？",field);
     const my=st;
-    T.after(2600,()=>{
+    afterSay(T,1200,()=>{
       if(!ctx.alive()||st!==my) return;
       numAnswer(ctx,ui,st,fails,{
         ans:q.ans,lo:1,hi:8,askText:"每人几块？点数字卡。",
@@ -1991,7 +2017,7 @@ GAMES.bluey=ctx=>{
             if(!ctx.alive()||st!==my2) return;
             if(i>=q.n){
               Speech.say("Bluey "+cnQ(q.ans)+"块，Bingo "+cnQ(q.ans)+"块，一样多！",{tag:"verify"});
-              T.after(1900,()=>{ if(ctx.alive()) ctx.win(card); });
+              afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(card); });
               return;
             }
             const o=ui.items[i];
@@ -2075,8 +2101,8 @@ GAMES.hulu=ctx=>{
         if(!ctx.alive()) return;
         o.querySelector("img").src=A.ch(HULU_COLORS[(q.t-1)%7]);
         o.classList.add("pop");
-        Speech.say("对啦！从"+(q.kind==="ordR"?"右":"左")+"边数第"+cnS(q.t)+"个！",{tag:"right"});
-        T.after(1400,()=>{ if(ctx.alive()) ctx.win(o); });
+        Speech.say("对啦！从"+(q.kind==="ordR"?"右":"左")+"边数第"+cnS(q.t)+"个！",{tag:"right",interrupt:true});
+        afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(o); });
       });
     }else{
       st.wrongs++; fails.n++; SFX.soft(); o.classList.add("shake");
@@ -2089,7 +2115,7 @@ GAMES.hulu=ctx=>{
   function ordRemedy(gs){
     st.locked=true; const my=st;
     const fromR=q.kind==="ordR";
-    Speech.say("我们从"+(fromR?"右":"左")+"边开始数：",{tag:"remedy"});
+    Speech.say("我们从"+(fromR?"右":"左")+"边开始数：",{tag:"remedy",interrupt:true});
     let i=0;
     const idx=k=>fromR?(gs.length-1-k):k;
     const step=()=>{
@@ -2097,7 +2123,7 @@ GAMES.hulu=ctx=>{
       if(i>=q.t){
         gs[q.ans-1].classList.add("tapme");
         Speech.say("这个就是第"+cnS(q.t)+"个。再试一个新的！",{tag:"remedy"});
-        T.after(2400,()=>{ if(ctx.alive()&&st===my){ gs[q.ans-1].classList.remove("tapme"); build(true,q.kind); } });
+        afterSay(T,1200,()=>{ if(ctx.alive()&&st===my){ gs[q.ans-1].classList.remove("tapme"); build(true,q.kind); } });
         return;
       }
       const o=gs[idx(i)]; o.classList.add("counted");
@@ -2111,8 +2137,8 @@ GAMES.hulu=ctx=>{
   function ordReveal(gs){
     st.done=true; ctx.answering(false);
     gs.forEach((o,i)=>{ if(i+1===q.ans){ o.classList.add("tapme"); Finger.at(o,2400); } else o.classList.add("dim"); });
-    Speech.say("是这个哦，从"+(q.kind==="ordR"?"右":"左")+"边数第"+cnS(q.t)+"个。",{tag:"reveal"});
-    T.after(2100,()=>{ if(ctx.alive()) ctx.win(gs[q.ans-1]); });
+    Speech.say("是这个哦，从"+(q.kind==="ordR"?"右":"左")+"边数第"+cnS(q.t)+"个。",{tag:"reveal",interrupt:true});
+    afterSay(T,1100,()=>{ if(ctx.alive()) ctx.win(gs[q.ans-1]); });
   }
   /* L3 补到整数：a + □ = N，点右边山顶派葫芦娃 */
   function buildMiss(L){
@@ -2143,9 +2169,9 @@ GAMES.hulu=ctx=>{
         ui.eq.setHole(q.ans);
         const pw=partWhole(ui.L.top,"right:2%;top:11%");
         pw.setN(q.N); pw.setA(q.a); pw.setB(q.ans);
-        Speech.say(cnQ(q.a)+"加"+cnQ(q.ans)+"，正好"+cnQ(q.N)+"个，出发！",{tag:"right"});
+        Speech.say(cnQ(q.a)+"加"+cnQ(q.ans)+"，正好"+cnQ(q.N)+"个，出发！",{tag:"right",interrupt:true});
         SFX.right();
-        T.after(1900,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
       }else{
         st.wrongs++; fails.n++; SFX.soft(); ui.zr.classList.add("shake");
         T.after(500,()=>ui.zr.classList.remove("shake"));
@@ -2164,12 +2190,12 @@ GAMES.hulu=ctx=>{
             const pw=partWhole(ui.L.top,"right:2%;top:11%");
             pw.setN(q.N); pw.setA(q.a); pw.setB(q.ans);
             Speech.say("还差的就是"+cnQ(q.ans)+"个："+cnQ(q.a)+"加"+cnQ(q.ans)+"等于"+cnQ(q.N)+"。",{tag:"reveal"});
-            T.after(2000,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
+            afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
           };
           T.after(600,step);
           return;
         }
-        Speech.say("一共要"+cnQ(q.N)+"个，左边已经有"+cnQ(q.a)+"个了，再想想右边要几个。",{tag:"remedy"});
+        Speech.say("一共要"+cnQ(q.N)+"个，左边已经有"+cnQ(q.a)+"个了，再想想右边要几个。",{tag:"remedy",interrupt:true});
       }
     });
     okBtn.disabled=true; ui.okBtn=okBtn;
@@ -2192,7 +2218,7 @@ GAMES.hulu=ctx=>{
     ui.eq=eqBar(L.top,[String(q.N),"=",String(q.x),"+","□"]);
     ctx.ask(cnQ(q.N)+"个葫芦娃分两队！一队"+cnQ(q.x)+"个，另一队几个？",field);
     const my=st;
-    T.after(2400,()=>{
+    afterSay(T,1000,()=>{
       if(!ctx.alive()||st!==my) return;
       numAnswer(ctx,ui,st,fails,{
         ans:q.ans,lo:1,hi:9,askText:"另一队几个？点数字卡。",
@@ -2214,7 +2240,7 @@ GAMES.hulu=ctx=>{
           T.after(q.N*140+800,()=>{
             if(!ctx.alive()||st!==my2) return;
             Speech.say("一队"+cnQ(q.x)+"个，一队"+cnQ(q.ans)+"个！",{tag:"verify"});
-            T.after(1500,()=>{ if(ctx.alive()) ctx.win(card); });
+            afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(card); });
           });
         }
       });
@@ -2282,7 +2308,7 @@ GAMES.aveng=ctx=>{
       T.after(220,dropIn);
     };
     ctx.ask("左边"+cnQ(q.a)+"个英雄，右边"+cnQ(q.b)+"个英雄，一共几个？",field);
-    T.after(1800,dropIn);
+    afterSay(T,800,dropIn);
   }
   function buildSub(L,field){
     const names=shuffle(HEROES);
@@ -2294,7 +2320,7 @@ GAMES.aveng=ctx=>{
     ui.eq=eqBar(L.top,[String(q.n),"−",String(q.k),"=","□"]);
     ctx.ask(cnQ(q.n)+"个英雄在大厦里，"+cnQ(q.k)+"个要穿过传送门去别的任务，还剩几个？",field);
     const my=st;
-    T.after(2800,()=>{
+    afterSay(T,1000,()=>{
       if(!ctx.alive()||st!==my) return;
       for(let i=0;i<q.k;i++){
         const o=ui.A[q.n-1-i];
@@ -2315,7 +2341,7 @@ GAMES.aveng=ctx=>{
     ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.n)]);
     ctx.ask("这次任务要"+cnQ(q.n)+"个英雄！现在只有"+cnQ(q.a)+"个，传送门还要送来几个？",field);
     const my=st;
-    T.after(2600,()=>{ if(ctx.alive()&&st===my) askAns("还要来几个英雄？"); });
+    afterSay(T,1000,()=>{ if(ctx.alive()&&st===my) askAns("还要来几个英雄？"); });
   }
   function buildTeen(L,field){
     // 10 个坏蛋一整排（一个"十"），加 b 个英雄 —— 十几就是 10 加几
@@ -2333,7 +2359,7 @@ GAMES.aveng=ctx=>{
     ui.eq=eqBar(L.top,["10","+",String(q.b),"=","□"]);
     ctx.ask("上面整整一排是十个坏蛋！下面还有"+cnQ(q.b)+"个英雄。十加"+cnQ(q.b)+"，一共是多少？",field);
     const my=st;
-    T.after(3000,()=>{ if(ctx.alive()&&st===my) askAns("十加"+cnQ(q.b)+"是多少？"); });
+    afterSay(T,1200,()=>{ if(ctx.alive()&&st===my) askAns("十加"+cnQ(q.b)+"是多少？"); });
   }
   function askAns(t){
     const hi=q.kind==="teen"?19:10, lo=q.kind==="teen"?11:0;
@@ -2354,7 +2380,7 @@ GAMES.aveng=ctx=>{
           const step=()=>{
             if(!ctx.alive()||st!==my) return;
             if(i>=q.ans){ Speech.say("现在正好"+cnQ(q.n)+"个英雄，集合完毕！",{tag:"verify"});
-              T.after(1500,()=>{ if(ctx.alive()) ctx.win(card); }); return; }
+              afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(card); }); return; }
             const o=el("div","cobj pop",ui.field);
             o.style.left=pos[i][0]+"%"; o.style.top="52%";
             img(A.ch(names[i%names.length]),"",o); el("div","tag",o);
@@ -2534,7 +2560,7 @@ GAMES.monkey=ctx=>{
             Link.arc(ui.anchor,ui.stones[q.pre-1],"#ffd75e");
             Link.arc(ui.stones[q.pre-1],ui.stones[q.target-1],"#ffd75e");
             Speech.say("看！同样长的一段再来一次 —— 这就是两倍，正好"+cnQ(q.target)+"格！",{tag:"verify"});
-            T.after(1600,cross); return;
+            afterSay(T,900,cross); return;
           }
           grow(true); T.after(480,step);
         };
@@ -2579,7 +2605,7 @@ GAMES.monkey=ctx=>{
       T.after(500,()=>ui.staff.classList.remove("shake"));
       posWrong++;
       if(posWrong>=2){ autoFix(); return; }
-      Speech.say("桥还没有正好搭到亮着的石墩，看看现在是几格。",{tag:"g:monkey"});
+      Speech.say("桥还没有正好搭到亮着的石墩，看看现在是几格。",{tag:"g:monkey",interrupt:true});
       return;
     }
     askHowMany();
@@ -2593,7 +2619,7 @@ GAMES.monkey=ctx=>{
       if(ui.len<q.target){ grow(true); T.after(520,step); return; }
       if(ui.len>q.target){ shrinkTo(ui.len-1); T.after(440,step); return; }
       Speech.say("好啦，正好搭到啦！",{tag:"g:monkey"});
-      T.after(1100,()=>{ if(ctx.alive()){ st.asking=false; askHowMany(); } });
+      afterSay(T,700,()=>{ if(ctx.alive()){ st.asking=false; askHowMany(); } });
     };
     T.after(600,step);
   }
@@ -2626,7 +2652,7 @@ GAMES.monkey=ctx=>{
       setTimeout(()=>{ im.style.transform="translateX(-"+(30+i*8)+"vw)"; },i*220);
     });
     Speech.say("师父他们过河啦！谢谢你！",{tag:"win"});
-    T.after(1900,()=>{ if(ctx.alive()) ctx.win(ui.staff); });
+    afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(ui.staff); });
   }
   return {
     start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
@@ -2695,7 +2721,7 @@ const App=(()=>{
         if(!Store.unlocked(w.id)){
           SFX.soft();
           const prev=W_BY_ID[ORDER[ORDER.indexOf(w.id)-1]];
-          Speech.say("这里还没打开哦，先去"+prev.name+"帮帮忙吧！",{tag:"locked"});
+          Speech.say("这里还没打开哦，先去"+prev.name+"帮帮忙吧！",{tag:"locked",interrupt:true});
           const pb=host.querySelector('[data-w="'+prev.id+'"]');
           if(pb){ pb.classList.add("suggest"); Finger.at(pb,2600); }
           return;
@@ -2808,7 +2834,7 @@ const App=(()=>{
     const d=$("#dots").children[round]; if(d) d.classList.add("f");
     flyStar(from||$("#scene")); SFX.star();
     round++;
-    T.after(1500,()=>{
+    afterSay(T,900,()=>{                 // 等夸奖/讲解说完再进下一轮，节奏跟着语音走
       if(!curW) return;
       if(round>=ROUNDS) finishSession();
       else if(cur&&cur.next) cur.next();
@@ -2825,7 +2851,7 @@ const App=(()=>{
     const full=Store.stars(w.id)>=STARS_FULL;
     Speech.say(full?"太棒啦！星星全都回家了，天上出现了新的星座！":"谢谢你！星星回到天上啦！",{tag:"session-end"});
     onTap($("#cheer"),()=>{ if(curW) leave(); });
-    T.after(full?4200:3200,()=>{ if(curW) leave(); });
+    afterSay(T,full?2600:2000,()=>{ if(curW) leave(); });
   }
 
   /* ---------- 分级提示：发光 → 重播 → 手势演示 ---------- */
@@ -2967,7 +2993,7 @@ const App=(()=>{
     onTap($("#panelClose"),()=>$("#panel").classList.remove("on"));
     onTap($("#gaCancel"),()=>$("#gateAdult").classList.remove("on"));
     onTap($("#dgTest"),()=>{ SFX.gesture(); Audio2.kick();
-      Speech.say("一，二，三。你好，我是语音测试。",{tag:"diag-test"}); setTimeout(refreshPanel,700); });
+      Speech.say("一，二，三。你好，我是语音测试。",{tag:"diag-test",interrupt:true}); setTimeout(refreshPanel,700); });
     onTap($("#dgReload"),()=>{ Speech.refreshVoice(); refreshPanel(); });
     $$("#dgLvRow .pb").forEach(b=>onTap(b,()=>{ Store.setMinLv(+b.dataset.lv); refreshMap(); refreshPanel(); }));
     onTap($("#dgNum"),()=>{ Store.setNum(!Store.symbols()); refreshPanel(); });
