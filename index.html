@@ -701,7 +701,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "6.2.0";
+const VERSION = "6.3.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -3268,239 +3268,445 @@ GAMES.bluey=ctx=>{
 };
 
 /* ============================================================================
-   世界四 · 葫芦山 —— 序数与分解：正数第几个 → 倒数第几个 → 补到整数 → 分成两份
+   世界四 · 葫芦山（v6）—— 四个独立小游戏：
+   L1 藤上摘瓜（点） L2 悬崖吊篮（上下滑） L3 炼丹炉药草捆（选捆拖） L4 七彩瀑布分流（描到分流门）
    ============================================================================ */
 GAMES.hulu=ctx=>{
   const T=ctx.T; let st=null,q=null,ui=null; const box={last:null},fails={n:0};
 
-  function spec(){
-    const lv=ctx.level();
-    if(lv===1){ const t=rint(2,7); return {kind:"ordL",total:7,t,ans:t}; }
-    if(lv===2){ const t=rint(1,6); return {kind:"ordR",total:7,t,ans:8-t}; }
-    if(lv===3){ const N=rint(6,10),a=rint(2,N-2); return {kind:"miss",N,a,ans:N-a}; }
-    const N=rint(5,10),x=rint(1,N-1); return {kind:"bond",N,x,ans:N-x};
-  }
-  function build(retry,forceKind){
+  function build(retry){
     st=bindState(newState(retry));
-    q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.t||o.N)+","+(o.a||o.x||0),box),{world:"hulu"}));
-    if(forceKind) q.kind=forceKind;
+    const lv=ctx.level();
     const L=layout(ctx.root); ui={L};
+    if(lv===1) buildVine(L);
+    else if(lv===2) buildLift(L);
+    else if(lv===3) buildFurnace(L);
+    else buildFalls(L);
+  }
+
+  /* ---------------- L1 藤上摘瓜（点第 n 个） ---------------- */
+  function buildVine(L){
+    const mk=()=>({kind:"vine",total:7,t:rint(2,7)});
+    q=setQ(Object.assign(fresh(mk,o=>"vn"+o.t,box),{world:"hulu",act:"vine",phase:"play"}));
+    q.ans=q.t;
+    lvlTag(L.top,1,"藤上摘瓜");
+    verbBanner(L.top,"找！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
     sideCast(L.top,"l",["yeye"],22);
-    if(q.kind==="ordL"){ lvlTag(L.top,1,"藤上排队"); buildOrd(L); }
-    else if(q.kind==="ordR"){ lvlTag(L.top,2,"倒着数"); buildOrd(L); }
-    else if(q.kind==="miss"){ lvlTag(L.top,3,"爷爷的篮子"); buildMiss(L); }
-    else { lvlTag(L.top,4,"分身法术"); buildBond(L); }
-  }
-  /* 正/倒序数：葫芦挂在藤上摇摆，答对的那个落地变成葫芦娃 */
-  function buildOrd(L){
-    q.act="gourd";
-    const total=q.total, fromR=q.kind==="ordR";
-    const cols=shuffle(GOURDS).slice(0,total);
-    const field=mkField(L.top,{mat:false,l:12,r:4,t:14,b:36});
-    el("div","vine",L.top);                              // 藤蔓横贯山头
-    fitObj(field,total,"row");
-    const pos=rowPos(total).map(p=>[p[0],34]);
-    const gs=[];
-    for(let i=0;i<total;i++){
+    el("div","vine",L.top);
+    const cols=shuffle(GOURDS).slice(0,7);
+    fitObj(field,8,"row");
+    const pos=rowPos(7).map(p=>[6+p[0]*0.92,34]);
+    ui.gs=[];
+    pos.forEach((p,i)=>{
       const o=el("div","cobj hang",field); o.dataset.g=String(i+1);
-      o.style.left=pos[i][0]+"%"; o.style.top=pos[i][1]+"%";
-      o.style.animationDelay=(i*0.33)+"s";               // 各自摇摆，错落有致
-      el("div","hangline",o);                            // 挂绳
+      o.style.left=p[0]+"%"; o.style.top=p[1]+"%";
+      o.style.animationDelay=(i*0.33)+"s";
+      el("div","hangline",o);
       img(A.pr(cols[i]),"",o); el("div","tag",o);
-      gs.push(o); onTap(o,()=>tapG(i,o,gs));
-    }
-    ui.gs=gs; ui.field=field; field.dataset.glowall="1";
-    // 方向箭头：从哪边开始数
-    const arw=el("div","",field);
-    arw.style.cssText="position:absolute;top:18%;"+(fromR?"right:2%":"left:2%")+";font-weight:900;color:#ffd75e;"+
-      "font-size:clamp(18px,4vmin,38px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
-    arw.textContent=fromR?"← 从这边数":"从这边数 →";
+      const n=el("div","",o);
+      n.style.cssText="position:absolute;left:50%;bottom:-42%;transform:translateX(-50%);font-weight:900;color:#fff;font-size:calc(var(--obj)*.42);text-shadow:0 2px 0 rgba(0,0,0,.55)";
+      n.textContent=String(i+1);
+      ui.gs.push(o);
+      onTap(o,()=>tap(i,o));
+    });
+    ctx.ask("从左边开始数，点一点第"+cnS(q.t)+"个葫芦，把它摘下来！",field);
     ctx.answering(true);
-    ctx.ask((st.isRetry?"再来一次！":"")+(fromR
-      ?("这次反过来，从右边开始数！点一点从右边数第"+cnS(q.t)+"个葫芦。")
-      :("从左边开始数，点一点第"+cnS(q.t)+"个葫芦。")),field);
-  }
-  function tapG(i,o,gs){
-    if(busyState(st)) return;
-    const ok=(i+1===q.ans); record(ctx,st,ok);
-    if(ok){
-      st.done=true; ctx.answering(false);
-      SFX.right();
-      // 摘葫芦：停止摇摆 → 落到地面 → 变身葫芦娃
-      o.classList.remove("hang");
-      const hl=o.querySelector(".hangline"); if(hl) hl.remove();
-      o.style.transition="top .6s cubic-bezier(.5,0,.6,1.3)";
-      o.style.top="72%";
-      T.after(620,()=>{
-        if(!ctx.alive()) return;
-        const pf=el("div","poof",ui.field);
-        pf.style.left=o.style.left; pf.style.top="72%";
-        T.after(750,()=>pf.remove());
-        o.querySelector("img").src=A.ch(HULU_COLORS[(q.t-1)%7]);
-        o.classList.add("pop");
-        Speech.say("对啦！从"+(q.kind==="ordR"?"右":"左")+"边数第"+cnS(q.t)+"个，摘下来变身！",{tag:"right",interrupt:true});
-        afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(o); });
-      });
-    }else{
-      st.wrongs++; fails.n++; SFX.soft(); o.classList.add("shake");
-      T.after(500,()=>o.classList.remove("shake"));
-      ctx.answering(false);
-      if(st.wrongs>=2||fails.n>=2){ ordReveal(gs); return; }
-      ordRemedy(gs);
+    function tap(i,o){
+      if(busyState(st)||q.phase!=="play") return;
+      const ok=(i+1===q.ans); record(ctx,st,ok);
+      if(ok){
+        st.done=true; q.phase="commit"; ctx.answering(false);
+        SFX.right();
+        o.classList.remove("hang");
+        const hl=o.querySelector(".hangline"); if(hl) hl.remove();
+        runReveal(ctx,[
+          [100,()=>{ o.style.transition="top .6s cubic-bezier(.5,0,.6,1.3)"; o.style.top="72%"; SFX.whoosh(); }],
+          [650,()=>{ const pf=el("div","poof",ui.field); pf.style.left=o.style.left; pf.style.top="72%";
+            T.after(750,()=>pf.remove());
+            o.querySelector("img").src=A.ch(HULU_COLORS[(q.t-1)%7]);
+            o.classList.add("pop"); SFX.star(); }],
+          [500,()=>{ confetti(10);
+            ui.eq=eqBar(ui.L.top,["第","□","个"]);
+            flyNum(o,q.t,ui.eq); }]
+        ],{done:()=>{
+          Speech.say("第"+cnS(q.t)+"个葫芦，变身成功！",{tag:"verify"});
+          afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(o); });
+        }});
+      }else{
+        st.wrongs++; fails.n++; SFX.soft();
+        o.classList.add("shake"); T.after(500,()=>o.classList.remove("shake"));
+        // 从左逐个位置牌闪到目标
+        st.locked=true; const my=st;
+        let k=0;
+        const step=()=>{
+          if(!ctx.alive()||st!==my) return;
+          if(k>=q.t){ st.locked=false;
+            if(st.wrongs>=2||fails.n>=2){ tap(q.ans-1,ui.gs[q.ans-1]); }
+            return; }
+          const g=ui.gs[k];
+          g.classList.remove("hit"); void g.offsetWidth; g.classList.add("hit");
+          SFX.count(k+1); Speech.count("第"+cnS(k+1),"auto-count");
+          k++; T.after(560,step);
+        };
+        Speech.say("我们从左边数：",{tag:"remedy",interrupt:true});
+        afterSay(T,300,step);
+      }
     }
   }
-  function ordRemedy(gs){
-    st.locked=true; const my=st;
-    const fromR=q.kind==="ordR";
-    Speech.say("我们从"+(fromR?"右":"左")+"边开始数：",{tag:"remedy",interrupt:true});
-    let i=0;
-    const idx=k=>fromR?(gs.length-1-k):k;
-    const step=()=>{
-      if(!ctx.alive()||st!==my) return;
-      if(i>=q.t){
-        gs[q.ans-1].classList.add("tapme");
-        Speech.say("这个就是第"+cnS(q.t)+"个。再试一个新的！",{tag:"remedy"});
-        afterSay(T,1200,()=>{ if(ctx.alive()&&st===my){ gs[q.ans-1].classList.remove("tapme"); build(true,q.kind); } });
+
+  /* ---------------- L2 悬崖吊篮（上下滑，反向序数） ---------------- */
+  function buildLift(L){
+    const mk=()=>({kind:"lift",total:6,t:rint(2,5)});   // 从上数第 t 层
+    q=setQ(Object.assign(fresh(mk,o=>"lf"+o.t,box),{world:"hulu",act:"lift",phase:"play"}));
+    q.ans=q.t;
+    lvlTag(L.top,2,"悬崖吊篮");
+    verbBanner(L.top,"送！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    // 悬崖
+    const cliff=el("div","",field);
+    cliff.style.cssText="position:absolute;right:6%;top:4%;width:24%;bottom:4%;border-radius:16px;z-index:3;"+
+      "background:linear-gradient(100deg,#7a5a3a,#9a7648 60%,#7a5a3a);box-shadow:0 8px 18px rgba(0,0,0,.4)";
+    // 六层洞穴
+    ui.caves=[]; ui.plates=[];
+    const total=q.total;
+    for(let i=0;i<total;i++){
+      const y=8+i*(84/(total-1));
+      const cave=el("div","",cliff);
+      cave.style.cssText="position:absolute;left:18%;top:"+y+"%;transform:translateY(-50%);width:64%;height:11%;"+
+        "border-radius:50% 50% 8px 8px/70% 70% 8px 8px;background:radial-gradient(#1c1230,#31215a 80%);"+
+        "box-shadow:inset 0 4px 8px rgba(0,0,0,.6)";
+      const plate=el("div","",cave);
+      plate.style.cssText="position:absolute;left:-34%;top:50%;transform:translate(0,-50%);font-weight:900;color:#ffd75e;"+
+        "font-size:clamp(13px,2.6vmin,24px);text-shadow:0 2px 0 rgba(0,0,0,.55);white-space:nowrap";
+      plate.textContent="上"+cnS(i+1);
+      ui.caves.push(cave); ui.plates.push(plate);
+      cave.dataset.level=String(i+1);
+    }
+    // 吊篮 + 绳
+    const rope=el("div","",field);
+    rope.style.cssText="position:absolute;left:57%;top:0;width:4px;bottom:0;background:#6a4a23;z-index:4";
+    const basket=el("div","",field);
+    basket.dataset.basket="1";
+    basket.style.cssText="position:absolute;left:57%;top:8%;transform:translate(-50%,-30%);width:12%;aspect-ratio:1;z-index:6;"+
+      "transition:top .4s cubic-bezier(.3,1.1,.5,1);touch-action:none";
+    img(A.pr("basket"),"",basket).style.cssText="width:100%;height:auto";
+    const rider=el("div","",basket);
+    rider.style.cssText="position:absolute;left:50%;top:-38%;transform:translateX(-50%);width:62%";
+    img(A.ch(HULU_COLORS[rnd(7)]),"",rider).style.cssText="width:100%;height:auto";
+    ui.basket=basket; ui.level=1;
+    const yOf=i=>8+ (i-1)*(84/(total-1));
+    basket.style.top=yOf(1)+"%";
+    // 上下滑（在场地任意处滑）
+    let y0=null;
+    field.style.touchAction="none";
+    field.addEventListener("pointerdown",e=>{ if(q.phase==="play"){ y0=e.clientY; SFX.gesture(); Audio2.kick(); } },{passive:true});
+    field.addEventListener("pointerup",e=>{
+      if(y0===null||q.phase!=="play") return;
+      const dy=e.clientY-y0; y0=null;
+      if(Math.abs(dy)<24){ // 点按：视为敲门提交
+        const t=e.target.closest("[data-basket]")||e.target.closest("[data-level]");
+        if(t) knock();
         return;
       }
-      const o=gs[idx(i)]; o.classList.add("counted");
-      o.querySelector(".tag").textContent="第"+cnS(i+1);
-      o.classList.remove("hit"); void o.offsetWidth; o.classList.add("hit");
-      SFX.count(i+1); Speech.count("第"+cnS(i+1),"auto-count");
-      i++; T.after(720,step);
-    };
-    T.after(700,step);
-  }
-  function ordReveal(gs){
-    st.done=true; ctx.answering(false);
-    gs.forEach((o,i)=>{ if(i+1===q.ans){ o.classList.add("tapme"); Finger.at(o,2400); } else o.classList.add("dim"); });
-    Speech.say("是这个哦，从"+(q.kind==="ordR"?"右":"左")+"边数第"+cnS(q.t)+"个。",{tag:"reveal",interrupt:true});
-    afterSay(T,1100,()=>{ if(ctx.alive()) ctx.win(gs[q.ans-1]); });
-  }
-  /* L3 补到整数：a + □ = N，点右边山顶派葫芦娃 */
-  function buildMiss(L){
-    q.act="zone";
-    const field=mkField(L.top,{mat:false,l:14,r:6,t:50,b:5});
-    const wrap=el("div","",field);
-    wrap.style.cssText="position:absolute;inset:0;display:flex;gap:3%";
-    const zl=el("button","dropzone",wrap), zr=el("button","dropzone",wrap);
-    zr.dataset.zone="r";
-    const hl=el("div","zhead",zl), hr=el("div","zhead",zr);
-    img(A.ch("shejing"),"",hl); img(A.ch("xiezijing"),"",hr);
-    const sl=el("div","slot",zl), sr=el("div","slot",zr);
-    ui.zl=zl; ui.zr=zr; ui.sl=sl; ui.sr=sr; ui.left=[]; ui.right=[];
-    for(let i=0;i<q.a;i++){ const im=img(A.ch(HULU_COLORS[i%7]),"",sl); ui.left.push(im); }
-    ui.eq=eqBar(L.top,[String(q.a),"+","□","=",String(q.N)]);
-    // 分合图从一开始就在场，右边的部分跟着孩子的手实时变
-    ui.pw=partWhole(L.top,"right:1.5%;top:10%");
-    ui.pw.setN(q.N); ui.pw.setA(q.a); ui.pw.setB("?",false);
-    onTap(zr,()=>{ if(busyState(st)||ui.right.length>=8) return;
-      const im=img(A.ch(HULU_COLORS[(q.a+ui.right.length)%7]),"",sr);
-      im.classList.add("pop"); ui.right.push(im);
-      ui.pw.setB(ui.right.length,false);
-      SFX.count(ui.right.length); Speech.count(cnS(ui.right.length),"child-count");
-      okBtn.disabled=ui.right.length===0; });
-    onTap(sr,()=>{ if(busyState(st)||!ui.right.length) return;
-      ui.right.pop().remove(); SFX.tap();
-      ui.pw.setB(ui.right.length||"?",false);
-      okBtn.disabled=ui.right.length===0; });
-    const okBtn=bigBtn(L.bot,"出发！","green",()=>{
-      if(st.done) return;
-      const ok=(ui.right.length===q.ans); record(ctx,st,ok);
+      moveTo(ui.level+(dy>0?1:-1));
+    },{passive:true});
+    function moveTo(lv2){
+      lv2=clamp(lv2,1,total);
+      if(lv2===ui.level) return;
+      ui.level=lv2; q.draft=lv2;
+      basket.style.top=yOf(lv2)+"%";
+      SFX.count(lv2); Speech.count("上"+cnS(lv2),"child-count");
+    }
+    ui.okBtn=bigBtn(L.bot,"敲门！","green",()=>knock());
+    ctx.ask("爷爷住在**从上往下数**第"+cnS(q.t)+"层的山洞！上下滑动吊篮，到了就敲门！",basket);
+    ctx.answering(true);
+    function knock(){
+      if(st.done||q.phase!=="play") return;
+      const ok=(ui.level===q.ans); record(ctx,st,ok);
       if(ok){
-        st.done=true; okBtn.disabled=true; ctx.answering(false);
-        ui.eq.setHole(q.ans);
-        ui.pw.setB(q.ans);
-        Speech.say(cnQ(q.a)+"加"+cnQ(q.ans)+"，正好"+cnQ(q.N)+"个，出发！",{tag:"right",interrupt:true});
+        st.done=true; q.phase="commit"; ctx.answering(false); ui.okBtn.disabled=true;
         SFX.right();
-        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
+        const cave=ui.caves[q.ans-1];
+        runReveal(ctx,[
+          [200,()=>{ cave.style.background="radial-gradient(#ffd75e,#e8a94b 80%)"; SFX.star();
+            const y2=el("div","",cave);
+            y2.style.cssText="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:56%";
+            img(A.ch("yeye"),"",y2).style.cssText="width:100%;height:auto"; }],
+          [600,()=>{ // 全部层牌翻面：从下数的编号
+            ui.plates.forEach((p2,i)=>{
+              T.after(i*140,()=>{ if(!ctx.alive()) return;
+                p2.style.transition="transform .3s"; p2.style.transform="translate(0,-50%) rotateX(180deg)";
+                T.after(160,()=>{ p2.textContent="下"+cnS(q.total-i); p2.style.transform="translate(0,-50%)"; p2.style.color="#7ef0a8"; SFX.tap(); });
+              });
+            }); }],
+          [q.total*140+500,()=>{ confetti(12);
+            ui.eq=eqBar(ui.L.top,["上","□","层"]);
+            flyNum(cave,q.t,ui.eq); }]
+        ],{done:()=>{
+          Speech.say("从上数第"+cnS(q.t)+"层，就是从下数第"+cnS(q.total-q.t+1)+"层 —— 同一个洞，两种数法！",{tag:"verify"});
+          afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(basket); });
+        }});
       }else{
-        st.wrongs++; fails.n++; SFX.soft(); ui.zr.classList.add("shake");
-        T.after(500,()=>ui.zr.classList.remove("shake"));
+        st.wrongs++; fails.n++; SFX.soft();
+        basket.classList.add("shake"); T.after(500,()=>basket.classList.remove("shake"));
+        Speech.say("这是从上数第"+cnS(ui.level)+"层哦，要到第"+cnS(q.t)+"层！",{tag:"remedy",interrupt:true});
         if(st.wrongs>=2||fails.n>=2){
-          st.done=true; st.locked=true; const my=st;
-          while(ui.right.length>q.ans) ui.right.pop().remove();
+          st.locked=true; const my=st;
           const step=()=>{
             if(!ctx.alive()||st!==my) return;
-            if(ui.right.length<q.ans){
-              const im=img(A.ch(HULU_COLORS[(q.a+ui.right.length)%7]),"",ui.sr);
-              im.classList.add("pop"); ui.right.push(im);
-              SFX.count(ui.right.length); Speech.count(cnS(ui.right.length),"auto-count");
-              T.after(600,step); return;
-            }
-            ui.eq.setHole(q.ans);
-            ui.pw.setB(q.ans);
-            Speech.say("还差的就是"+cnQ(q.ans)+"个："+cnQ(q.a)+"加"+cnQ(q.ans)+"等于"+cnQ(q.N)+"。",{tag:"reveal"});
-            afterSay(T,1000,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
+            if(ui.level===q.ans){ st.locked=false; knock(); return; }
+            moveTo(ui.level+(ui.level<q.ans?1:-1));
+            T.after(600,step);
           };
-          T.after(600,step);
-          return;
+          T.after(700,step);
         }
-        Speech.say("一共要"+cnQ(q.N)+"个，左边已经有"+cnQ(q.a)+"个了，再想想右边要几个。",{tag:"remedy",interrupt:true});
       }
-    });
-    okBtn.disabled=true; ui.okBtn=okBtn;
-    ctx.answering(true);
-    ctx.ask("一共要"+cnQ(q.N)+"个葫芦娃！左边已经有"+cnQ(q.a)+"个，右边还要几个？点右边派人，好了按绿色按钮。",zr);
-  }
-  /* L4 数的分解：N 分成 x 和几 */
-  function buildBond(L){
-    q.act="card";
-    const field=mkField(L.top,{l:14,r:6,t:14,b:40}); ui.field=field;
-    fitObj(field,q.N,"row");
-    const pos=rowFixed(q.N,q.N);
-    ui.gs=[];
-    for(let i=0;i<q.N;i++){
-      const o=el("div","cobj",field);
-      o.style.left=pos[i][0]+"%"; o.style.top="50%";
-      img(A.ch(HULU_COLORS[i%7]),"",o); el("div","tag",o);
-      ui.gs.push(o);
     }
-    ui.eq=eqBar(L.top,[String(q.N),"=",String(q.x),"+","□"]);
-    ctx.ask(cnQ(q.N)+"个葫芦娃分两队！一队"+cnQ(q.x)+"个，另一队几个？",field);
-    const my=st;
-    afterSay(T,1000,()=>{
-      if(!ctx.alive()||st!==my) return;
-      numAnswer(ctx,ui,st,fails,{
-        ans:q.ans,lo:1,hi:9,askText:"另一队几个？点数字卡。",
-        rightSay:"对啦！"+cnQ(q.N)+"可以分成"+cnQ(q.x)+"和"+cnQ(q.ans)+"！",
-        revealSay:cnQ(q.N)+"分成"+cnQ(q.x)+"和"+cnQ(q.ans)+"："+cnQ(q.x)+"加"+cnQ(q.ans)+"等于"+cnQ(q.N)+"。",
-        retry:()=>build(true,"bond"),
-        onRight:card=>{
-          ui.eq.setHole(q.ans);
-          const pw=partWhole(ui.L.top,"right:2%;top:11%");
-          pw.setN(q.N); pw.setA(q.x); pw.setB(q.ans);
-          st.locked=true; const my2=st;
-          ui.gs.forEach((o,i)=>{
-            o.style.transition="left .5s,top .5s";
-            T.after(i*140,()=>{ if(!ctx.alive()||st!==my2) return;
-              if(i<q.x){ o.style.top="36%"; o.style.left=(10+i*9)+"%"; }
-              else { o.style.top="66%"; o.style.left=(10+(i-q.x)*9)+"%"; }
-              SFX.tap(); });
-          });
-          T.after(q.N*140+800,()=>{
-            if(!ctx.alive()||st!==my2) return;
-            // 分身完成：两队各起一团白烟
-            [[10+(q.x-1)*4.5,36],[10+(q.ans-1)*4.5,66]].forEach(p=>{
-              const pf=el("div","poof",ui.field); pf.style.left=p[0]+"%"; pf.style.top=p[1]+"%";
-              T.after(750,()=>pf.remove());
-            });
-            SFX.whoosh();
-            Speech.say("分身术成功！一队"+cnQ(q.x)+"个，一队"+cnQ(q.ans)+"个！",{tag:"verify"});
-            afterSay(T,800,()=>{ if(ctx.alive()) ctx.win(card); });
-          });
-        }
+  }
+
+  /* ---------------- L3 炼丹炉（选对缺的那捆） ---------------- */
+  function buildFurnace(L){
+    const mk=()=>{ const N=rint(6,9),x=rint(2,N-3); return {kind:"furnace",N,x}; };
+    q=setQ(Object.assign(fresh(mk,o=>"fu"+o.N+","+o.x,box),{world:"hulu",act:"furnace",phase:"play"}));
+    q.ans=q.N-q.x;
+    lvlTag(L.top,3,"炼丹炉");
+    verbBanner(L.top,"炼！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    sideCast(L.top,"l",["yeye"],26);
+    // 炉子
+    const fur=el("div","",field);
+    fur.style.cssText="position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:34%;aspect-ratio:1.1;z-index:5";
+    fur.innerHTML='<svg viewBox="0 0 110 100" style="width:100%;height:100%">'+
+      '<ellipse cx="55" cy="88" rx="40" ry="9" fill="#5a3c18"/>'+
+      '<path d="M20 40 Q20 88 55 88 Q90 88 90 40 Q90 22 55 22 Q20 22 20 40Z" fill="#8a5a2b" stroke="#5a3c18" stroke-width="5"/>'+
+      '<ellipse cx="55" cy="26" rx="35" ry="10" fill="#a3702f" stroke="#5a3c18" stroke-width="4"/>'+
+      '<path id="fuFlame" d="M45 96 Q50 88 55 96 Q60 88 65 96" stroke="#ff9b3d" stroke-width="5" fill="none" stroke-linecap="round"/></svg>';
+    ui.fur=fur;
+    // 炉沿 N 个槽（环形排布在炉口）
+    ui.slots=[];
+    for(let i=0;i<q.N;i++){
+      const a=(-160+i*(140/Math.max(q.N-1,1)))*Math.PI/180;
+      const sx=50+38*Math.cos(a), sy=24+16*Math.sin(a)+8;
+      const s2=el("i","",fur);
+      s2.style.cssText="position:absolute;left:"+sx+"%;top:"+sy+"%;transform:translate(-50%,-50%);width:11%;aspect-ratio:1;"+
+        "border-radius:50%;display:block;"+(i<q.x?"background:#6fbf4a;box-shadow:0 0 8px #6fbf4a":"border:3px dashed rgba(255,255,255,.85);background:rgba(0,0,0,.25)");
+      ui.slots.push(s2);
+    }
+    // 三捆药草（点阵+数字双编码）
+    const opts=shuffle([q.ans,clamp(q.ans+pick([-1,1]),1,7),clamp(q.ans+pick([-2,2]),1,7)].filter((v,i,arr)=>arr.indexOf(v)===i));
+    while(opts.length<3){ const v=rint(1,7); if(!opts.includes(v)) opts.push(v); }
+    ui.bundles=[];
+    opts.slice(0,3).forEach((v,i)=>{
+      const b2=el("div","",field); b2.dataset.bundle=String(v);
+      b2.style.cssText="position:absolute;left:"+(16+i*26)+"%;top:80%;transform:translate(-50%,-50%);width:15%;aspect-ratio:1.2;z-index:7;"+
+        "background:rgba(255,255,255,.94);border-radius:14px;box-shadow:0 5px 12px rgba(0,0,0,.35);"+
+        "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px";
+      const dots=el("div","",b2);
+      dots.style.cssText="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;width:80%";
+      for(let k=0;k<v;k++){ const d2=el("i","",dots);
+        d2.style.cssText="width:clamp(8px,1.6vmin,15px);aspect-ratio:1;border-radius:50%;background:#3f7d2e;display:block"; }
+      const num=el("b","",b2);
+      num.style.cssText="font-weight:900;color:#2a1f4d;font-size:clamp(16px,3.2vmin,32px)";
+      num.textContent=String(v);
+      ui.bundles.push(b2);
+      draggable(b2,{
+        enabled:()=>(!busyState(st)&&q.phase==="play"),
+        zones:()=>[{el:fur}],
+        onDrop:(elm)=>{ tryBundle(elm,v); return true; },
+        onTap:()=>{ if(!busyState(st)&&q.phase==="play") tryBundle(b2,v); }
       });
     });
+    ctx.ask("炉子要正好"+cnQ(q.N)+"株药草，已经有"+cnQ(q.x)+"株了。哪一捆刚好补满？拖它进炉口！",fur);
+    ctx.answering(true);
+    function tryBundle(b2,v){
+      const ok=(v===q.ans);
+      record(ctx,st,ok);
+      if(!ok){
+        st.wrongs++; fails.n++;
+        // 预演差错：幽灵填充
+        st.locked=true; const my=st;
+        let k=0; const ghost=[];
+        const step=()=>{
+          if(!ctx.alive()||st!==my) return;
+          if(k>=Math.min(v,q.ans)){
+            if(v<q.ans){ ui.slots[q.x+v].classList.add("tapme");
+              Speech.say("还空一格！这捆太少了。",{tag:"remedy",interrupt:true});
+            }else{
+              Speech.say("多出一株没地方放！这捆太多了。",{tag:"remedy",interrupt:true});
+            }
+            T.after(1400,()=>{ if(!ctx.alive()||st!==my) return;
+              ghost.forEach(g=>{ g.style.background=""; g.style.border="3px dashed rgba(255,255,255,.85)"; g.classList.remove("tapme"); });
+              ui.slots.forEach(s2=>s2.classList.remove("tapme"));
+              b2.style.transition="left .3s,top .3s";
+              st.locked=false;
+              if(st.wrongs>=2||fails.n>=2){ const right=ui.bundles.find(x=>+x.dataset.bundle===q.ans); if(right) tryBundle(right,q.ans); }
+            });
+            return;
+          }
+          const s2=ui.slots[q.x+k]; ghost.push(s2);
+          s2.style.border="none"; s2.style.background="rgba(111,191,74,.45)";
+          SFX.tap(); k++; T.after(240,step);
+        };
+        step();
+        return;
+      }
+      st.done=true; q.phase="commit"; ctx.answering(false);
+      b2.style.transition="left .4s,top .4s,opacity .4s";
+      b2.style.left="50%"; b2.style.top="30%"; b2.style.opacity="0";
+      SFX.whoosh();
+      runReveal(ctx,[
+        [450,()=>{ // 逐株填槽
+          for(let k=0;k<q.ans;k++){
+            T.after(k*280,()=>{ if(!ctx.alive()) return;
+              const s2=ui.slots[q.x+k];
+              s2.style.border="none"; s2.style.background="#6fbf4a"; s2.style.boxShadow="0 0 8px #6fbf4a";
+              s2.classList.add("pop");
+              SFX.count(q.x+k+1); Speech.count(cnS(q.x+k+1),"auto-count"); });
+          } }],
+        [q.ans*280+500,()=>{ // 炉火转绿 + 出丹
+          const f2=ui.fur.querySelector("#fuFlame"); if(f2) f2.setAttribute("stroke","#7ef0a8");
+          confetti(12); SFX.right(); }],
+        [400,()=>{ ui.eq=eqBar(ui.L.top,[String(q.x),"+","□","=",String(q.N)]);
+          flyNum(ui.fur,q.ans,ui.eq); }]
+      ],{done:()=>{
+        Speech.say(cnQ(q.x)+"株加"+cnQ(q.ans)+"株，正好"+cnQ(q.N)+"株 —— 仙丹炼成！",{tag:"verify"});
+        afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.fur); });
+      }});
+    }
   }
+
+  /* ---------------- L4 七彩瀑布分流（描到分流门，集两种分法） ---------------- */
+  function buildFalls(L){
+    const mk=()=>({kind:"falls",N:rint(5,6)});
+    q=setQ(Object.assign(fresh(mk,o=>"fa"+o.N,box),{world:"hulu",act:"falls",phase:"play",got:[]}));
+    q.need=2;                       // 一局集两种无序分法
+    q.ans=q.need;
+    lvlTag(L.top,4,"七彩瀑布");
+    verbBanner(L.top,"分！");
+    const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
+    // 顶部水源：N 颗水珠
+    ui.beads=[];
+    const mkBeads=()=>{
+      ui.beads.forEach(b2=>b2.remove()); ui.beads=[];
+      for(let i=0;i<q.N;i++){
+        const b2=el("div","",field);
+        b2.style.cssText="position:absolute;left:"+(38+i*5)+"%;top:10%;width:4.5%;aspect-ratio:1;border-radius:50%;z-index:6;"+
+          "background:radial-gradient(circle at 36% 30%,#bfe9ff,#3fa9f5 75%);box-shadow:0 3px 6px rgba(0,0,0,.3);transform:translate(-50%,-50%)";
+        ui.beads.push(b2);
+      }
+    };
+    mkBeads();
+    const lab=el("div","chip",field); lab.style.left="50%"; lab.style.right="auto"; lab.style.top="2.5%"; lab.style.transform="translateX(-50%)";
+    lab.textContent="一共 "; el("b","",lab).textContent=String(q.N);
+    // 分流门：N−1 个把手（1..N−1 = 左股数量）
+    ui.gates=[];
+    for(let a2=1;a2<q.N;a2++){
+      const g=el("button","",field); g.dataset.gate=String(a2);
+      g.style.cssText="position:absolute;left:"+(24+(a2-1)*(52/(q.N-2||1)))+"%;top:44%;transform:translate(-50%,-50%);width:11%;aspect-ratio:1;"+
+        "border-radius:50%;border:5px solid #ffd75e;background:rgba(255,215,94,.2);z-index:7;"+
+        "display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;"+
+        "font-size:clamp(15px,3vmin,30px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
+      g.textContent=a2+"|"+(q.N-a2);
+      onTap(g,()=>split(a2,g));
+      ui.gates.push(g);
+    }
+    // 两个彩虹潭
+    const mkPool=(x)=>{
+      const p2=el("div","",field);
+      p2.style.cssText="position:absolute;left:"+x+"%;bottom:6%;width:26%;height:12%;border-radius:50%;z-index:5;"+
+        "background:radial-gradient(ellipse,#7fd4ff88,#3fa9f544);box-shadow:inset 0 4px 10px rgba(0,0,0,.25)";
+      const t2=el("b","",p2);
+      t2.style.cssText="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-weight:900;color:#fff;"+
+        "font-size:clamp(18px,4vmin,40px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
+      t2.textContent="";
+      return {el:p2,t:t2};
+    };
+    ui.poolL=mkPool(12); ui.poolR=mkPool(62);
+    // 收集架
+    const rack=el("div","",field);
+    rack.style.cssText="position:absolute;right:2%;top:8%;z-index:9;background:rgba(255,255,255,.94);border-radius:12px;"+
+      "padding:1.6% 2%;box-shadow:0 5px 14px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:6px;"+
+      "font-weight:900;color:#2a1f4d;font-size:clamp(14px,2.8vmin,26px)";
+    rack.innerHTML='<span style="font-size:.75em;opacity:.7">找两种分法</span>';
+    ui.rack=rack; ui.rackRows=[];
+    for(let i=0;i<q.need;i++){
+      const r2=el("div","",rack);
+      r2.style.cssText="min-width:5em;padding:.1em .4em;border-radius:8px;border:3px dashed #cdc6ea;text-align:center";
+      r2.textContent="？+？";
+      ui.rackRows.push(r2);
+    }
+    ctx.ask("把"+cnQ(q.N)+"颗水珠分成两股彩虹瀑布！点一个分水门 —— 找出两种不一样的分法！",field);
+    ctx.answering(true);
+    function split(a2,g){
+      if(busyState(st)||q.phase!=="play") return;
+      const key=Math.min(a2,q.N-a2)+"+"+Math.max(a2,q.N-a2);
+      if(q.got.includes(key)){
+        SFX.soft();
+        const row=ui.rackRows[q.got.indexOf(key)];
+        row.classList.add("shake"); T.after(500,()=>row.classList.remove("shake"));
+        Speech.say("这个分法已经找到啦 —— 换一个门试试！",{tag:"remedy",interrupt:true});
+        return;
+      }
+      q.phase="anim";
+      st.locked=true; const my=st;
+      // 水珠分两股滑落
+      ui.beads.forEach((b2,i)=>{
+        const goL=i<a2;
+        b2.style.transition="left .7s cubic-bezier(.4,.2,.5,1),top .7s cubic-bezier(.4,.2,.5,1)";
+        T.after(i*90,()=>{ if(!ctx.alive()) return;
+          b2.style.left=(goL?(16+ (i%3)*6):(66+((i-a2)%3)*6))+"%";
+          b2.style.top="86%"; });
+      });
+      SFX.whoosh();
+      T.after(q.N*90+750,()=>{
+        if(!ctx.alive()||st!==my) return;
+        ui.poolL.t.textContent=String(a2); ui.poolR.t.textContent=String(q.N-a2);
+        SFX.count(a2);
+        const row=ui.rackRows[q.got.length];
+        row.textContent=key.replace('+',' + ');
+        row.style.border="3px solid #37d67a"; row.style.background="rgba(55,214,122,.15)";
+        q.got.push(key); q.draft=q.got.length;
+        Speech.say(cnQ(a2)+"和"+cnQ(q.N-a2)+"，合起来还是"+cnQ(q.N)+"！",{tag:"g:hulu"});
+        if(q.got.length>=q.need){ T.after(600,commit); return; }
+        // 复位再来
+        T.after(900,()=>{
+          if(!ctx.alive()||st!==my) return;
+          mkBeads(); ui.poolL.t.textContent=""; ui.poolR.t.textContent="";
+          st.locked=false; q.phase="play";
+          Speech.say("再找一种不一样的分法！",{tag:"instruct"});
+        });
+      });
+    }
+    function commit(){
+      if(st.done) return;
+      st.done=true; record(ctx,st,true); ctx.answering(false);
+      SFX.right();
+      runReveal(ctx,[
+        [300,()=>{ // 彩虹升起相接
+          const arc=el("div","",ui.field);
+          arc.style.cssText="position:absolute;left:50%;bottom:10%;transform:translateX(-50%);width:60%;aspect-ratio:2.1;z-index:8;"+
+            "border-radius:50% 50% 0 0/100% 100% 0 0;border:10px solid transparent;border-bottom:none;"+
+            "border-image:linear-gradient(90deg,#e2453f,#ffd75e,#6fbf4a,#3fa9f5,#b47ce8) 1;opacity:0;transition:opacity .6s";
+          requestAnimationFrame(()=>requestAnimationFrame(()=>{ arc.style.opacity="1"; }));
+          confetti(16); SFX.star(); }],
+        [700,()=>{ ui.eq=eqBar(ui.L.top,[String(q.N),"=",q.got[0],"=",q.got[1]]);
+          SFX.right(); }]
+      ],{done:()=>{
+        Speech.say("两种分法都找到啦："+q.got[0].replace('+','加')+"，"+q.got[1].replace('+','加')+" —— 怎么分，合起来都是"+cnQ(q.N)+"！",{tag:"verify"});
+        afterSay(T,1100,()=>{ if(ctx.alive()) ctx.win(ui.field); });
+      }});
+    }
+  }
+
   return {
     start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
     repeat:()=>{ if(!q) return "";
-      if(q.kind==="ordL") return "从左边数第"+cnS(q.t)+"个葫芦，点一点它。";
-      if(q.kind==="ordR") return "从右边数第"+cnS(q.t)+"个葫芦，点一点它。";
-      if(q.kind==="miss") return "一共要"+cnQ(q.N)+"个，已经有"+cnQ(q.a)+"个，右边还要几个？";
-      return cnQ(q.N)+"分成"+cnQ(q.x)+"和几？"; },
-    destroy:()=>{ ui=null; q=null; st=null; }
+      if(q.kind==="vine") return "从左边数，点第"+cnS(q.t)+"个葫芦！";
+      if(q.kind==="lift") return "上下滑吊篮，到从上数第"+cnS(q.t)+"层敲门！";
+      if(q.kind==="furnace") return "炉子还差几株？把刚好的那捆拖进去！";
+      return "点分水门，把水珠分成两股，找两种分法！"; },
+    destroy:()=>{ Link.clear(); ui=null; q=null; st=null; }
   };
 };
 
