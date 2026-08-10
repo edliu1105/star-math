@@ -213,6 +213,39 @@ canvas{display:block}
 .eqbar b.hole{color:#ffd75e;background:rgba(255,255,255,.13);border-radius:10px;padding:0 .16em;
   border:3px dashed rgba(255,215,94,.85)}
 .eqbar b.hole.filled{border-style:solid;background:rgba(255,215,94,.25)}
+/* 十格阵 */
+.tfwrap{position:absolute;z-index:9;display:flex;gap:2%;pointer-events:none}
+.tf{flex:1 1 0;display:grid;grid-template-columns:repeat(5,1fr);gap:5%;padding:5%;
+  background:rgba(255,255,255,.94);border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.tf i{display:block;width:100%;aspect-ratio:1;border-radius:50%;border:2px solid #cdc6ea;transition:background .25s}
+.tf i.f{background:#e2453f;border-color:#b02f2a}
+.tf i.g{background:#3fa9f5;border-color:#2277c8}
+.tf i.x{background:#c9c2e8;border-color:#9a91c9;opacity:.55}
+/* 分合图 */
+.pw{position:absolute;width:24%;aspect-ratio:100/74;z-index:9;pointer-events:none}
+.pw svg{position:absolute;inset:0;width:100%;height:100%}
+.pw line{stroke:#fff;stroke-width:3;opacity:.9}
+.pw b{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:50%;
+  background:#fff;color:#2a1f4d;font-weight:900;width:34%;aspect-ratio:1;
+  font-size:clamp(15px,3.2vmin,32px);box-shadow:0 3px 10px rgba(0,0,0,.35)}
+.pw .pwN{left:33%;top:0;background:#ffd75e}
+.pw .pwA{left:6%;bottom:0}
+.pw .pwB{right:6%;bottom:0}
+.pw b.go{background:#8be28b}
+/* 条形对比 */
+.bars{position:absolute;left:15%;right:5%;bottom:1.5%;z-index:9;display:flex;flex-direction:column;
+  gap:clamp(2px,.6vmin,6px);pointer-events:none}
+.bars .barrow{display:flex;align-items:center;gap:clamp(4px,1vmin,10px)}
+.bars span{width:3.2em;text-align:right;font-weight:900;color:#fff;font-size:clamp(10px,1.9vmin,17px);
+  text-shadow:0 2px 0 rgba(0,0,0,.5)}
+.bars .btrack{position:relative;flex:1;height:clamp(10px,2vmin,20px);border-radius:99px;background:rgba(0,0,0,.35)}
+.bars .bar{position:absolute;left:0;top:0;bottom:0;border-radius:99px;transition:width .3s}
+.bars .bar.ba{background:#3fa9f5}
+.bars .bar.bb{background:#ff8a3d}
+.bars .bdiff{position:absolute;top:-18%;bottom:-18%;width:0;border-radius:8px;
+  border:3px dashed #ffd75e;opacity:0;transition:opacity .3s}
+.bars.showdiff .bdiff{opacity:1;animation:tapme 1.1s ease-in-out infinite}
+.bars b{width:1.6em;font-weight:900;color:#fff;font-size:clamp(12px,2.2vmin,20px);text-shadow:0 2px 0 rgba(0,0,0,.5)}
 .card .dot{position:absolute;width:20%;height:20%;border-radius:50%;background:#e2453f;
   box-shadow:inset 0 -3px 0 rgba(0,0,0,.16);transform:translate(-50%,-50%)}
 .card .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -429,7 +462,7 @@ canvas{display:block}
   <span class="txt">听不到声音？点我再说一遍</span>
 </button>
 <div id="parentDot">⚙️</div>
-<div id="gearTip">家长入口：长按 3 秒</div>
+<div id="gearTip">家长入口</div>
 
 <div id="gateAdult">
   <div id="gaQ">7 + 6 = ?</div>
@@ -492,7 +525,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "3.0.0";
+const VERSION = "3.1.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -1146,7 +1179,21 @@ const Link=(()=>{
     g.lineTo(rb.left+rb.width/2-s.left, rb.top+rb.height/2-s.top);
     g.stroke(); g.restore();
   }
-  return { fit, clear, line };
+  /** 跳跃弧线（数轴上的"一跳"）：从 a 跳到 b，弧顶朝上 */
+  function arc(a,b,color){
+    if(!g) fit(); if(!g||!a||!b) return;
+    const s=$("#scene").getBoundingClientRect();
+    const ra=a.getBoundingClientRect(), rb=b.getBoundingClientRect();
+    const x1=ra.left+ra.width/2-s.left, y1=ra.top+ra.height/2-s.top;
+    const x2=rb.left+rb.width/2-s.left, y2=rb.top+rb.height/2-s.top;
+    const lift=Math.max(24,Math.abs(x2-x1)*.55);
+    g.save(); g.strokeStyle=color||"#ffd75e"; g.lineWidth=5; g.lineCap="round";
+    g.shadowColor="rgba(0,0,0,.5)"; g.shadowBlur=5;
+    g.beginPath(); g.moveTo(x1,y1-10);
+    g.quadraticCurveTo((x1+x2)/2,Math.min(y1,y2)-lift,x2,y2-10);
+    g.stroke(); g.restore();
+  }
+  return { fit, clear, line, arc };
 })();
 
 /* ========================= 素材预载 ========================= */
@@ -1297,12 +1344,63 @@ function autoCount(ctx,objs,i,step,done){
 /* 0~20 中文数词：cnS 计数/序数用（"二"），cnQ 量词用（"两"） */
 function cnS(n){ n=clamp(n,0,20); return n<=10?CN_SEQ[n]:(n<20?("十"+CN_SEQ[n-10]):"二十"); }
 function cnQ(n){ n=clamp(n,0,20); return n<=10?CN_QTY[n]:(n<20?("十"+CN_SEQ[n-10]):"二十"); }
-/** 算式条：parts 里的 "□" 是空位；返回 {setHole} 用来把空位填上答案 */
-function eqBar(host,parts){
+/** 算式条：parts 里的 "□" 是空位；返回 {setHole}。topPct 可指定第二条算式的位置 */
+function eqBar(host,parts,topPct){
   const bar=el("div","eqbar",host);
+  if(topPct!=null) bar.style.top=topPct+"%";
   let hole=null;
   parts.forEach(p=>{ const b=el("b",p==="□"?"hole":"",bar); b.textContent=p; if(p==="□"&&!hole) hole=b; });
   return { bar, setHole(t){ if(hole){ hole.textContent=String(t); hole.classList.add("filled"); } } };
+}
+/** 十格阵：cap=10 一个框 / cap=20 两个框。mark(i,cls)：f 红 g 蓝 x 划掉 */
+function tenFrame(host,cap,style){
+  const wrap=el("div","tfwrap",host);
+  if(style) wrap.style.cssText+=style;
+  const frames=cap>10?2:1, cells=[];
+  for(let f=0;f<frames;f++){
+    const tf=el("div","tf",wrap);
+    for(let i=0;i<10;i++) cells.push(el("i","",tf));
+  }
+  return {
+    wrap, cells,
+    mark(i,cls){ if(cells[i]) cells[i].className=cls||"f"; },
+    setAll(n,cls){ cells.forEach((c,i)=>c.className=i<n?(cls||"f"):""); }
+  };
+}
+/** 分合图（部分-整体）：整体在上，两个部分在下 */
+function partWhole(host,style){
+  const w=el("div","pw",host);
+  if(style) w.style.cssText+=style;
+  w.innerHTML='<svg viewBox="0 0 100 74" preserveAspectRatio="none">'+
+    '<line x1="50" y1="20" x2="26" y2="54"/><line x1="50" y1="20" x2="74" y2="54"/></svg>'+
+    '<b class="pwN"></b><b class="pwA"></b><b class="pwB"></b>';
+  const N=w.querySelector(".pwN"),A2=w.querySelector(".pwA"),B2=w.querySelector(".pwB");
+  return { el:w,
+    setN:v=>{N.textContent=String(v);},
+    setA:v=>{A2.textContent=String(v);},
+    setB:(v,go)=>{B2.textContent=String(v); if(go!==false) B2.classList.add("go");} };
+}
+/** 条形对比（bar model）：两条按数量成比例的条，差值段高亮 */
+function barModel(host,maxN,nameA,nameB){
+  const w=el("div","bars",host);
+  const mk=(cls)=>{ const r=el("div","barrow",w);
+    const lb=el("span","",r); lb.textContent=cls==="ba"?nameA:nameB;
+    const tr=el("div","btrack",r);
+    const bar=el("div","bar "+cls,tr);
+    const df=el("div","bdiff",tr);
+    const t=el("b","",r);
+    return {bar,df,t}; };
+  const A2=mk("ba"), B2=mk("bb");
+  function set(a,b){
+    A2.bar.style.width=(a/maxN*100)+"%"; A2.t.textContent=a||"";
+    B2.bar.style.width=(b/maxN*100)+"%"; B2.t.textContent=b||"";
+    const lo=Math.min(a,b), hi=Math.max(a,b);
+    const big=a>=b?A2:B2, small=a>=b?B2:A2;
+    small.df.style.width="0";
+    big.df.style.left=(lo/maxN*100)+"%";
+    big.df.style.width=((hi-lo)/maxN*100)+"%";
+  }
+  return { el:w, set, flashDiff(){ w.classList.add("showdiff"); } };
 }
 /** 通用四选一数字卡答题。
     o={ans,lo,hi,onRight(card),rightSay,revealSay,remedy()} ；remedy 缺省=直接揭示 */
@@ -1447,14 +1545,34 @@ GAMES.peppa=ctx=>{
     if(q.kind==="sub")   return cnQ(q.n)+"减"+cnQ(q.k)+"，剩下"+cnQ(q.ans)+"个！";
     return cnQ(q.a)+"和"+cnQ(q.ans)+"合起来正好"+cnQ(q.n)+"！";
   }
-  /** 确认性重现：把全部泥点亮出来数一遍（miss/sub 把藏的补回来对照） */
+  /** 确认性重现：数一遍，同一个数同时出现在 实物、十格阵/分合图、算式 三个地方 */
   function verify(from){
     const my=st;
+    if(q.kind==="miss"){
+      const pw=partWhole(ui.L.top,"right:2%;top:12%");
+      pw.setN(q.n); pw.setA(q.a); pw.setB(q.ans);
+      ui.blobs.forEach(b=>{ b.style.opacity="1"; b.style.transform=""; });
+      autoCount(ctx,ui.blobs,0,360,()=>{ if(ctx.alive()&&st===my) ctx.win(from); });
+      return;
+    }
+    const tf=tenFrame(ui.L.top,10,"right:2%;top:12%;width:22%");
+    if(q.kind==="sub"){
+      tf.setAll(q.n,"f");                     // 满 n 格 → 划掉 k 格 → 数剩下的
+      ui.blobs.forEach((b,i)=>{ if(i<q.ans){ b.style.opacity="1"; b.style.transform=""; } });
+      let k=0;
+      const cross=()=>{
+        if(!ctx.alive()||st!==my) return;
+        if(k<q.k){ tf.mark(q.n-1-k,"x"); SFX.tap(); k++; T.after(340,cross); return; }
+        autoCount(ctx,ui.blobs.slice(0,q.ans),0,360,()=>{ if(ctx.alive()&&st===my) ctx.win(from); });
+      };
+      T.after(400,cross);
+      return;
+    }
+    // flash / add：逐个点数，同步点亮十格阵（加法的第二部分用蓝色 —— 看见 7 = 5+2 的结构）
     ui.blobs.forEach(b=>{ b.style.opacity="1"; b.style.transform=""; });
-    if(!ui.blobs.length){ ui.blobs=splash(q.ans); }
-    autoCount(ctx,ui.blobs.slice(0,Math.min(ui.blobs.length,q.kind==="sub"?q.ans:ui.blobs.length)),0,380,()=>{
-      if(ctx.alive()&&st===my) ctx.win(from);
-    });
+    if(!ui.blobs.length) ui.blobs=splash(q.ans);
+    ui.blobs.forEach((b,i)=>{ T.after(i*360+80,()=>{ if(ctx.alive()&&st===my) tf.mark(i,(q.kind==="add"&&i>=q.a)?"g":"f"); }); });
+    autoCount(ctx,ui.blobs,0,360,()=>{ if(ctx.alive()&&st===my) ctx.win(from); });
   }
   return {
     start:()=>{ fails.n=0; build(false); }, next:()=>{ fails.n=0; build(false); },
@@ -1640,6 +1758,8 @@ GAMES.paw=ctx=>{
       }
     }
     ui.eq=eqBar(L.top,[String(d),"只狗","×","2","=","□"]);
+    const parts=[]; for(let i=0;i<d;i++){ parts.push("2"); if(i<d-1) parts.push("+"); } parts.push("=","□");
+    ui.eq2=eqBar(L.top,parts,12);           // 倍数 = 连加：两条算式同时看
     ctx.ask("每只狗狗救两只小海龟！"+cnQ(d)+"只狗狗一共救几只海龟？两个两个数！",field);
     const my=st;
     T.after(2400,()=>{
@@ -1649,7 +1769,7 @@ GAMES.paw=ctx=>{
         rightSay:"对啦！两个两个数："+Array.from({length:d},(x,i)=>cnS((i+1)*2)).join("、")+"！",
         revealSay:"两个两个数："+Array.from({length:d},(x,i)=>cnS((i+1)*2)).join("、")+"，是"+cnQ(q.ans)+"只。",
         retry:()=>build(true),
-        onRight:card=>{ ui.eq.setHole(q.ans);
+        onRight:card=>{ ui.eq.setHole(q.ans); ui.eq2.setHole(q.ans);
           let i=0; const step=()=>{
             if(!ctx.alive()) return;
             if(i>=d){ ctx.win(card); return; }
@@ -1710,6 +1830,7 @@ GAMES.bluey=ctx=>{
   function buildDiff(L,item){
     q.act="card";
     rows(L,q.a,q.b,item);
+    ui.bm=barModel(L.top,10,"Bluey","Bingo"); ui.bm.set(q.a,q.b);   // 条形图：长度即数量
     const moreName=q.a>q.b?"Bluey":"Bingo";
     ctx.ask("上面一排是 Bluey 的，下面一排是 Bingo 的。"+moreName+"的多 —— 多几个呢？",ui.rowA);
     const my=st;
@@ -1728,7 +1849,8 @@ GAMES.bluey=ctx=>{
             if(i>=n){
               const extra=(q.a>q.b?ui.A.slice(n):ui.B.slice(n));
               extra.forEach(x=>x.classList.add("tapme"));
-              Speech.say("配对以后，多出来的就是这"+cnQ(q.ans)+"个！",{tag:"verify"});
+              ui.bm.flashDiff();            // 条形图上把"差"那一段圈出来
+              Speech.say("配对以后，多出来的就是这"+cnQ(q.ans)+"个！条上多出来的那段也是"+cnQ(q.ans)+"！",{tag:"verify"});
               T.after(1900,()=>{ if(ctx.alive()){ Link.clear(); ctx.win(card); } });
               return;
             }
@@ -1742,6 +1864,7 @@ GAMES.bluey=ctx=>{
   function buildMake(L,item){
     q.act="basket";
     rows(L,q.a,q.b,item);
+    ui.bm=barModel(L.top,10,"Bluey","Bingo"); ui.bm.set(q.a,q.b);   // 条形图跟着实时长
     const basket=el("button","",L.bot);
     basket.dataset.basket="1";
     basket.style.cssText="width:clamp(64px,11vmin,120px);height:clamp(64px,11vmin,120px);position:relative";
@@ -1752,7 +1875,7 @@ GAMES.bluey=ctx=>{
       added++;
       const o=el("div","cobj pop",ui.rowB);
       img(ui.item,"",o); el("div","tag",o);
-      ui.B.push(o); relayout();
+      ui.B.push(o); relayout(); ui.bm.set(q.a,ui.B.length);
       SFX.count(q.b+added); Speech.count(cnS(q.b+added),"child-count");
       okBtn.disabled=false;
     });
@@ -1777,7 +1900,7 @@ GAMES.bluey=ctx=>{
           st.done=true; st.locked=true; const my=st;
           const step=()=>{
             if(!ctx.alive()||st!==my) return;
-            if(ui.B.length<q.a){ const o=el("div","cobj pop",ui.rowB); img(ui.item,"",o); el("div","tag",o); ui.B.push(o); relayout(); SFX.count(ui.B.length); Speech.count(cnS(ui.B.length),"auto-count"); T.after(600,step); return; }
+            if(ui.B.length<q.a){ const o=el("div","cobj pop",ui.rowB); img(ui.item,"",o); el("div","tag",o); ui.B.push(o); relayout(); ui.bm.set(q.a,ui.B.length); SFX.count(ui.B.length); Speech.count(cnS(ui.B.length),"auto-count"); T.after(600,step); return; }
             Speech.say("现在两边都是"+cnQ(q.a)+"个，公平啦！",{tag:"reveal"});
             T.after(1600,()=>{ if(ctx.alive()) ctx.win(basket); });
           };
@@ -2018,6 +2141,8 @@ GAMES.hulu=ctx=>{
       if(ok){
         st.done=true; okBtn.disabled=true; ctx.answering(false);
         ui.eq.setHole(q.ans);
+        const pw=partWhole(ui.L.top,"right:2%;top:11%");
+        pw.setN(q.N); pw.setA(q.a); pw.setB(q.ans);
         Speech.say(cnQ(q.a)+"加"+cnQ(q.ans)+"，正好"+cnQ(q.N)+"个，出发！",{tag:"right"});
         SFX.right();
         T.after(1900,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
@@ -2036,6 +2161,8 @@ GAMES.hulu=ctx=>{
               T.after(600,step); return;
             }
             ui.eq.setHole(q.ans);
+            const pw=partWhole(ui.L.top,"right:2%;top:11%");
+            pw.setN(q.N); pw.setA(q.a); pw.setB(q.ans);
             Speech.say("还差的就是"+cnQ(q.ans)+"个："+cnQ(q.a)+"加"+cnQ(q.ans)+"等于"+cnQ(q.N)+"。",{tag:"reveal"});
             T.after(2000,()=>{ if(ctx.alive()) ctx.win(ui.zr); });
           };
@@ -2074,6 +2201,8 @@ GAMES.hulu=ctx=>{
         retry:()=>build(true,"bond"),
         onRight:card=>{
           ui.eq.setHole(q.ans);
+          const pw=partWhole(ui.L.top,"right:2%;top:11%");
+          pw.setN(q.N); pw.setA(q.x); pw.setB(q.ans);
           st.locked=true; const my2=st;
           ui.gs.forEach((o,i)=>{
             o.style.transition="left .5s,top .5s";
@@ -2215,7 +2344,9 @@ GAMES.aveng=ctx=>{
       onRight:card=>{
         ui.eq.setHole(q.ans);
         if(q.kind==="missA"){
-          // 传送门把缺的英雄送进来验证
+          // 分合图 + 传送门把缺的英雄送进来验证
+          const pw=partWhole(ui.L.top,"left:2%;top:11%");
+          pw.setN(q.n); pw.setA(q.a); pw.setB(q.ans);
           st.locked=true; const my=st;
           const names=shuffle(HEROES).slice(3);
           const pos=rowPos(q.n).slice(q.a);
@@ -2231,13 +2362,28 @@ GAMES.aveng=ctx=>{
             i++; T.after(560,step);
           }; T.after(500,step);
         }else if(q.kind==="teen"){
+          // 20 格双阵：左边一整框"10"，右边零头 —— 十几 = 一个十加几个一
+          const tf=tenFrame(ui.L.top,20,"left:2%;top:12%;width:42%");
+          tf.setAll(10,"f");
           st.locked=true; const my=st;
           Speech.say("十个再数"+cnQ(q.b)+"个："+Array.from({length:q.b},(x,i)=>cnS(10+i+1)).join("、")+"！",{tag:"verify"});
           ui.A.forEach((o,i)=>{ T.after(400+i*430,()=>{ if(!ctx.alive()||st!==my) return;
-            o.classList.add("counted","hit"); setTag(o.querySelector(".tag"),10+i+1); SFX.count(10+i+1); }); });
+            o.classList.add("counted","hit"); setTag(o.querySelector(".tag"),10+i+1);
+            tf.mark(10+i,"g"); SFX.count(10+i+1); }); });
           T.after(700+q.b*430+900,()=>{ if(ctx.alive()&&st===my) ctx.win(card); });
+        }else if(q.kind==="sub"){
+          // 十格阵：满 n 格，划掉 k 格，剩下的就是答案
+          const tf=tenFrame(ui.L.top,10,"left:2%;top:14%;width:22%");
+          tf.setAll(q.n,"f");
+          st.locked=true; const my=st;
+          for(let i2=0;i2<q.k;i2++) T.after(400+i2*340,()=>{ if(ctx.alive()&&st===my){ tf.mark(q.n-1-i2,"x"); SFX.tap(); } });
+          T.after(500+q.k*340,()=>{ if(!ctx.alive()||st!==my) return;
+            autoCount(ctx,ui.A.slice(0,q.ans),0,360,()=>{ if(ctx.alive()) ctx.win(card); }); });
         }else{
-          const objs=(q.kind==="sub")?ui.A.slice(0,q.ans):ui.A.concat(ui.B||[]);
+          // 加法：十格阵红蓝两段 —— 看见 a+b 在"十"里的位置
+          const tf=tenFrame(ui.L.top,10,"left:2%;top:14%;width:22%");
+          const objs=ui.A.concat(ui.B||[]);
+          objs.forEach((o,i)=>{ T.after(i*360+80,()=>{ if(ctx.alive()) tf.mark(i,i<q.a?"f":"g"); }); });
           autoCount(ctx,objs,0,360,()=>{ if(ctx.alive()) ctx.win(card); });
         }
       }
@@ -2276,7 +2422,7 @@ GAMES.monkey=ctx=>{
     return {kind:"over10",pre,need,target:pre+need,ans:need};
   }
   function build(retry,forceKind){
-    st=bindState(newState(retry)); posWrong=0;
+    st=bindState(newState(retry)); posWrong=0; Link.clear();
     q=setQ(Object.assign(fresh(spec,o=>o.kind+":"+(o.pre||0)+","+(o.target),box),{world:"monkey"}));
     if(forceKind) q.kind=forceKind;
     const L=layout(ctx.root); ui={L,len:0};
@@ -2302,6 +2448,9 @@ GAMES.monkey=ctx=>{
     tip.style.cssText="position:absolute;top:56%;height:clamp(18px,3.2vmin,32px);width:clamp(12px,2.2vmin,22px);"+
       "background:url("+A.pr("gubang_tip")+") no-repeat center/contain;transition:left .3s cubic-bezier(.3,1.3,.5,1);z-index:6;opacity:0";
     ui.staff=staff; ui.tip=tip; ui.x0=X0; ui.cw=XW/CELLS;
+    const anchor=el("div","",field);   // 数轴 0 点：跳跃弧线的起点
+    anchor.style.cssText="position:absolute;left:"+X0+"%;top:66%;width:2px;height:2px;pointer-events:none";
+    ui.anchor=anchor;
     const wk=el("div","",field);
     wk.style.cssText="position:absolute;left:0;bottom:4%;height:30%;max-width:12%;z-index:7;pointer-events:none;display:flex;align-items:flex-end;justify-content:center";
     img(A.ch("wukong"),"",wk).style.cssText="width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))";
@@ -2321,7 +2470,9 @@ GAMES.monkey=ctx=>{
       const jump=bigBtn(L.bot,"跳两格！","",()=>{
         if(busyState(st)||st.asking) return;
         if(ui.len+2>CELLS) return;
+        const from=ui.len>0?ui.stones[ui.len-1]:ui.anchor;
         ui.len=Math.min(CELLS,ui.len+2); render();   // 一跳两格，只报双数
+        Link.arc(from,ui.stones[ui.len-1],"#ffd75e");  // 一道弧 = 一跳（跨两格）
         SFX.count(ui.len); numPop(ui.stones[ui.len-1],ui.len);
         Speech.count(cnS(ui.len),"child-count");
         ui.jumpN=(ui.jumpN||0)+1;
@@ -2377,7 +2528,14 @@ GAMES.monkey=ctx=>{
         st.locked=true; const my=st;
         const step=()=>{
           if(!ctx.alive()||st!==my) return;
-          if(ui.len>=q.target){ Speech.say("变！正好"+cnQ(q.target)+"格！",{tag:"verify"}); T.after(1100,cross); return; }
+          if(ui.len>=q.target){
+            // 两段同样长的大弧：翻倍 = 同样的一段再来一次
+            Link.clear();
+            Link.arc(ui.anchor,ui.stones[q.pre-1],"#ffd75e");
+            Link.arc(ui.stones[q.pre-1],ui.stones[q.target-1],"#ffd75e");
+            Speech.say("看！同样长的一段再来一次 —— 这就是两倍，正好"+cnQ(q.target)+"格！",{tag:"verify"});
+            T.after(1600,cross); return;
+          }
           grow(true); T.after(480,step);
         };
         T.after(400,step);
@@ -2386,12 +2544,14 @@ GAMES.monkey=ctx=>{
   }
   function grow(auto){
     if(ui.len>=CELLS) return;
+    const from=ui.len>0?ui.stones[ui.len-1]:ui.anchor;
     ui.len++;
     render();
+    Link.arc(from,ui.stones[ui.len-1],"rgba(255,255,255,.8)");   // 一格一小跳
     SFX.count(ui.len); numPop(ui.stones[ui.len-1],ui.len);
     Speech.count(cnS(ui.len),auto?"auto-count":"child-count");
   }
-  function shrinkTo(k){ if(k<0||k===ui.len) return; ui.len=k; render(); SFX.tap(); }
+  function shrinkTo(k){ if(k<0||k===ui.len) return; ui.len=k; render(); Link.clear(); SFX.tap(); }
   function render(){
     window.__len=ui.len;
     ui.staff.style.width=(ui.cw*ui.len)+"%";
@@ -2449,7 +2609,12 @@ GAMES.monkey=ctx=>{
         :("对啦！从"+cnS(q.pre)+"接着数"+cnQ(q.ans)+"格，正好到"+cnS(q.target)+"！")),
       revealSay:isSkip?("跳了"+cnQ(q.ans)+"次。"):("加了"+cnQ(q.ans)+"格："+cnQ(q.pre)+"加"+cnQ(q.ans)+"等于"+cnQ(q.target)+"。"),
       retry:()=>{ build(true,q.kind); },
-      onRight:()=>cross()
+      onRight:()=>{
+        // 一道金色大弧把"新加的一段"整体圈出来：pre → target
+        if(!isSkip&&q.target<=CELLS)
+          Link.arc(q.pre>0?ui.stones[q.pre-1]:ui.anchor,ui.stones[q.target-1],"#ffd75e");
+        cross();
+      }
     });
   }
   function cross(){
@@ -2470,7 +2635,7 @@ GAMES.monkey=ctx=>{
       if(q.kind==="skip2") return "按'跳两格'跳到"+cnS(q.target)+"号石墩。";
       if(q.kind==="double") return cnQ(q.pre)+"格的两倍是几格？";
       return "接着点，冲过十号，到"+cnS(q.target)+"号。"; },
-    destroy:()=>{ ui=null; q=null; st=null; }
+    destroy:()=>{ Link.clear(); ui=null; q=null; st=null; }
   };
 };
 
@@ -2771,15 +2936,18 @@ const App=(()=>{
       Speech.replay("你好呀！听得到我说话吗？",{tag:"hint-retry"});
     });
 
-    let lp=null,tipT=null; const pd=$("#parentDot");
-    pd.addEventListener("pointerdown",e=>{ e.preventDefault();
-      if(Date.now()<gaCooldownUntil) return;      // 答错后的冷却期内长按无效
-      lp=setTimeout(()=>{ lp=null; openAdultGate(); },3000); },{passive:false});
-    ["pointerup","pointercancel","pointerleave"].forEach(ev=>
-      pd.addEventListener(ev,()=>{ if(lp){clearTimeout(lp);lp=null;
-        // 按了但没按满 3 秒 → 提示怎么进
-        const t=$("#gearTip"); t.classList.add("on");
-        clearTimeout(tipT); tipT=setTimeout(()=>t.classList.remove("on"),1800); } }));
+    /* 点齿轮直接弹大人验证（两道加法题就是儿童锁）。
+       之前的"长按 3 秒"在 iPad 上会被系统长按手势 pointercancel 掉，打不开。 */
+    let tipT=null;
+    onTap($("#parentDot"),()=>{
+      if(Date.now()<gaCooldownUntil){
+        const t=$("#gearTip"); t.textContent="先休息一下，等 30 秒再试";
+        t.classList.add("on");
+        clearTimeout(tipT); tipT=setTimeout(()=>t.classList.remove("on"),1800);
+        return;
+      }
+      openAdultGate();
+    });
 
     document.addEventListener("contextmenu",e=>e.preventDefault());
     document.addEventListener("gesturestart",e=>e.preventDefault());
