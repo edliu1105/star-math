@@ -560,10 +560,10 @@ const Store=(()=>{
     for(let i=1;i<ORDER.length;i++){
       const prev=W(ORDER[i-1]), cur=W(ORDER[i]);
       if(cur.open) continue;
-      // 四个条件同时成立才解锁，全部只看"掌握"，与参与星完全无关：
-      //   难度到 L2 以上 + 累计 >=6 次无提示首答正确 + 最近 10 次正确率 >=0.6
-      //   + **两个来自不同游玩会话的掌握窗口**（单次运气好的连对不算）
-      if(prev.lv>=2 && prev.mast>=6 && prev.wins>=2 && recentRate(prev)>=0.6){
+      // 玩完过上一世界的一整节（拿满一节 ROUNDS 颗星）就解锁下一个；
+      // 或者走掌握路径（难度 L2+ 且 >=6 次无提示首答正确 且近期正确率 >=0.6）。
+      // 原来的 wins>=2 要求两次**不同应用启动**，一次坐下来永远开不了门，已去掉。
+      if(prev.stars>=ROUNDS || (prev.lv>=2 && prev.mast>=6 && recentRate(prev)>=0.6)){
         cur.open=1; changed=true;
       }
     }
@@ -664,6 +664,7 @@ const Speech=(()=>{
   const OK=!!S && typeof SpeechSynthesisUtterance==="function";
   const CANCEL_GAP=160;      // 军规2
   const NO_INTERRUPT=1500;   // 军规7
+  const WAIT_MAX=4000;       // 新指令最多等正在说的话 4s，之后才允许打断
   let state="LOCKED";        // LOCKED -> READY
   let voice=null,tries=0;
   let lastReqAt=0,lastCancelAt=0;
@@ -767,8 +768,25 @@ const Speech=(()=>{
     cntLatest=null;                                    // 指令优先级高于计数补播
     const item={id,text,opt,done:false,ep:epoch}; pendItem=item;
     if(engineBusy()){                     // 必须"原生状态 或 本地标记"取或，否则本地 active 形同虚设
-      try{ S.cancel(); }catch(e){} lastCancelAt=Date.now();
-      pendTimer=setTimeout(()=>fire(item),CANCEL_GAP);
+      /* 不再立刻掐掉正在说的话（刚开口就被下一步打断很难受）：
+         等引擎空闲再播这条最新的；等待有上限，超时才强制打断，流程不会被卡死的引擎拖住。 */
+      const waitStart=Date.now();
+      const poll=()=>{
+        pendTimer=null;
+        if(item.done||item.ep!==epoch) return;
+        if(!engineBusy()){
+          const gap=Date.now()-lastCancelAt;
+          if(gap<CANCEL_GAP){ pendTimer=setTimeout(poll,CANCEL_GAP-gap); return; }
+          fire(item); return;
+        }
+        if(Date.now()-waitStart>=WAIT_MAX){
+          try{ S.cancel(); }catch(e){} lastCancelAt=Date.now();
+          pendTimer=setTimeout(()=>fire(item),CANCEL_GAP);
+          return;
+        }
+        pendTimer=setTimeout(poll,120);
+      };
+      pendTimer=setTimeout(poll,120);
     }else{
       const gap=Date.now()-lastCancelAt;
       if(gap<CANCEL_GAP) pendTimer=setTimeout(()=>fire(item),CANCEL_GAP-gap);
