@@ -705,7 +705,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "6.7.0";
+const VERSION = "6.8.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -1420,7 +1420,7 @@ const Assets=(()=>{
   return { load, worldList };
 })();
 const WORLD_PROPS={
-  peppa:["mudblob"], paw:["turtle"], bluey:["cookie","icecream","basket"],
+  peppa:["mudblob","gen/trampoline","gen/cake","gen/candleflame","gen/toybox_open","gen/toybox_closed","gen/magichat","gen/toy_ball","gen/toy_car","gen/toy_blocks"], paw:["turtle","gen/gondola","gen/radar","gen/launcher","gen/lifering","gen/treatmachine","gen/crankwheel","gen/fishtreat"], bluey:["cookie","icecream","basket"],
   hulu:GOURDS.slice(), aveng:["goon","portal","quinjet"],
   monkey:["gubang_seg","gubang_tip","stone"]
 };
@@ -1858,9 +1858,9 @@ GAMES.peppa=ctx=>{
     const mkTramp=(x,who)=>{
       const t=el("div","tramp",field);
       t.style.left=x+"%"; t.style.bottom="10%";
-      el("div","leg",t).style.left="12%";
-      el("div","leg",t).style.right="12%";
-      el("div","mat",t);
+      const m=el("div","mat",t);
+      m.style.cssText="position:absolute;inset:0;top:0;height:100%;transition:transform .16s;background:none;box-shadow:none;border-radius:0";
+      img(A.pr("gen/trampoline"),"",m).style.cssText="width:100%;height:100%;object-fit:contain;object-position:bottom";
       const j=el("div","jumper",t); img(A.ch(who),"",j);
       return {t,j};
     };
@@ -1970,8 +1970,11 @@ GAMES.peppa=ctx=>{
     // 蛋糕
     const cw=el("div","cakewrap",field);
     const cake=el("div","cake",cw); cake.style.cssText="position:absolute;inset:0";
-    el("div","t1",cake); el("div","t2",cake); el("div","drip",cake);
-    el("div","candle",cake); el("div","flame",cake);
+    img(A.pr("gen/cake"),"",cake).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom;filter:drop-shadow(0 8px 12px rgba(0,0,0,.3))";
+    const cd=el("div","",cake);
+    cd.style.cssText="position:absolute;left:50%;bottom:82%;transform:translate(-50%,0) scale(0);width:13%;aspect-ratio:165/512;transition:transform .5s cubic-bezier(.3,1.4,.5,1)";
+    img(A.pr("gen/candleflame"),"",cd).style.cssText="width:100%;height:100%;object-fit:contain";
+    cake._cd=cd;
     const cnum=el("div","cnum",cake);
     ui.cake=cake; ui.cw=cw;
     // 果盘
@@ -2037,7 +2040,7 @@ GAMES.peppa=ctx=>{
         const onCake=el("div","berrycake "+color,ui.cw);
         onCake.style.cssText="position:absolute;width:13%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);"+
           "left:"+(18+idx2*16)+"%;top:"+(color==="red"?"34%":"52%")+"%;".replace("%%","%");
-        onCake.style.top=(color==="red"?34:52)+"%";
+        onCake.style.top=(color==="red"?42:58)+"%";
         onCake.classList.add("pop");
         ui.placed[color]++;
         const row=color==="red"?ui.rowR:ui.rowB;
@@ -2080,7 +2083,7 @@ GAMES.peppa=ctx=>{
         [400,()=>{ ui.cw.style.transition="transform .5s"; ui.cw.style.transform="translate(-50%,-50%) scale(.92)"; SFX.whoosh(); }],
         [600,()=>{ ui.cw.style.transform="translate(-50%,-50%) scale(1) rotate(360deg)"; }],
         [500,()=>{ SFX.tap(); }],
-        [700,()=>{ ui.cake.classList.add("lit"); ui.cake.querySelector(".cnum").textContent=String(q.ans); SFX.star(); }],
+        [700,()=>{ ui.cake.classList.add("lit"); ui.cake._cd.style.transform="translate(-50%,0) scale(1)"; ui.cake.querySelector(".cnum").textContent=String(q.ans); SFX.star(); }],
         [500,()=>{ ui.eq=eqBar(ui.L.top,[String(q.a),"+",String(q.b),"=","□"]);
           flyNum(ui.cake.querySelector(".candle"),q.ans,ui.eq); }]
       ],{done:()=>{
@@ -2091,13 +2094,7 @@ GAMES.peppa=ctx=>{
   }
 
   /* ---------------- L3 睡前收玩具（拖） ---------------- */
-  const TOYS=["#e2453f","#3fa9f5","#6fbf4a","#ffd75e","#b47ce8"];
-  function toySVG(i){
-    const c=TOYS[i%TOYS.length];
-    if(i%3===0) return '<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="24" fill="'+c+'"/><path d="M8 30a22 22 0 0 1 44 0" fill="rgba(255,255,255,.35)"/><circle cx="30" cy="30" r="24" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="3"/></svg>';
-    if(i%3===1) return '<svg viewBox="0 0 60 60"><rect x="8" y="14" width="44" height="34" rx="7" fill="'+c+'" stroke="rgba(0,0,0,.25)" stroke-width="3"/><circle cx="20" cy="50" r="7" fill="#333"/><circle cx="42" cy="50" r="7" fill="#333"/><rect x="18" y="6" width="24" height="14" rx="5" fill="'+c+'"/></svg>';
-    return '<svg viewBox="0 0 60 60"><rect x="10" y="10" width="40" height="40" rx="6" fill="'+c+'" stroke="rgba(0,0,0,.25)" stroke-width="3"/><text x="30" y="42" text-anchor="middle" font-size="30" font-weight="900" fill="rgba(255,255,255,.85)">A</text></svg>';
-  }
+  const TOYIMGS=["gen/toy_ball","gen/toy_car","gen/toy_blocks"];
   function buildTidy(L,retry){
     const mk=()=>{ const n=rint(5,7),k=rint(2,4); return {kind:"tidy",n,k}; };
     q=setQ(Object.assign(fresh(mk,o=>"t"+o.n+","+o.k,box),{world:"peppa",act:"tidy",phase:"play"}));
@@ -2108,7 +2105,9 @@ GAMES.peppa=ctx=>{
     sideCast(L.top,"l",["mummypig"],30);
     // 玩具箱
     const tb=el("div","toybox",field);
-    el("div","body",tb); el("div","lid",tb);
+    const tbi=img(A.pr("gen/toybox_open"),"",tb);
+    tbi.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))";
+    tb._img=tbi;
     const slots=el("div","slots",tb); ui.slots=[];
     for(let i=0;i<q.k;i++) ui.slots.push(el("i","",slots));
     tb.classList.add("open");
@@ -2119,7 +2118,7 @@ GAMES.peppa=ctx=>{
     scatter(q.n,4).forEach((p,i)=>{
       const o=el("div","cobj",field);
       o.style.left=(6+p[0]*0.62)+"%"; o.style.top=(26+p[1]*0.5)+"%";
-      o.innerHTML=toySVG(i); o.firstChild.style.cssText="width:100%;height:100%";
+      img(A.pr(TOYIMGS[i%3]),"",o).style.cssText="width:100%;height:100%;object-fit:contain";
       el("div","tag",o);
       ui.toys.push(o);
       draggable(o,{
@@ -2153,7 +2152,7 @@ GAMES.peppa=ctx=>{
     function commitTidy(){
       if(st.done||q.phase!=="play") return;
       q.phase="commit"; ctx.answering(false);
-      ui.tb.classList.remove("open"); SFX.right();
+      ui.tb.classList.remove("open"); if(ui.tb._img) ui.tb._img.src=A.pr("gen/toybox_closed"); SFX.right();
       const rest=ui.toys.filter(o=>!o.dataset.in);
       runReveal(ctx,[
         [400,()=>{ // 剩下的玩具排成一行
@@ -2217,9 +2216,9 @@ GAMES.peppa=ctx=>{
     const hat=el("div","magichat",field);
     const x1=pos[q.a][0], x2=pos[q.n-1][0];
     hat.style.left=((x1+x2)/2)+"%";
-    hat.style.width=Math.min(56,(x2-x1)+16)+"%";
+    hat.style.width=Math.min(42,(x2-x1)+14)+"%";
     hat.style.top="4%"; hat.style.opacity="0";
-    el("div","cyl",hat); el("div","band",hat); el("div","brim",hat);
+    img(A.pr("gen/magichat"),"",hat).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom;filter:drop-shadow(0 8px 12px rgba(0,0,0,.4))";
     ui.hat=hat;
     // 答题板 + 印章
     const board=el("div","board",field);
@@ -2383,14 +2382,11 @@ GAMES.paw=ctx=>{
     function nextCabin(){
       if(!ctx.alive()) return;
       const cab=el("div","",ui.field);
-      cab.style.cssText="position:absolute;left:-16%;top:24%;width:14%;aspect-ratio:.92;z-index:5;transition:left .8s cubic-bezier(.3,.8,.4,1)";
-      cab.innerHTML='<svg viewBox="0 0 80 88" style="width:100%;height:100%">'+
-        '<rect x="37" y="0" width="6" height="16" fill="#5b4a35"/>'+
-        '<rect x="8" y="14" width="64" height="60" rx="12" fill="#e2453f" stroke="#9c2b26" stroke-width="4"/>'+
-        '<rect x="16" y="24" width="48" height="26" rx="8" fill="#bfe6ff"/>'+
-        '<rect x="8" y="62" width="64" height="12" rx="6" fill="#9c2b26"/></svg>';
+      cab.style.cssText="position:absolute;left:-16%;top:22%;width:13%;aspect-ratio:.79;z-index:5;transition:left .8s cubic-bezier(.3,.8,.4,1)";
+      const gimg=img(A.pr("gen/gondola"),"",cab);
+      gimg.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))";
       const seat=el("div","",cab);
-      seat.style.cssText="position:absolute;left:22%;top:22%;width:56%;height:44%;display:flex;align-items:flex-end;justify-content:center";
+      seat.style.cssText="position:absolute;left:20%;top:44%;width:60%;height:36%;display:flex;align-items:flex-end;justify-content:center;overflow:hidden";
       cab._seat=seat;
       const num=el("div","",cab);
       num.style.cssText="position:absolute;left:50%;bottom:-26%;transform:translateX(-50%);font-weight:900;color:#fff;"+
@@ -2417,11 +2413,11 @@ GAMES.paw=ctx=>{
         if(!ctx.alive()) return;
         // 真正坐进车窗：把狗的图片移进座位容器，从此跟车厢一体
         const im=o.querySelector("img");
-        if(im){ im.style.cssText="width:74%;height:auto;display:block"; cab._seat.appendChild(im); }
+        if(im){ im.style.cssText="max-height:100%;max-width:92%;width:auto;height:auto;display:block"; cab._seat.appendChild(im); }
         o.remove();
         cab._num.style.opacity="1";
         cab.style.transition="left .8s ease-in";
-        cab.style.left="72%";
+        cab.style.left=(50+(ui.boarded-1)*11.8)+"%";   // 阶梯停靠：每节车厢一个泊位，数字不重叠
         T.after(850,()=>{
           if(!ctx.alive()) return;
           if(ui.boarded>=q.n) commit();
