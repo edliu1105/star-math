@@ -705,7 +705,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "6.9.0";
+const VERSION = "7.0.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -1421,8 +1421,8 @@ const Assets=(()=>{
 })();
 const WORLD_PROPS={
   peppa:["mudblob","gen/trampoline","gen/cake","gen/candleflame","gen/toybox_open","gen/toybox_closed","gen/magichat","gen/toy_ball","gen/toy_car","gen/toy_blocks"], paw:["turtle","gen/gondola","gen/radar","gen/launcher","gen/lifering","gen/treatmachine","gen/crankwheel","gen/fishtreat"], bluey:["cookie","icecream","basket","gen/projector_blue","gen/projector_orange","gen/seesaw_plank","gen/seesaw_base","gen/pizza"],
-  hulu:GOURDS.slice().concat(["gen/furnace","gen/herbs","gen/splitgate"]), aveng:["goon","portal","quinjet","gen/cannon","gen/truck","gen/energyball"],
-  monkey:["gubang_seg","gubang_tip","stone"]
+  hulu:GOURDS.slice().concat(["gen/furnace","gen/herbs","gen/splitgate"]), aveng:["goon","portal","quinjet","gen/cannon","gen/truck","gen/tenbox","gen/singlebox"],
+  monkey:["gubang_seg","gubang_tip","stone","gen/cloud","gen/peach","gen/clonegate","gen/coralpad","gen/goldpin"]
 };
 
 /* ========================= 游戏注册表 ========================= */
@@ -4072,13 +4072,15 @@ GAMES.aveng=ctx=>{
     screenB.textContent="装了 "; ui.scr=el("b","",screenB); ui.scr.textContent="0";
     // 传送带上的十箱
     const tenbox=el("div","",field); tenbox.dataset.tenbox="1";
-    tenbox.style.cssText="position:absolute;left:14%;top:70%;transform:translate(-50%,-50%);width:17%;aspect-ratio:1.15;z-index:7;"+
-      "background:linear-gradient(#f0a949,#d4842a);border-radius:12px;box-shadow:0 6px 0 #a3611a,0 10px 14px rgba(0,0,0,.35);"+
-      "display:flex;align-items:center;justify-content:center";
+    tenbox.style.cssText="position:absolute;left:14%;top:70%;transform:translate(-50%,-50%);width:17%;aspect-ratio:512/421;z-index:7";
+    const tbImg=img(A.pr("gen/tenbox"),"",tenbox);
+    tbImg.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))";
+    tenbox._img=tbImg;
     const grid=el("div","",tenbox);
-    grid.style.cssText="display:grid;grid-template-columns:repeat(5,1fr);gap:9%;width:76%";
+    grid.style.cssText="position:absolute;left:14%;top:16%;right:14%;display:grid;grid-template-columns:repeat(5,1fr);gap:7%;opacity:0";
     for(let i=0;i<10;i++){ const d2=el("i","",grid);
-      d2.style.cssText="width:100%;aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.55);display:block"; }
+      d2.style.cssText="width:100%;aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.9);display:block;box-shadow:0 1px 3px rgba(0,0,0,.3)"; }
+    tenbox._grid=grid;
     const tb=el("b","",tenbox);
     tb.style.cssText="position:absolute;right:6%;bottom:4%;font-weight:900;color:#5a3c18;font-size:clamp(18px,4vmin,40px)";
     tb.textContent="10";
@@ -4093,10 +4095,10 @@ GAMES.aveng=ctx=>{
     ui.sBoxes=[];
     for(let i=0;i<q.b;i++){
       const s2=el("div","",field); s2.dataset.sbox="1";
-      s2.style.cssText="position:absolute;left:"+(34+i*10)+"%;top:82%;transform:translate(-50%,-50%);width:7.5%;aspect-ratio:1;z-index:7;"+
-        "background:linear-gradient(#f7d78a,#e8b25a);border-radius:8px;box-shadow:0 4px 0 #b8863a,0 6px 8px rgba(0,0,0,.3);"+
+      s2.style.cssText="position:absolute;left:"+(34+i*10)+"%;top:82%;transform:translate(-50%,-50%);width:7.5%;aspect-ratio:512/411;z-index:7;"+
         "display:flex;align-items:center;justify-content:center;font-weight:900;color:#7a5316;font-size:clamp(14px,2.8vmin,26px)";
-      s2.textContent="1";
+      img(A.pr("gen/singlebox"),"",s2).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.3))";
+      const s2t=el("b","",s2); s2t.style.cssText="position:relative;z-index:2"; s2t.textContent="1";
       s2.style.opacity=".45";
       ui.sBoxes.push(s2);
       onTap(s2,()=>{
@@ -4129,8 +4131,9 @@ GAMES.aveng=ctx=>{
       Speech.say("装满"+cnS(q.n)+"件，发车！",{tag:"right",interrupt:true});
       runReveal(ctx,[
         [300,()=>{ // 卡车开走 + 十箱透明化露出10件
-          ui.tenbox.style.background="rgba(240,169,73,.25)";
-          ui.tenbox.querySelectorAll("i").forEach(d2=>{ d2.style.background="#fff"; d2.classList.add("pop"); });
+          if(ui.tenbox._img) ui.tenbox._img.style.opacity=".3";
+          if(ui.tenbox._grid){ ui.tenbox._grid.style.opacity="1";
+            [].forEach.call(ui.tenbox._grid.children,d2=>d2.classList.add("pop")); }
           SFX.star(); }],
         [800,()=>{ ui.truck.style.transition="left 1.1s ease-in";
           ui.truck.style.left="130%";
@@ -4307,9 +4310,7 @@ GAMES.monkey=ctx=>{
     const cloud=el("div","",field); cloud.dataset.cloud="1";
     cloud.style.cssText="position:absolute;left:42%;bottom:4%;transform:translateX(-50%);width:17%;aspect-ratio:1.7;z-index:7;"+
       "transition:bottom .55s cubic-bezier(.3,1.15,.4,1);touch-action:none";
-    cloud.innerHTML='<svg viewBox="0 0 100 60" style="width:100%;height:100%">'+
-      '<ellipse cx="30" cy="42" rx="24" ry="15" fill="#fff"/><ellipse cx="58" cy="36" rx="26" ry="18" fill="#fff"/>'+
-      '<ellipse cx="80" cy="44" rx="17" ry="11" fill="#fff"/><ellipse cx="50" cy="48" rx="40" ry="10" fill="#f0ecff"/></svg>';
+    img(A.pr("gen/cloud"),"",cloud).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.3))";
     const wk=el("div","",cloud);
     wk.style.cssText="position:absolute;left:50%;top:-66%;transform:translateX(-50%);width:52%";
     img(A.ch("wukong"),"",wk).style.cssText="width:100%;height:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.4))";
@@ -4376,12 +4377,11 @@ GAMES.monkey=ctx=>{
     sideCast(L.top,"l",["wukong"],28);
     // 分身门
     const gate=el("div","",field); gate.dataset.gate2="1";
-    gate.style.cssText="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:15%;aspect-ratio:.62;z-index:6;"+
-      "border:6px solid #ffd75e;border-radius:99px 99px 12px 12px;"+
-      "background:linear-gradient(rgba(255,215,94,.25),rgba(180,124,232,.3));box-shadow:0 0 24px rgba(255,215,94,.6)";
+    gate.style.cssText="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:16%;aspect-ratio:479/512;z-index:6";
+    img(A.pr("gen/clonegate"),"",gate).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 20px rgba(255,215,94,.55))";
     ui.gate=gate;
     // 枝上的桃（SVG 桃子）
-    const peachSVG='<svg viewBox="0 0 60 60" style="width:100%;height:100%"><circle cx="24" cy="34" r="19" fill="#ff9eb0"/><circle cx="37" cy="34" r="19" fill="#ff7f9d"/><path d="M30 16 Q33 6 42 6" stroke="#3f7d2e" stroke-width="4" fill="none"/><ellipse cx="42" cy="9" rx="7" ry="4" fill="#6fbf4a"/></svg>';
+    const peachSVG='<img src="'+A.pr("gen/peach")+'" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.3))">';
     // 树枝
     const branch=el("div","",field);
     branch.style.cssText="position:absolute;left:6%;top:18%;width:34%;height:3.2%;border-radius:99px;z-index:5;"+
@@ -4473,11 +4473,13 @@ GAMES.monkey=ctx=>{
     for(let n=6;n<=12;n++){
       const x=8+(n-6)*13.5, y=64-(n%2)*8;
       const pad=el("div","",field); pad.dataset.pad=String(n);
-      pad.style.cssText="position:absolute;left:"+x+"%;top:"+y+"%;transform:translate(-50%,-50%);width:11%;aspect-ratio:1.25;z-index:5;"+
-        "border-radius:46% 46% 40% 40%/60% 60% 30% 30%;background:linear-gradient("+(n===10?"#ffd75e,#e8a94b":"#ff8fb3,#d76c92")+");"+
-        "box-shadow:0 6px 0 rgba(0,0,0,.3),0 10px 14px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center";
+      pad.style.cssText="position:absolute;left:"+x+"%;top:"+y+"%;transform:translate(-50%,-50%);width:12%;aspect-ratio:512/327;z-index:5;"+
+        "display:flex;align-items:center;justify-content:center";
+      const padImg=img(A.pr("gen/coralpad"),"",pad);
+      padImg.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(0,0,0,.35))"+
+        (n===10?";filter:sepia(1) saturate(2.6) hue-rotate(-12deg) brightness(1.15) drop-shadow(0 8px 10px rgba(0,0,0,.35))":"");
       const t2=el("b","",pad);
-      t2.style.cssText="font-weight:900;color:#fff;font-size:clamp(18px,4vmin,40px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
+      t2.style.cssText="position:relative;z-index:2;font-weight:900;color:#fff;font-size:clamp(18px,4vmin,40px);text-shadow:0 2px 4px rgba(0,0,0,.65)";
       t2.textContent=String(n);
       ui.pads[n]=pad;
     }
@@ -4488,9 +4490,9 @@ GAMES.monkey=ctx=>{
     ui.gaten=gaten;
     // 神针（终点台）
     const pin=el("div","",field);
-    pin.style.cssText="position:absolute;left:"+ui.pads[q.target].style.left+";top:"+(parseFloat(ui.pads[q.target].style.top)-16)+"%;"+
-      "transform:translate(-50%,-50%);width:2.2%;height:16%;z-index:6;border-radius:4px;"+
-      "background:linear-gradient(#ffd75e,#e8a94b);box-shadow:0 0 14px #ffd75e";
+    pin.style.cssText="position:absolute;left:"+ui.pads[q.target].style.left+";top:"+(parseFloat(ui.pads[q.target].style.top)-17)+"%;"+
+      "transform:translate(-50%,-50%);width:3.2%;height:19%;z-index:6";
+    img(A.pr("gen/goldpin"),"",pin).style.cssText="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 12px rgba(255,215,94,.8))";
     // 悟空
     const wk=el("div","",field); wk.dataset.wk="1";
     wk.style.cssText="position:absolute;left:"+ui.pads[q.start].style.left+";top:"+(parseFloat(ui.pads[q.start].style.top)-12)+"%;"+
