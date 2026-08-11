@@ -23,11 +23,13 @@ try:
                 page.click("#startBtn", force=True)
                 page.wait_for_selector("#map.on", timeout=6000)
                 for w in ("peppa", "paw", "bluey", "hulu", "aveng", "monkey"):
+                    page.evaluate("window.__spk=[]")
                     TA.enter_world(page, w)
                     got = TA.play_session(page, w, rounds=5, timeout_s=170)
                     ok = got >= 4
                     TA.check(ok, "L%d %s：5 轮至少完成 4 轮（实际 %d）" % (lv, w, got))
                     print("  [%s] L%d %s (%d/5)" % ("OK" if ok else "FAIL", lv, w, got), flush=True)
+                    TA.assert_speech(page, "L%d %s" % (lv, w))
                     if page.query_selector("#stage.on"):
                         page.click("#homeBtn", force=True)
                     page.wait_for_selector("#map.on", timeout=8000)

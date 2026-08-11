@@ -705,7 +705,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "7.1.0";
+const VERSION = "7.2.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -1024,7 +1024,7 @@ const Speech=(()=>{
   }
 
   /** 指令通道：顺序队列 —— 每句说完再说下一句，绝不掐断正在说的话。
-      积压保护：待播最多 3 条，超了丢最旧的（它的语境早已被后面的话覆盖）。 */
+      积压保护：待播最多 8 条，超了丢最旧的（正常流程永远到不了 8；用户一操作队列即清空）。 */
   function pump(){
     if(pendTimer) return;
     while(queue.length&&(queue[0].done||queue[0].ep!==epoch)) queue.shift();
@@ -1036,13 +1036,12 @@ const Speech=(()=>{
   }
   function say(text,opt){
     opt=opt||{}; if(!text) return 0;
-    if(opt.interrupt) cutSay();                        // 用户主动操作 → 旧话立刻让路
+    if(opt.interrupt){ cutSay(); cntLatest=null; }     // 用户主动操作 → 旧话和待播计数立刻让路
     const id=++serial; lastReqAt=Date.now();
     window.__speechLog.push({id,t:Math.round(performance.now()),text,tag:opt.tag||"say",ch:"say"});
     if(id===1) firstText=text;
-    cntLatest=null;                                    // 指令优先级高于计数补播
     queue.push({id,text,opt,done:false,ep:epoch});
-    while(queue.length>3){ const old=queue.shift(); old.done=true; }
+    while(queue.length>8){ const old=queue.shift(); old.done=true; }
     pump(); notify(); return id;
   }
 
@@ -2096,9 +2095,9 @@ GAMES.peppa=ctx=>{
             if(!ctx.alive()||st!==my) return;
             if(ui.placed.red<q.a){ const b2=ui.field.querySelector(".berry.red"); if(b2) send(b2,"red"); T.after(700,fill); return; }
             if(ui.placed.blue<q.b){ const b2=ui.field.querySelector(".berry.blue"); if(b2) send(b2,"blue"); T.after(700,fill); return; }
-            st.locked=false; T.after(600,commit);
+            st.locked=false; afterSay(T,600,commit);
           };
-          T.after(800,fill);
+          afterSay(T,800,fill);
         }
         return;
       }
@@ -2618,29 +2617,23 @@ GAMES.paw=ctx=>{
         // 先让孩子把装的发完，空舱咔哒 → 看见还缺
       }
       q.phase="fire"; ui.goBtn.disabled=true;
-      Speech.say("发射！拖发射器对准海龟，松手！",{tag:"instruct",interrupt:true});
-      armAim();
-    }
-    function armAim(){
-      if(ui.aimArmed) return; ui.aimArmed=1;   // 重装弹后不再重复布防，防一击多发
-      draggable(ui.launcher,{
-        enabled:()=>q.phase==="fire",
-        zones:()=>[],
-        onStart:()=>{},
-        onTap:()=>fire(),
-        onBounce:()=>fire(),
-        onDrop:()=>{ fire(); return false; }
-      });
+      // 数学在装弹那一步已经完成——发射不再考验手指：自动连发，孩子看着圈一个个飞出去数数
+      Speech.say("发射！",{tag:"instruct",interrupt:true});
+      T.after(350,fire);
     }
     function fire(){
       if(q.phase!=="fire") return;
+      // 发射器后座小动画（纯反馈，无操作）
+      try{ ui.launcher.animate(
+        [{transform:"none"},{transform:"translateY(-5%) rotate(-7deg)"},{transform:"none"}],
+        {duration:280,easing:"ease-out"}); }catch(_){}
       const target=ui.turts.find(t=>!t.dataset.saved);
       if(ui.fired>=ui.loaded){
         // 弹舱空
         if(target){ SFX.soft();
           const left=ui.turts.filter(t=>!t.dataset.saved).length;
           ui.turts.filter(t=>!t.dataset.saved).forEach(t=>t.classList.add("tapme"));
-          Speech.say("咔哒 —— 圈用完了！还有"+cnQ(left)+"只没圈到，再装"+cnQ(left)+"个！",{tag:"remedy",interrupt:true});
+          Speech.say("咔哒 —— 圈用完了！还有"+cnQ(left)+"只没圈到，再装"+cnQ(left)+"个！",{tag:"remedy"});
           T.after(1500,()=>ui.turts.forEach(t=>t.classList.remove("tapme")));
           q.phase="load"; ui.goBtn.disabled=false;
         }
@@ -2682,18 +2675,22 @@ GAMES.paw=ctx=>{
         target.style.transition="left .8s,top .8s";
         target.style.left=(54+(q.k+ui.fired-1)*6.4)+"%"; target.style.top="78%";
         if(ui.turts.every(t=>t.dataset.saved)) T.after(900,commit);
+        else T.after(360,fire);            // 自动连发下一发（弹尽时 fire 内部走"咔哒"补装流程）
       }
     }
     function commit(){
       if(st.done) return;
       st.done=true; q.phase="sealed"; ctx.answering(false);
-      Speech.say("全部救上岸啦！",{tag:"right",interrupt:true});
+      const extra=ui.loaded-ui.fired;      // 装多的圈：弹舱里剩下的
+      Speech.say(extra>0?"全部救上岸啦！咦，弹舱里还剩着圈。":"全部救上岸啦！",{tag:"right"});
       runReveal(ctx,[
         [400,()=>{ SFX.right(); confetti(12); }],
         [400,()=>{ ui.eq=eqBar(ui.L.top,[String(q.n),"−",String(q.k),"=","□"]);
           flyNum(ui.mag.parentNode?ui.launcher:ui.field,q.ans,ui.eq); }]
       ],{done:()=>{
-        Speech.say("一共"+cnQ(q.n)+"只，岸上有"+cnQ(q.k)+"只，你救了"+cnQ(q.ans)+"只 —— 装的圈刚刚好！",{tag:"verify"});
+        Speech.say(extra>0
+          ?"一共"+cnQ(q.n)+"只，岸上有"+cnQ(q.k)+"只，救"+cnQ(q.ans)+"只就够 —— 你装了"+cnQ(ui.loaded)+"个，多了"+cnQ(extra)+"个。下次数好再装，刚刚好才最厉害！"
+          :"一共"+cnQ(q.n)+"只，岸上有"+cnQ(q.k)+"只，你救了"+cnQ(q.ans)+"只 —— 装的圈刚刚好！",{tag:"verify"});
         afterSay(T,900,()=>{ if(ctx.alive()) ctx.win(ui.field); });
       }});
     }
@@ -3251,7 +3248,7 @@ GAMES.bluey=ctx=>{
           st.locked=true; const my=st;
           const heavy=l>r?"L":"R";
           const ch=ui.cherries.find(c=>c.dataset.side===heavy);
-          T.after(700,()=>{ if(ctx.alive()&&st===my){ st.locked=false; replace(ch,true); T.after(800,doCut); } });
+          afterSay(T,700,()=>{ if(ctx.alive()&&st===my){ st.locked=false; replace(ch,true); afterSay(T,800,doCut); } });
         }
         return;
       }
@@ -3494,7 +3491,7 @@ GAMES.hulu=ctx=>{
             moveTo(ui.level+(ui.level<q.ans?1:-1));
             T.after(600,step);
           };
-          T.after(700,step);
+          afterSay(T,700,step);
         }
       }
     }
@@ -3566,11 +3563,11 @@ GAMES.hulu=ctx=>{
           if(!ctx.alive()||st!==my) return;
           if(k>=Math.min(v,q.ans)){
             if(v<q.ans){ ui.slots[q.x+v].classList.add("tapme");
-              Speech.say("还空一格！这捆太少了。",{tag:"remedy",interrupt:true});
+              Speech.say("还空一格！这捆太少了。",{tag:"remedy"});
             }else{
-              Speech.say("多出一株没地方放！这捆太多了。",{tag:"remedy",interrupt:true});
+              Speech.say("多出一株没地方放！这捆太多了。",{tag:"remedy"});
             }
-            T.after(1400,()=>{ if(!ctx.alive()||st!==my) return;
+            afterSay(T,1400,()=>{ if(!ctx.alive()||st!==my) return;
               ghost.forEach(g=>{ g.style.background=""; g.style.border="3px dashed rgba(255,255,255,.85)"; g.classList.remove("tapme"); });
               ui.slots.forEach(s2=>s2.classList.remove("tapme"));
               b2.style.transition="left .3s,top .3s";
@@ -3790,6 +3787,28 @@ GAMES.aveng=ctx=>{
     rail1.style.cssText="position:absolute;left:12%;top:0;bottom:0;width:4px;background:rgba(180,195,255,.5);border-radius:2px";
     rail2.style.cssText="position:absolute;right:12%;top:0;bottom:0;width:4px;background:rgba(180,195,255,.5);border-radius:2px";
     sheen.style.cssText="position:absolute;left:16%;top:0;bottom:0;width:14%;background:linear-gradient(90deg,rgba(255,255,255,.16),transparent);pointer-events:none";
+    // —— 真电梯机械层：楼层横梁 / 机房 / 卷扬轮 / 缆绳 / 对重块 ——
+    for(let i=0;i<10;i++){ const ln=el("div","",field);
+      ln.style.cssText="position:absolute;left:41.6%;width:16.8%;bottom:"+(8+i*8.6)+"%;height:2px;"+
+        "background:rgba(150,170,255,.20);z-index:4;pointer-events:none"; }
+    const mroom=el("div","",field);
+    mroom.style.cssText="position:absolute;left:44.5%;top:.6%;width:11%;height:4.2%;z-index:5;border-radius:8px;"+
+      "background:linear-gradient(#2a3468,#1a2350);box-shadow:0 4px 10px rgba(0,0,0,.4),inset 0 0 0 2px rgba(150,170,255,.35)";
+    const wheel=el("div","",field);
+    wheel.style.cssText="position:absolute;left:50%;top:1.4%;transform:translateX(-50%);width:4.6%;aspect-ratio:1;z-index:6;"+
+      "border-radius:50%;background:#20295f;box-shadow:inset 0 0 0 4px #9db8ee,0 3px 8px rgba(0,0,0,.4)";
+    const spk1=el("div","",wheel), spk2=el("div","",wheel);
+    spk1.style.cssText="position:absolute;left:50%;top:8%;bottom:8%;width:3px;transform:translateX(-50%);background:#9db8ee;border-radius:2px";
+    spk2.style.cssText="position:absolute;top:50%;left:8%;right:8%;height:3px;transform:translateY(-50%);background:#9db8ee;border-radius:2px";
+    ui.wheel=wheel;
+    const cable=el("div","",field);
+    cable.style.cssText="position:absolute;left:50%;transform:translateX(-50%);top:4.5%;width:.55%;height:68.5%;z-index:5;"+
+      "background:linear-gradient(90deg,#39406e,#8b97cf,#39406e);border-radius:2px";
+    ui.cable=cable;
+    const cw=el("div","",shaft);
+    cw.style.cssText="position:absolute;right:5%;top:14%;width:15%;height:9%;z-index:1;border-radius:4px;"+
+      "background:repeating-linear-gradient(0deg,#39406e 0 24%,#232a52 24% 48%);box-shadow:inset 0 0 0 2px #4a5aa0";
+    ui.cw=cw;
     ui.lights=[];
     for(let i=0;i<10;i++){
       const lt=el("div","",field);
@@ -3803,13 +3822,32 @@ GAMES.aveng=ctx=>{
     // 目标屏
     const tgt=el("div","chip",field); tgt.style.left="64%"; tgt.style.right="auto"; tgt.style.top="8%";
     tgt.textContent="目标 "; el("b","",tgt).textContent=String(q.n);
-    // 轿厢（预置5位）
+    // 轿厢（预置5位）：金属顶梁 + LED 楼层屏 + 玻璃双开门 + 底板 —— 一台真的电梯
     const cab=el("div","",field);
-    cab.style.cssText="position:absolute;left:50%;bottom:8%;transform:translateX(-50%);width:17%;height:19%;z-index:6;"+
-      "border-radius:10px;background:linear-gradient(#bfe0ff44,#7fa8e055);box-shadow:inset 0 0 0 3px #9db8ee;"+
-      "display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:1%;transition:bottom .5s cubic-bezier(.3,.9,.4,1)";
+    cab.style.cssText="position:absolute;left:50%;bottom:8%;transform:translateX(-50%);width:14.5%;height:21.5%;z-index:6;"+
+      "border-radius:12px;overflow:hidden";
+    img(A.pr("gen/elevcar"),"",cab).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:0";
+    const seat=el("div","",cab);   // 内舱：百分比按轿厢解析，英雄只站在门洞可视区里
+    seat.style.cssText="position:absolute;left:16%;right:16%;top:24%;bottom:10%;z-index:2;"+
+      "display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:3%";
+    ui.seat=seat;
+    const beam=el("div","",cab);
+    beam.style.cssText="position:absolute;left:0;right:0;top:1.5%;height:16%;z-index:4;"+
+      "display:flex;align-items:center;justify-content:center";
+    const lcd=el("b","",beam);
+    lcd.style.cssText="min-width:38%;text-align:center;background:#0b1030;color:#ffd54a;border-radius:5px;"+
+      "font-size:clamp(11px,2.2vmin,20px);font-weight:900;line-height:1.35;letter-spacing:.05em;box-shadow:inset 0 0 6px rgba(0,0,0,.8)";
+    lcd.textContent="5";
+    ui.lcd=lcd;
+
+    const doorL=el("div","",cab), doorR=el("div","",cab);
+    const doorCss="position:absolute;top:23%;bottom:8%;width:50%;z-index:3;transition:transform .5s ease;"+
+      "background:linear-gradient(180deg,rgba(190,215,255,.55),rgba(130,160,225,.5));backdrop-filter:blur(1px)";
+    doorL.style.cssText=doorCss+";left:0;border-right:2px solid #cfe0ff;transform:translateX(-104%)";
+    doorR.style.cssText=doorCss+";right:0;border-left:2px solid #cfe0ff;transform:translateX(104%)";
+    ui.doorL=doorL; ui.doorR=doorR;
     ui.cab=cab; ui.count=5;
-    for(let i=0;i<5;i++){ const im=img(A.ch(HEROES[i]),"",cab); im.style.cssText="width:19%;height:auto"; }
+    for(let i=0;i<5;i++){ const im=img(A.ch(HEROES[i]),"",seat); im.style.cssText="width:30%;height:auto"; }
     for(let i=0;i<5;i++) ui.lights[i].style.cssText+=";background:#37d67a;color:#04310f;border-color:#37d67a";
     // 待命英雄
     ui.pool=[];
@@ -3832,11 +3870,12 @@ GAMES.aveng=ctx=>{
       o.style.transform="translate(-50%,-50%) scale(.6)";
       const lt=ui.lights[ui.count-1];
       lt.style.background="#37d67a"; lt.style.color="#04310f"; lt.style.borderColor="#37d67a"; lt.classList.add("pop");
+      ui.lcd.textContent=String(ui.count); ui.lcd.classList.remove("pop"); void ui.lcd.offsetWidth; ui.lcd.classList.add("pop");
       SFX.count(ui.count); Speech.count(cnS(ui.count),"child-count");
       T.after(470,()=>{                              // 真正走进轿厢：图片入厢，跟电梯一体升降
         if(!ctx.alive()) return;
         const im=o.querySelector("img");
-        if(im){ im.style.cssText="width:19%;height:auto;display:block"; ui.cab.appendChild(im); }
+        if(im){ im.style.cssText="width:30%;height:auto;display:block"; ui.seat.appendChild(im); }
         o.remove();
       });
       if(ui.count===q.n){ q.phase="commit"; T.after(700,commit); }
@@ -3845,11 +3884,31 @@ GAMES.aveng=ctx=>{
       if(st.done) return;
       st.done=true; record(ctx,st,true); ctx.answering(false);
       SFX.right();
-      Speech.say("叮！到"+cnQ(q.n)+"层！",{tag:"right",interrupt:true});
+      Speech.say("人齐了 —— 关门，上楼！",{tag:"right",interrupt:true});
+      const targetB=8+(q.n-1)*7.4, dur=Math.max(1400,(q.n-1)*360);
       runReveal(ctx,[
-        [300,()=>{ ui.cab.style.bottom=(8+(q.n-1)*7.4)+"%"; SFX.whoosh(); }],
-        [700,()=>{ confetti(12); SFX.star(); }],
-        [300,()=>{ ui.eq=eqBar(ui.L.top,["5","+","□","=",String(q.n)]);
+        [350,()=>{ ui.doorL.style.transform="translateX(0)"; ui.doorR.style.transform="translateX(0)"; SFX.soft(); }],
+        [620,()=>{ // 升降机全套联动：轿厢升、缆绳收、对重降、轮子转、楼层屏逐层跳
+          const ease="cubic-bezier(.3,.55,.35,1)";
+          ui.cab.style.transition="bottom "+dur+"ms "+ease;
+          ui.cable.style.transition="height "+dur+"ms "+ease;
+          ui.cw.style.transition="top "+dur+"ms "+ease;
+          ui.cab.style.bottom=targetB+"%";
+          ui.cable.style.height=Math.max(1.5,76.5-targetB)+"%";
+          ui.cw.style.top=(14+(targetB-8)*0.8)+"%";
+          try{ ui.wheel.animate(
+            [{transform:"translateX(-50%) rotate(0deg)"},{transform:"translateX(-50%) rotate(900deg)"}],
+            {duration:dur,easing:ease}); }catch(_){}
+          SFX.whoosh();
+          for(let f=2;f<=q.n;f++){
+            T.after(Math.round(dur*(f-1)/(q.n-1)),()=>{ if(!ctx.alive()) return;
+              ui.lcd.textContent=String(f);
+              const lt2=ui.lights[f-1]; lt2.classList.remove("pop"); void lt2.offsetWidth; lt2.classList.add("pop"); });
+          }
+        }],
+        [dur+300,()=>{ ui.doorL.style.transform="translateX(-104%)"; ui.doorR.style.transform="translateX(104%)";
+          ui.lcd.textContent=String(q.n); confetti(12); SFX.star(); }],
+        [400,()=>{ ui.eq=eqBar(ui.L.top,["5","+","□","=",String(q.n)]);
           flyNum(ui.cab,q.n-5,ui.eq); }]
       ],{done:()=>{
         Speech.say("五位再上"+cnQ(q.n-5)+"位 —— 从五接着数到"+cnQ(q.n)+"！",{tag:"verify"});
@@ -3934,7 +3993,7 @@ GAMES.aveng=ctx=>{
         for(let k=0;k<fill;k++) ui.segs[q.has+k].setAttribute("fill","rgba(226,69,63,.45)");
         SFX.soft();
         Speech.say(v<q.ans?"还空一片！这条太短了。":"多出一片没地方放！这条太长了。",{tag:"remedy",interrupt:true});
-        T.after(1500,()=>{ if(!ctx.alive()||st!==my) return;
+        afterSay(T,1500,()=>{ if(!ctx.alive()||st!==my) return;
           for(let k=0;k<fill;k++) ui.segs[q.has+k].setAttribute("fill","rgba(255,255,255,.10)");
           st.locked=false;
           if(st.wrongs>=2||fails.n>=2){ const right=ui.strips.find(x=>+x.dataset.strip===q.ans); if(right) tryStrip(right,q.ans); }
@@ -3992,6 +4051,12 @@ GAMES.aveng=ctx=>{
     cannon.style.cssText="position:absolute;left:30%;top:44%;transform:translate(-50%,-50%);width:26%;aspect-ratio:1.5;z-index:5";
     img(A.pr("gen/cannon"),"",cannon).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 10px rgba(0,0,0,.4))";
     ui.cannon=cannon;
+    // 判定与视觉对齐：加大的隐形落区（与炮同心）+ 拖动时亮起的"投喂圈"——放哪里算数，看得见
+    const dropZone=el("div","",field);
+    dropZone.style.cssText="position:absolute;left:30%;top:44%;transform:translate(-50%,-50%);width:36%;aspect-ratio:1.2;z-index:1";
+    const halo=el("div","",field);
+    halo.style.cssText="position:absolute;left:30%;top:44%;transform:translate(-50%,-50%);width:30%;aspect-ratio:1.35;z-index:4;"+
+      "border:5px dashed rgba(255,215,94,.9);border-radius:26px;opacity:0;transition:opacity .18s;pointer-events:none";
     const meter=el("div","",field);
     meter.style.cssText="position:absolute;left:30%;top:22%;transform:translateX(-50%);display:flex;gap:4px;z-index:7;"+
       "background:rgba(20,14,50,.7);padding:5px 8px;border-radius:10px";
@@ -4021,8 +4086,18 @@ GAMES.aveng=ctx=>{
       ui.cans.push(can);
       draggable(can,{
         enabled:()=>(!busyState(st)&&q.phase==="play"),
-        zones:()=>[{el:cannon}],
-        onDrop:(elm)=>{ tryCan(elm,v); return true; },
+        zones:()=>[{el:dropZone}],
+        onStart:()=>{ halo.style.opacity="1"; },
+        onMove:(elm)=>{                    // 罐子进圈：虚线变实线＋炮身微放大——命中反馈实时可见
+          const r=elm.getBoundingClientRect(), z=dropZone.getBoundingClientRect();
+          const inZ=r.left+r.width/2>z.left&&r.left+r.width/2<z.right&&r.top+r.height/2>z.top&&r.top+r.height/2<z.bottom;
+          halo.style.borderStyle=inZ?"solid":"dashed";
+          halo.style.boxShadow=inZ?"0 0 26px rgba(255,215,94,.65)":"none";
+          cannon.style.transform="translate(-50%,-50%) scale("+(inZ?1.05:1)+")";
+        },
+        onBounce:()=>{ halo.style.opacity="0"; halo.style.boxShadow="none"; cannon.style.transform="translate(-50%,-50%)"; },
+        onDrop:(elm)=>{ halo.style.opacity="0"; halo.style.boxShadow="none"; cannon.style.transform="translate(-50%,-50%)";
+          tryCan(elm,v); return true; },
         onTap:()=>{ if(!busyState(st)&&q.phase==="play") tryCan(can,v); }
       });
     });
@@ -4037,7 +4112,7 @@ GAMES.aveng=ctx=>{
         for(let k=0;k<fill;k++){ ui.cells[q.has+k].style.background="rgba(126,240,168,.4)"; ui.cells[q.has+k].style.border="none"; }
         SFX.soft();
         Speech.say(v<q.ans?"还差一格，射不出去！":"溢出来一格！要不多不少。",{tag:"remedy",interrupt:true});
-        T.after(1500,()=>{ if(!ctx.alive()||st!==my) return;
+        afterSay(T,1500,()=>{ if(!ctx.alive()||st!==my) return;
           for(let k=0;k<fill;k++){ ui.cells[q.has+k].style.background="rgba(255,255,255,.14)"; ui.cells[q.has+k].style.border="2px dashed rgba(255,255,255,.5)"; }
           st.locked=false;
           if(st.wrongs>=2||fails.n>=2){ const right=ui.cans.find(x=>+x.dataset.can===q.ans); if(right) tryCan(right,q.ans); }
@@ -4654,7 +4729,7 @@ GAMES.monkey=ctx=>{
         st.locked=false; jump(plan[i]); st.locked=true;
         i++; T.after(700,step);
       };
-      Speech.say("看悟空怎么跳：",{tag:"reveal",interrupt:true});
+      Speech.say("看悟空怎么跳：",{tag:"reveal"});
       afterSay(T,300,step);
     }
   }
