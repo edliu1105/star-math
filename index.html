@@ -705,7 +705,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "6.8.0";
+const VERSION = "6.9.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -1420,8 +1420,8 @@ const Assets=(()=>{
   return { load, worldList };
 })();
 const WORLD_PROPS={
-  peppa:["mudblob","gen/trampoline","gen/cake","gen/candleflame","gen/toybox_open","gen/toybox_closed","gen/magichat","gen/toy_ball","gen/toy_car","gen/toy_blocks"], paw:["turtle","gen/gondola","gen/radar","gen/launcher","gen/lifering","gen/treatmachine","gen/crankwheel","gen/fishtreat"], bluey:["cookie","icecream","basket"],
-  hulu:GOURDS.slice(), aveng:["goon","portal","quinjet"],
+  peppa:["mudblob","gen/trampoline","gen/cake","gen/candleflame","gen/toybox_open","gen/toybox_closed","gen/magichat","gen/toy_ball","gen/toy_car","gen/toy_blocks"], paw:["turtle","gen/gondola","gen/radar","gen/launcher","gen/lifering","gen/treatmachine","gen/crankwheel","gen/fishtreat"], bluey:["cookie","icecream","basket","gen/projector_blue","gen/projector_orange","gen/seesaw_plank","gen/seesaw_base","gen/pizza"],
+  hulu:GOURDS.slice().concat(["gen/furnace","gen/herbs","gen/splitgate"]), aveng:["goon","portal","quinjet","gen/cannon","gen/truck","gen/energyball"],
   monkey:["gubang_seg","gubang_tip","stone"]
 };
 
@@ -1607,7 +1607,13 @@ function lvlTag(host,lv,name){ const d=el("div","lvltag",host); d.textContent="�
 /** 跷跷板：多的一边压下去；等重时水平 */
 function seesaw(host,maxN){
   const w=el("div","seesaw",host);
-  const plank=el("div","plank",w); el("div","ful",w);
+  const plank=el("div","plank",w);
+  plank.style.background="none"; plank.style.boxShadow="none";
+  img(A.pr("gen/seesaw_plank"),"",plank).style.cssText=
+    "position:absolute;left:0;right:0;top:-64%;height:220%;width:100%;object-fit:fill;filter:drop-shadow(0 4px 6px rgba(0,0,0,.35))";
+  const ful=el("div","ful",w);
+  ful.style.cssText+=";border:none;width:9%;aspect-ratio:512/458;background:none";
+  img(A.pr("gen/seesaw_base"),"",ful).style.cssText="position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:100%;height:auto";
   const mk=cls=>{ const p=el("div","pan "+cls,plank); const b=el("b","",p); const s=el("div","stack",p); return {b,s}; };
   const L2=mk("l"), R2=mk("r");
   function set(a,b){
@@ -2455,11 +2461,11 @@ GAMES.paw=ctx=>{
     sideCast(L.top,"l",["rubble"],28);
     // 雷达屏
     const radar=el("div","",field);
-    radar.style.cssText="position:absolute;right:2%;top:8%;width:15%;aspect-ratio:1;border-radius:50%;z-index:9;"+
-      "background:radial-gradient(circle,#155c33,#0c4423 60%,#093018 100%);box-shadow:0 0 0 5px #3a8a5c,0 6px 14px rgba(0,0,0,.4)";
+    radar.style.cssText="position:absolute;right:2%;top:6%;width:13%;aspect-ratio:309/512;z-index:9";
+    img(A.pr("gen/radar"),"",radar).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.4))";
     const rnum=el("div","",radar);
-    rnum.style.cssText="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#5aff9c;font-weight:900";
-    rnum.innerHTML='<span style="font-size:clamp(11px,2vmin,18px)">埋着</span><b style="font-size:clamp(26px,6vmin,58px)">'+q.n+'</b><span id="rdGot" style="font-size:clamp(11px,2vmin,18px)">挖到 0</span>';
+    rnum.style.cssText="position:absolute;left:12%;right:12%;top:14%;height:30%;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#0a3d20;font-weight:900";
+    rnum.innerHTML='<span style="font-size:clamp(10px,1.8vmin,16px)">埋着</span><b style="font-size:clamp(22px,5vmin,48px)">'+q.n+'</b><span id="rdGot" style="font-size:clamp(10px,1.8vmin,16px)">挖到 0</span>';
     // 沙地光区（种子槽位，互不重叠）
     ui.zones=[]; ui.found=0;
     const slots=shuffle([[16,44],[32,58],[48,42],[62,58],[30,78],[52,74],[68,42],[70,76]]).slice(0,q.n);
@@ -2559,8 +2565,8 @@ GAMES.paw=ctx=>{
     // 发射器 + 圈堆 + 弹舱
     const launcher=el("div","",field);
     launcher.dataset.launcher="1";
-    launcher.style.cssText="position:absolute;left:10%;top:74%;width:12%;aspect-ratio:1;z-index:8";
-    launcher.innerHTML='<svg viewBox="0 0 80 80" style="width:100%;height:100%"><rect x="30" y="34" width="44" height="16" rx="8" fill="#5b6ee1" stroke="#2c3a91" stroke-width="4"/><circle cx="26" cy="42" r="18" fill="#8b97ee" stroke="#2c3a91" stroke-width="4"/><circle cx="26" cy="42" r="7" fill="#2c3a91"/></svg>';
+    launcher.style.cssText="position:absolute;left:10%;top:72%;width:11%;aspect-ratio:476/512;z-index:8";
+    img(A.pr("gen/launcher"),"",launcher).style.cssText="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(0,0,0,.4))";
     ui.launcher=launcher;
     const mag=el("div","",field);
     mag.style.cssText="position:absolute;left:4%;top:92%;display:flex;gap:6px;z-index:8";
@@ -2570,13 +2576,15 @@ GAMES.paw=ctx=>{
     pile.style.cssText="position:absolute;left:24%;top:86%;width:30%;height:12%;z-index:8;display:flex;gap:4px;align-items:center";
     for(let i=0;i<8;i++){
       const r=el("div","",pile);
-      r.style.cssText="width:clamp(26px,5vmin,52px);aspect-ratio:1;border-radius:50%;border:7px solid #ff8a3d;box-shadow:inset 0 0 0 3px #fff,0 3px 6px rgba(0,0,0,.35);cursor:pointer";
+      r.style.cssText="width:clamp(30px,5.6vmin,58px);aspect-ratio:1;cursor:pointer;position:relative";
+      img(A.pr("gen/lifering"),"",r).style.cssText="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.35))";
       onTap(r,()=>{
         if(busyState(st)||q.phase!=="load") return;
         r.style.visibility="hidden";
         ui.loaded++; q.draft=ui.loaded;
         const m=el("i","",mag);
-        m.style.cssText="width:clamp(18px,3.4vmin,34px);aspect-ratio:1;border-radius:50%;border:5px solid #ff8a3d;box-shadow:inset 0 0 0 2px #fff";
+        m.style.cssText="width:clamp(20px,3.8vmin,38px);aspect-ratio:1;display:block";
+        img(A.pr("gen/lifering"),"",m).style.cssText="width:100%;height:100%;object-fit:contain";
         SFX.count(ui.loaded); Speech.count(cnS(ui.loaded),"child-count");
         if(!ui.goBtn) ui.goBtn=bigBtn(L.bot,"出发！","green",()=>startFire());
       });
@@ -2625,8 +2633,8 @@ GAMES.paw=ctx=>{
       const s=ui.field.getBoundingClientRect();
       const lr=ui.launcher.getBoundingClientRect(), tr=target.getBoundingClientRect();
       const ring=el("div","",ui.field);
-      ring.style.cssText="position:absolute;width:8%;aspect-ratio:1;border-radius:50%;border:8px solid #ff8a3d;"+
-        "box-shadow:inset 0 0 0 3px #fff;z-index:9;transform:translate(-50%,-50%)";
+      ring.style.cssText="position:absolute;width:8%;aspect-ratio:1;z-index:9;transform:translate(-50%,-50%)";
+      img(A.pr("gen/lifering"),"",ring).style.cssText="width:100%;height:100%;object-fit:contain";
       const x0=(lr.left+lr.width/2-s.left)/s.width*100, y0=(lr.top-s.top)/s.height*100;
       const x1=(tr.left+tr.width/2-s.left)/s.width*100, y1=(tr.top+tr.height/2-s.top)/s.height*100;
       const cx=(x0+x1)/2, cy=Math.min(y0,y1)-24;
@@ -2643,7 +2651,9 @@ GAMES.paw=ctx=>{
         ring.remove();
         target.dataset.saved="1";
         target.style.animation="";
-        target.innerHTML='<div style="position:absolute;inset:-14%;border-radius:50%;border:7px solid #ff8a3d;box-shadow:inset 0 0 0 3px #fff"></div>'+target.innerHTML;
+        const rimg=img(A.pr("gen/lifering"),"",target);
+        rimg.style.cssText="position:absolute;inset:-16%;width:132%;height:132%;object-fit:contain;z-index:2";
+        target.insertBefore(rimg,target.firstChild);
         const idx=q.k+ui.fired;
         ui.cells[idx-1].style.cssText+=";background:#37d67a;border:none";
         setTag(target.querySelector(".tag")||el("div","tag",target),ui.fired);
@@ -2679,11 +2689,11 @@ GAMES.paw=ctx=>{
     const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
     // 机器
     const mac=el("div","",field);
-    mac.style.cssText="position:absolute;left:6%;top:16%;width:30%;height:56%;border-radius:18px;z-index:5;"+
-      "background:linear-gradient(#8b97ee,#5b6ee1 70%);box-shadow:0 8px 0 #2c3a91,0 12px 18px rgba(0,0,0,.4)";
+    mac.style.cssText="position:absolute;left:6%;top:12%;width:26%;height:62%;z-index:5";
+    img(A.pr("gen/treatmachine"),"",mac).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom;filter:drop-shadow(0 8px 12px rgba(0,0,0,.4))";
     const face=el("div","",mac);
-    face.style.cssText="position:absolute;left:12%;top:10%;width:76%;height:30%;border-radius:12px;background:#20295f;"+
-      "display:flex;align-items:center;justify-content:center;color:#7ef0a8;font-weight:900;font-size:clamp(18px,4vmin,40px)";
+    face.style.cssText="position:absolute;left:22%;top:13%;width:56%;height:16%;border-radius:10px;"+
+      "display:flex;align-items:center;justify-content:center;color:#20295f;font-weight:900;font-size:clamp(18px,4vmin,40px)";
     face.textContent="0";
     ui.face=face;
     // 纸带
@@ -2696,12 +2706,9 @@ GAMES.paw=ctx=>{
     const crank=el("div","",field);
     crank.dataset.crank="1";
     crank.style.cssText="position:absolute;left:40%;top:30%;width:17%;aspect-ratio:1;z-index:7;touch-action:none";
-    crank.innerHTML='<svg viewBox="0 0 100 100" style="width:100%;height:100%">'+
-      '<circle cx="50" cy="50" r="44" fill="#ffd75e" stroke="#a3611a" stroke-width="6"/>'+
-      '<path d="M50 50 L50 6 A44 44 0 0 1 94 50 Z" fill="#ffe89a"/>'+
-      '<circle cx="50" cy="50" r="8" fill="#a3611a"/>'+
-      '<g id="ckArm"><rect x="46" y="8" width="8" height="42" rx="4" fill="#7c4a12"/><circle cx="50" cy="10" r="9" fill="#e2453f" stroke="#7c1f1c" stroke-width="3"/></g></svg>';
-    const arm=crank.querySelector("#ckArm");
+    const wheelImg=img(A.pr("gen/crankwheel"),"",crank);
+    wheelImg.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:transform .18s cubic-bezier(.3,1.2,.5,1);filter:drop-shadow(0 5px 8px rgba(0,0,0,.4))";
+    const arm=wheelImg;
     ui.sector=0; ui.turnsDone=0; ui.fed=0;
     // 狗队
     ui.dq=[];
@@ -2712,7 +2719,7 @@ GAMES.paw=ctx=>{
       ui.dq.push(o);
     }
     fitObj(field,8,"row");
-    const setArm=()=>{ arm.setAttribute("transform","rotate("+(ui.sector*90)+" 50 50)"); };
+    const setArm=()=>{ arm.style.transform="rotate("+(ui.sector*90)+"deg)"; };
     const tick=()=>{
       ui.sector=(ui.sector+1)%4; setArm(); SFX.tap();
       if(ui.sector===0) fullTurn();
@@ -2750,9 +2757,9 @@ GAMES.paw=ctx=>{
       for(let j=0;j<2;j++){
         const dog=ui.dq[ui.fed+j]; if(!dog) continue;
         const fc=el("div","",ui.field);
-        fc.style.cssText="position:absolute;left:34%;top:60%;width:5%;aspect-ratio:1;border-radius:40% 60% 60% 40%/50%;"+
-          "background:#e8b04b;box-shadow:inset -2px -3px 0 rgba(0,0,0,.25);z-index:8;transform:translate(-50%,-50%);"+
+        fc.style.cssText="position:absolute;left:30%;top:62%;width:6%;aspect-ratio:512/371;z-index:8;transform:translate(-50%,-50%);"+
           "transition:left .55s cubic-bezier(.3,.9,.5,1),top .55s cubic-bezier(.3,.9,.5,1)";
+        img(A.pr("gen/fishtreat"),"",fc).style.cssText="width:100%;height:100%;object-fit:contain";
         requestAnimationFrame(()=>requestAnimationFrame(()=>{
           fc.style.left=dog.style.left; fc.style.top=dog.style.top;
         }));
@@ -2846,11 +2853,9 @@ GAMES.bluey=ctx=>{
     // 两盏投影灯
     const mkLamp=(x,who,color)=>{
       const lp=el("button","",field); lp.dataset.lamp=who;
-      lp.style.cssText="position:absolute;left:"+x+"%;bottom:6%;width:13%;aspect-ratio:1.1;z-index:6;background:none;border:none";
-      lp.innerHTML='<svg viewBox="0 0 90 80" style="width:100%;height:100%">'+
-        '<path d="M20 30 L64 14 L64 46 Z" fill="'+color+'" stroke="rgba(0,0,0,.3)" stroke-width="3"/>'+
-        '<circle cx="18" cy="30" r="13" fill="'+color+'" stroke="rgba(0,0,0,.3)" stroke-width="3"/>'+
-        '<rect x="60" y="52" width="10" height="22" rx="4" fill="#5b4a35"/></svg>';
+      lp.style.cssText="position:absolute;left:"+x+"%;bottom:5%;width:11%;aspect-ratio:.72;z-index:6;background:none;border:none";
+      img(A.pr(who==="a"?"gen/projector_blue":"gen/projector_orange"),"",lp).style.cssText=
+        "width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(0,0,0,.4))";
       const tag=el("div","",lp);
       tag.style.cssText="position:absolute;left:50%;bottom:-16%;transform:translateX(-50%);font-weight:900;color:#fff;font-size:clamp(12px,2.2vmin,20px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
       tag.textContent=who==="a"?"Bluey 的灯":"Bingo 的灯";
@@ -3138,9 +3143,8 @@ GAMES.bluey=ctx=>{
     faceAt(L.top,"bluey",14,24); faceAt(L.top,"bingo",14,24,true);
     // 披萨
     const pz=el("div","",field);
-    pz.style.cssText="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:39%;aspect-ratio:1;z-index:4;"+
-      "border-radius:50%;background:radial-gradient(circle,#ffd98c 62%,#e8a94b 63%,#c9853a 100%);"+
-      "box-shadow:0 8px 20px rgba(0,0,0,.4),inset 0 0 0 6px rgba(201,133,58,.7)";
+    pz.style.cssText="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:39%;aspect-ratio:1;z-index:4";
+    img(A.pr("gen/pizza"),"",pz).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 16px rgba(0,0,0,.4))";
     ui.pz=pz;
     // 中缝走廊
     const corridor=el("div","",field);
@@ -3484,17 +3488,15 @@ GAMES.hulu=ctx=>{
     // 炉子
     const fur=el("div","",field);
     fur.style.cssText="position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:34%;aspect-ratio:1.1;z-index:5";
-    fur.innerHTML='<svg viewBox="0 0 110 100" style="width:100%;height:100%">'+
-      '<ellipse cx="55" cy="88" rx="40" ry="9" fill="#5a3c18"/>'+
-      '<path d="M20 40 Q20 88 55 88 Q90 88 90 40 Q90 22 55 22 Q20 22 20 40Z" fill="#8a5a2b" stroke="#5a3c18" stroke-width="5"/>'+
-      '<ellipse cx="55" cy="26" rx="35" ry="10" fill="#a3702f" stroke="#5a3c18" stroke-width="4"/>'+
-      '<path id="fuFlame" d="M45 96 Q50 88 55 96 Q60 88 65 96" stroke="#ff9b3d" stroke-width="5" fill="none" stroke-linecap="round"/></svg>';
+    img(A.pr("gen/furnace"),"",fur).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom;filter:drop-shadow(0 8px 12px rgba(0,0,0,.4))";
+    const fuGlow=el("div","",fur); fuGlow.id="fuFlame2";
+    fuGlow.style.cssText="position:absolute;left:30%;bottom:2%;width:40%;height:10%;border-radius:50%;"+
+      "background:radial-gradient(ellipse,#ff9b3dcc,transparent 70%);filter:blur(2px)";
     ui.fur=fur;
     // 炉沿 N 个槽（环形排布在炉口）
     ui.slots=[];
     for(let i=0;i<q.N;i++){
-      const a=(-152+i*(124/Math.max(q.N-1,1)))*Math.PI/180;
-      const sx=50+36*Math.cos(a), sy=26+13*Math.sin(a)+6;
+      const sx=27+i*(46/Math.max(q.N-1,1)), sy=16.5;   // 贴着位图炉口沿一字排开
       const s2=el("i","",fur);
       s2.style.cssText="position:absolute;left:"+sx+"%;top:"+sy+"%;transform:translate(-50%,-50%);width:11%;aspect-ratio:1;"+
         "border-radius:50%;display:block;"+(i<q.x?"background:#6fbf4a;box-shadow:0 0 8px #6fbf4a":"border:3px dashed rgba(255,255,255,.85);background:rgba(0,0,0,.25)");
@@ -3509,6 +3511,8 @@ GAMES.hulu=ctx=>{
       b2.style.cssText="position:absolute;left:"+(26+i*24)+"%;top:80%;transform:translate(-50%,-50%);width:15%;aspect-ratio:1.2;z-index:7;"+
         "background:rgba(255,255,255,.94);border-radius:14px;box-shadow:0 5px 12px rgba(0,0,0,.35);"+
         "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px";
+      const hb=img(A.pr("gen/herbs"),"",b2);
+      hb.style.cssText="width:34%;height:auto;margin-top:-14%;filter:drop-shadow(0 3px 5px rgba(0,0,0,.3))";
       const dots=el("div","",b2);
       dots.style.cssText="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;width:80%";
       for(let k=0;k<v;k++){ const d2=el("i","",dots);
@@ -3572,7 +3576,7 @@ GAMES.hulu=ctx=>{
               SFX.count(q.x+k+1); Speech.count(cnS(q.x+k+1),"auto-count"); });
           } }],
         [q.ans*280+500,()=>{ // 炉火转绿 + 出丹
-          const f2=ui.fur.querySelector("#fuFlame"); if(f2) f2.setAttribute("stroke","#7ef0a8");
+          const f2=ui.fur.querySelector("#fuFlame2"); if(f2) f2.style.background="radial-gradient(ellipse,#7ef0a8cc,transparent 70%)";
           confetti(12); SFX.right(); }],
         [400,()=>{ ui.eq=eqBar(ui.L.top,[String(q.x),"+","□","=",String(q.N)]);
           flyNum(ui.fur,q.ans,ui.eq); }]
@@ -3610,11 +3614,14 @@ GAMES.hulu=ctx=>{
     ui.gates=[];
     for(let a2=1;a2<q.N;a2++){
       const g=el("button","",field); g.dataset.gate=String(a2);
-      g.style.cssText="position:absolute;left:"+(24+(a2-1)*(52/(q.N-2||1)))+"%;top:44%;transform:translate(-50%,-50%);width:11%;aspect-ratio:1;"+
-        "border-radius:50%;border:5px solid #ffd75e;background:rgba(255,215,94,.2);z-index:7;"+
-        "display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;"+
-        "font-size:clamp(15px,3vmin,30px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
-      g.textContent=a2+"|"+(q.N-a2);
+      g.style.cssText="position:absolute;left:"+(24+(a2-1)*(52/(q.N-2||1)))+"%;top:44%;transform:translate(-50%,-50%);width:12%;aspect-ratio:512/494;"+
+        "background:none;border:none;z-index:7";
+      img(A.pr("gen/splitgate"),"",g).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))";
+      const gl=el("b","",g);
+      gl.style.cssText="position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);font-weight:900;color:#fff;"+
+        "font-size:clamp(14px,2.8vmin,28px);text-shadow:0 2px 0 rgba(0,0,0,.6)";
+      gl.textContent=a2+"|"+(q.N-a2);
+      g._label=gl;
       onTap(g,()=>split(a2,g));
       ui.gates.push(g);
     }
@@ -3677,7 +3684,7 @@ GAMES.hulu=ctx=>{
         ui.gates.forEach(g2=>{                     // 该分法（含镜像门）打勾变灰
           const a3=+g2.dataset.gate;
           const k3=Math.min(a3,q.N-a3)+"+"+Math.max(a3,q.N-a3);
-          if(k3===key){ g2.style.opacity=".38"; g2.style.borderColor="#8b86a8"; g2.textContent="✓"; }
+          if(k3===key){ g2.style.opacity=".38"; if(g2._label) g2._label.textContent="✓"; }
         });
         Speech.say(cnQ(a2)+"和"+cnQ(q.N-a2)+"，合起来还是"+cnQ(q.N)+"！",{tag:"g:hulu"});
         if(q.got.length>=q.need){ T.after(600,commit); return; }
@@ -3951,12 +3958,7 @@ GAMES.aveng=ctx=>{
     // 能量炮 + 10 格仪表
     const cannon=el("div","",field);
     cannon.style.cssText="position:absolute;left:30%;top:44%;transform:translate(-50%,-50%);width:26%;aspect-ratio:1.5;z-index:5";
-    cannon.innerHTML='<svg viewBox="0 0 120 80" style="width:100%;height:100%">'+
-      '<path d="M14 76 h56 l-8 -14 h-40 Z" fill="#2c3a91"/>'+
-      '<circle cx="42" cy="48" r="22" fill="#5b6ee1" stroke="#2c3a91" stroke-width="5"/>'+
-      '<circle cx="42" cy="48" r="9" fill="#7ef0a8"/>'+
-      '<rect x="52" y="36" width="58" height="20" rx="10" fill="#8b97ee" stroke="#2c3a91" stroke-width="5"/>'+
-      '<rect x="102" y="32" width="12" height="28" rx="6" fill="#ffd75e" stroke="#a3611a" stroke-width="4"/></svg>';
+    img(A.pr("gen/cannon"),"",cannon).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 10px rgba(0,0,0,.4))";
     ui.cannon=cannon;
     const meter=el("div","",field);
     meter.style.cssText="position:absolute;left:30%;top:22%;transform:translateX(-50%);display:flex;gap:4px;z-index:7;"+
@@ -4062,12 +4064,7 @@ GAMES.aveng=ctx=>{
     // 卡车
     const truck=el("div","",field);
     truck.style.cssText="position:absolute;left:62%;top:56%;transform:translate(-50%,-50%);width:38%;aspect-ratio:2;z-index:5";
-    truck.innerHTML='<svg viewBox="0 0 160 80" style="width:100%;height:100%">'+
-      '<rect x="4" y="14" width="104" height="46" rx="8" fill="#8b97ee" stroke="#2c3a91" stroke-width="4"/>'+
-      '<path d="M108 26 h26 l18 16 v18 h-44 Z" fill="#5b6ee1" stroke="#2c3a91" stroke-width="4"/>'+
-      '<rect x="118" y="30" width="16" height="12" rx="3" fill="#bfe6ff"/>'+
-      '<circle cx="34" cy="64" r="11" fill="#28304e" stroke="#111" stroke-width="3"/>'+
-      '<circle cx="120" cy="64" r="11" fill="#28304e" stroke="#111" stroke-width="3"/></svg>';
+    img(A.pr("gen/truck"),"",truck).style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom;filter:drop-shadow(0 8px 12px rgba(0,0,0,.4))";
     ui.truck=truck;
     // 车侧两段屏
     const screenB=el("div","chip",field);
