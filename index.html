@@ -341,10 +341,12 @@ canvas{display:block}
 .cake .candle{position:absolute;left:50%;bottom:70%;width:7%;height:20%;transform:translateX(-50%);
   background:repeating-linear-gradient(45deg,#ff8b8b 0 6px,#fff 6px 12px);border-radius:4px}
 .cake .flame{position:absolute;left:50%;bottom:90%;width:12%;aspect-ratio:.7;transform:translateX(-50%);opacity:0;
-  background:radial-gradient(ellipse at 50% 70%,#ffd75e,#ff9b3d 70%,transparent 75%);border-radius:50% 50% 50% 50%/62% 62% 38% 38%;
+  background:radial-gradient(ellipse at 50% 78%,#fff2ae,#ffb23d 55%,#ff7b1f 78%,transparent 82%);border-radius:50% 50% 50% 50%/62% 62% 38% 38%;
   transition:opacity .4s}
-.cake .cnum{position:absolute;left:50%;bottom:71%;transform:translateX(-50%);font-weight:900;color:#4a2c00;
-  font-size:clamp(20px,4.6vmin,46px);opacity:0;transition:opacity .4s}
+.cake .cnum{position:absolute;left:63%;bottom:78%;transform:translateX(-50%);font-weight:900;color:#4a2c00;
+  font-size:clamp(20px,4.6vmin,46px);opacity:0;transition:opacity .4s;background:rgba(255,255,255,.95);
+  width:1.7em;height:1.7em;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 8px rgba(0,0,0,.3)}
 .cake.lit .flame{opacity:1;animation:holo 1.2s ease-in-out infinite}
 .cake.lit .cnum{opacity:1}
 .bowl{position:absolute;width:17%;aspect-ratio:1.35;z-index:6}
@@ -353,7 +355,9 @@ canvas{display:block}
 .berry{position:absolute;width:9%;aspect-ratio:1;border-radius:50%;z-index:7;
   box-shadow:inset -3px -4px 0 rgba(0,0,0,.22),0 3px 6px rgba(0,0,0,.35)}
 .berry::after{content:"";position:absolute;left:24%;top:14%;width:26%;height:20%;border-radius:50%;background:rgba(255,255,255,.65)}
-.berry.red{background:#e2453f}.berry.blue{background:#3f6fe2}
+.berry.red,.berrycake.red{background:#e2453f}.berry.blue,.berrycake.blue{background:#3f6fe2}
+.berrycake{box-shadow:inset -3px -4px 0 rgba(0,0,0,.22),0 3px 6px rgba(0,0,0,.35)}
+.berrycake::after{content:"";position:absolute;left:24%;top:14%;width:26%;height:20%;border-radius:50%;background:rgba(255,255,255,.65)}
 .rail{position:absolute;z-index:4;pointer-events:none}
 .rail path{fill:none;stroke:rgba(255,255,255,.55);stroke-width:5;stroke-dasharray:2 14;stroke-linecap:round}
 .ordercard{position:absolute;left:1.5%;top:9%;z-index:10;background:rgba(255,255,255,.95);border-radius:14px;
@@ -368,7 +372,7 @@ canvas{display:block}
   background:linear-gradient(#f0a949,#d4842a 70%);box-shadow:0 6px 0 #a3611a,0 10px 14px rgba(0,0,0,.35)}
 .toybox .lid{position:absolute;left:-3%;right:-3%;bottom:60%;height:16%;border-radius:8px;
   background:linear-gradient(#f7bd66,#e09638);box-shadow:0 4px 0 #b06f1e;transform-origin:8% 100%;transition:transform .4s cubic-bezier(.3,1.4,.5,1)}
-.toybox.open .lid{transform:rotate(-38deg)}
+.toybox.open .lid{transform:rotate(-74deg)}
 .toybox .slots{position:absolute;left:8%;right:8%;bottom:70%;height:26%;display:flex;gap:6%;z-index:7}
 .toybox .slots i{flex:1;border:3px dashed rgba(255,255,255,.85);border-radius:10px;background:rgba(0,0,0,.18)}
 .toybox .slots i.f{border-style:solid;border-color:#37d67a;background:rgba(55,214,122,.25)}
@@ -701,7 +705,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "6.6.0";
+const VERSION = "6.7.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -1919,12 +1923,11 @@ GAMES.peppa=ctx=>{
           [620,()=>{ ui.boing(ui.P,q.n,true); ui.boing(ui.G,q.n,true); confetti(14); }],
           [650,()=>{ // 泥花排成一行 = 次数变成可见的量
             for(let k=0;k<q.n;k++){
-              const f=el("div","cobj pop",ui.field);
+              const f=el("div","cobj counted pop",ui.field);
               f.style.left=(30+k*10)+"%"; f.style.top="88%";
               f.style.width="8%";
               img(A.pr("mudblob"),"",f); flowers.push(f);
-              setTag(el("div","tag",f),k+1); f.querySelector(".tag").className="tag";
-              setTag(f.querySelector(".tag"),k+1);
+              el("div","tag",f); setTag(f.querySelector(".tag"),k+1);
             }
             SFX.right(); }],
           [700,()=>{ ui.eq=eqBar(ui.L.top,["跳了","□","下"]);
@@ -2028,6 +2031,14 @@ GAMES.peppa=ctx=>{
       };
       requestAnimationFrame(fly);
       function land(){
+        // 真正落进蛋糕：挂到 cakewrap 里，用蛋糕坐标（红一行蓝一行）
+        const idx2=color==="red"?ui.placed.red:ui.placed.blue;
+        be.remove();
+        const onCake=el("div","berrycake "+color,ui.cw);
+        onCake.style.cssText="position:absolute;width:13%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);"+
+          "left:"+(18+idx2*16)+"%;top:"+(color==="red"?"34%":"52%")+"%;".replace("%%","%");
+        onCake.style.top=(color==="red"?34:52)+"%";
+        onCake.classList.add("pop");
         ui.placed[color]++;
         const row=color==="red"?ui.rowR:ui.rowB;
         row.dots[ui.placed[color]-1].classList.add("on");
@@ -2065,18 +2076,10 @@ GAMES.peppa=ctx=>{
       }
       st.done=true; q.phase="commit"; ui.okBtn.disabled=true; ctx.answering(false);
       Speech.say("进烤箱喽！",{tag:"right",interrupt:true});
-      const berries=$$(".berry").filter(b2=>b2.style.pointerEvents==="none");
       runReveal(ctx,[
         [400,()=>{ ui.cw.style.transition="transform .5s"; ui.cw.style.transform="translate(-50%,-50%) scale(.92)"; SFX.whoosh(); }],
-        [600,()=>{ ui.cw.style.transform="translate(-50%,-50%) scale(1)"; }],
-        [500,()=>{ // 莓果排成红上蓝下两行
-          berries.forEach((b2,i)=>{
-            const isRed=b2.classList.contains("red");
-            const rIdx=berries.filter((x,j)=>j<i&&x.classList.contains("red")===isRed).length;
-            b2.style.transition="left .5s,top .5s";
-            b2.style.left=(36+rIdx*7)+"%"; b2.style.top=isRed?"40%":"47%";
-          });
-          SFX.tap(); }],
+        [600,()=>{ ui.cw.style.transform="translate(-50%,-50%) scale(1) rotate(360deg)"; }],
+        [500,()=>{ SFX.tap(); }],
         [700,()=>{ ui.cake.classList.add("lit"); ui.cake.querySelector(".cnum").textContent=String(q.ans); SFX.star(); }],
         [500,()=>{ ui.eq=eqBar(ui.L.top,[String(q.a),"+",String(q.b),"=","□"]);
           flyNum(ui.cake.querySelector(".candle"),q.ans,ui.eq); }]
@@ -2401,22 +2404,24 @@ GAMES.paw=ctx=>{
       if(busyState(st)||q.phase!=="play"||!ui.docked||o.dataset.out) return;
       ui.docked=false; o.dataset.out="1";
       ui.boarded++; q.draft=ui.boarded;
-      // 狗跳进车厢
+      // 狗跳向车厢门口
       const cab=ui.cab, s=ui.field.getBoundingClientRect();
       const cr=cab.getBoundingClientRect();
-      o.style.transition="left .45s cubic-bezier(.4,.9,.5,1),top .45s cubic-bezier(.4,.9,.5,1),transform .45s";
+      o.style.transition="left .4s cubic-bezier(.4,.9,.5,1),top .4s cubic-bezier(.4,.9,.5,1),transform .4s";
       o.style.left=((cr.left+cr.width/2-s.left)/s.width*100)+"%";
-      o.style.top="28%"; o.style.transform="translate(-50%,-50%) scale(.72)";
+      o.style.top=((cr.top+cr.height*0.45-s.top)/s.height*100)+"%";
+      o.style.transform="translate(-50%,-50%) scale(.8)";
       SFX.count(ui.boarded); Speech.count(cnS(ui.boarded),"child-count");
       cab._num.textContent=String(ui.boarded);
-      T.after(520,()=>{
+      T.after(430,()=>{
         if(!ctx.alive()) return;
+        // 真正坐进车窗：把狗的图片移进座位容器，从此跟车厢一体
+        const im=o.querySelector("img");
+        if(im){ im.style.cssText="width:74%;height:auto;display:block"; cab._seat.appendChild(im); }
+        o.remove();
         cab._num.style.opacity="1";
-        // 该厢自动发车
         cab.style.transition="left .8s ease-in";
         cab.style.left="72%";
-        o.style.transition="left .8s ease-in";
-        o.style.left="79%";
         T.after(850,()=>{
           if(!ctx.alive()) return;
           if(ui.boarded>=q.n) commit();
@@ -2755,7 +2760,7 @@ GAMES.paw=ctx=>{
         requestAnimationFrame(()=>requestAnimationFrame(()=>{
           fc.style.left=dog.style.left; fc.style.top=dog.style.top;
         }));
-        T.after(580,()=>{ fc.remove(); dog.classList.add("hit"); setTag(dog.querySelector(".tag"),ui.fed+j+1); });
+        T.after(580,()=>{ fc.remove(); dog.classList.add("hit"); dog.classList.add("counted"); setTag(dog.querySelector(".tag"),ui.fed+j+1); });
       }
       ui.fed+=2;
       ui.face.textContent=String(ui.fed);
@@ -2772,7 +2777,7 @@ GAMES.paw=ctx=>{
       runReveal(ctx,[
         [300,()=>{ // 纸带撕下变横幅
           ui.tape.style.transition="top .6s,left .6s,transform .6s";
-          ui.tape.style.top="10%"; ui.tape.style.left="34%"; ui.tape.style.transform="rotate(-3deg) scale(1.25)";
+          ui.tape.style.top="21%"; ui.tape.style.left="30%"; ui.tape.style.transform="rotate(-3deg) scale(1.2)";
           const eqTxt=Array.from({length:q.turns},()=>"2").join("+")+"=";
           const b2=el("b","",ui.tape); b2.textContent="="+q.d;
           SFX.whoosh(); }],
@@ -2942,7 +2947,7 @@ GAMES.bluey=ctx=>{
     lvlTag(L.top,2,"后院跷跷板");
     verbBanner(L.top,"配平！");
     const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
-    faceAt(L.top,"bluey",12,24); faceAt(L.top,"bingo",12,24,true);
+    faceAt(L.top,"bluey",44,24); faceAt(L.top,"bingo",44,24,true);
     ui.ss=seesaw(L.top,10); ui.ss.set(q.a,q.b);
     ui.ss.el.style.bottom="10%";
     // 地上饼干堆（可拖）
@@ -2950,7 +2955,7 @@ GAMES.bluey=ctx=>{
     const gold=[];
     for(let i=0;i<5;i++){
       const o=el("div","cobj",field);
-      o.style.left=(30+i*9)+"%"; o.style.top="30%"; o.style.width="8%";
+      o.style.left=(30+i*9)+"%"; o.style.top="52%"; o.style.width="8%";
       img(A.pr("cookie"),"",o); el("div","tag",o);
       ui.ground.push(o);
       draggable(o,{
@@ -2964,7 +2969,7 @@ GAMES.bluey=ctx=>{
       o.dataset.on="1"; ui.added++; q.draft=ui.added;
       // 金徽章：配平所加的块
       o.style.transition="left .4s,top .4s,transform .4s";
-      o.style.left=(66+ui.added*3)+"%"; o.style.top="72%";
+      o.style.left=(69+ui.added*2.6)+"%"; o.style.top="75%";
       o.style.transform="translate(-50%,-50%) scale(.6)"; o.style.filter="drop-shadow(0 0 8px #ffd75e)";
       setTag(o.querySelector(".tag"),ui.added);
       ui.ss.set(q.a,q.b+ui.added);
@@ -3234,7 +3239,7 @@ GAMES.bluey=ctx=>{
       requestAnimationFrame(()=>requestAnimationFrame(()=>{ knife.style.height="48%"; }));
       SFX.whoosh();
       runReveal(ctx,[
-        [450,()=>{ knife.remove();
+        [450,()=>{ knife.remove(); ui.corridor.style.display="none";
           // 两半分开
           ui.pz.style.transition="transform .6s";
           ui.pz.style.transform="translate(-56%,-50%)";
@@ -3443,7 +3448,7 @@ GAMES.hulu=ctx=>{
             ui.plates.forEach((p2,i)=>{
               T.after(i*140,()=>{ if(!ctx.alive()) return;
                 p2.style.transition="transform .3s"; p2.style.transform="translate(0,-50%) rotateX(180deg)";
-                T.after(160,()=>{ p2.textContent="下"+cnS(q.total-i); p2.style.transform="translate(0,-50%)"; p2.style.color="#7ef0a8"; SFX.tap(); });
+                T.after(160,()=>{ p2.textContent="上"+cnS(i+1)+"｜下"+cnS(q.total-i); p2.style.transform="translate(0,-50%)"; p2.style.color="#7ef0a8"; SFX.tap(); });
               });
             }); }],
           [q.total*140+500,()=>{ confetti(12);
@@ -3673,6 +3678,11 @@ GAMES.hulu=ctx=>{
         row.textContent=key.replace('+',' + ');
         row.style.border="3px solid #37d67a"; row.style.background="rgba(55,214,122,.15)";
         q.got.push(key); q.draft=q.got.length;
+        ui.gates.forEach(g2=>{                     // 该分法（含镜像门）打勾变灰
+          const a3=+g2.dataset.gate;
+          const k3=Math.min(a3,q.N-a3)+"+"+Math.max(a3,q.N-a3);
+          if(k3===key){ g2.style.opacity=".38"; g2.style.borderColor="#8b86a8"; g2.textContent="✓"; }
+        });
         Speech.say(cnQ(a2)+"和"+cnQ(q.N-a2)+"，合起来还是"+cnQ(q.N)+"！",{tag:"g:hulu"});
         if(q.got.length>=q.need){ T.after(600,commit); return; }
         // 复位再来
@@ -3744,7 +3754,7 @@ GAMES.aveng=ctx=>{
     const field=mkField(L.top,{mat:false,l:0,r:0,t:0,b:0}); ui.field=field;
     // 电梯井 + 楼层灯 1-10
     const shaft=el("div","",field);
-    shaft.style.cssText="position:absolute;left:38%;top:4%;width:24%;bottom:6%;border-radius:14px;z-index:4;"+
+    shaft.style.cssText="position:absolute;left:41%;top:4%;width:18%;bottom:6%;border-radius:14px;z-index:4;"+
       "background:linear-gradient(#28304e,#171c33);box-shadow:0 8px 18px rgba(0,0,0,.45),inset 0 0 0 4px #3a4570";
     ui.lights=[];
     for(let i=0;i<10;i++){
@@ -3761,17 +3771,17 @@ GAMES.aveng=ctx=>{
     tgt.textContent="目标 "; el("b","",tgt).textContent=String(q.n);
     // 轿厢（预置5位）
     const cab=el("div","",field);
-    cab.style.cssText="position:absolute;left:50%;bottom:8%;transform:translateX(-50%);width:20%;height:17%;z-index:6;"+
+    cab.style.cssText="position:absolute;left:50%;bottom:8%;transform:translateX(-50%);width:17%;height:19%;z-index:6;"+
       "border-radius:10px;background:linear-gradient(#bfe0ff44,#7fa8e055);box-shadow:inset 0 0 0 3px #9db8ee;"+
       "display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:1%;transition:bottom .5s cubic-bezier(.3,.9,.4,1)";
     ui.cab=cab; ui.count=5;
-    for(let i=0;i<5;i++){ const im=img(A.ch(HEROES[i]),"",cab); im.style.cssText="width:30%;height:auto"; }
+    for(let i=0;i<5;i++){ const im=img(A.ch(HEROES[i]),"",cab); im.style.cssText="width:19%;height:auto"; }
     for(let i=0;i<5;i++) ui.lights[i].style.cssText+=";background:#37d67a;color:#04310f;border-color:#37d67a";
     // 待命英雄
     ui.pool=[];
     for(let i=5;i<10;i++){
       const o=el("div","cobj",field);
-      o.style.left=(7+ (i-5)*12.5)+"%"; o.style.top="78%"; o.style.width="10.5%";
+      o.style.left=(68+ (i-5)*7.6)+"%"; o.style.top="82%"; o.style.width="7.5%";
       img(A.ch(HEROES[i%HEROES.length]),"",o); el("div","tag",o);
       onTap(o,()=>enter(o));
       ui.pool.push(o);
@@ -3789,8 +3799,13 @@ GAMES.aveng=ctx=>{
       const lt=ui.lights[ui.count-1];
       lt.style.background="#37d67a"; lt.style.color="#04310f"; lt.style.borderColor="#37d67a"; lt.classList.add("pop");
       SFX.count(ui.count); Speech.count(cnS(ui.count),"child-count");
-      if(ui.count===q.n){ q.phase="commit"; T.after(600,commit); }
-      else if(ui.count>q.n){ /* 超载不可能：到 n 即提交 */ }
+      T.after(470,()=>{                              // 真正走进轿厢：图片入厢，跟电梯一体升降
+        if(!ctx.alive()) return;
+        const im=o.querySelector("img");
+        if(im){ im.style.cssText="width:19%;height:auto;display:block"; ui.cab.appendChild(im); }
+        o.remove();
+      });
+      if(ui.count===q.n){ q.phase="commit"; T.after(700,commit); }
     }
     function commit(){
       if(st.done) return;
@@ -3892,6 +3907,7 @@ GAMES.aveng=ctx=>{
         return;
       }
       st.done=true; q.phase="commit"; ctx.answering(false);
+      ui.strips.forEach(x=>{ if(x!==s2){ x.style.transition="opacity .3s"; x.style.opacity="0"; } });
       s2.style.transition="left .4s,top .4s,opacity .4s";
       s2.style.left=ui.shield.style.left; s2.style.top=ui.shield.style.top; s2.style.opacity="0";
       SFX.whoosh();
@@ -3940,9 +3956,11 @@ GAMES.aveng=ctx=>{
     const cannon=el("div","",field);
     cannon.style.cssText="position:absolute;left:30%;top:44%;transform:translate(-50%,-50%);width:26%;aspect-ratio:1.5;z-index:5";
     cannon.innerHTML='<svg viewBox="0 0 120 80" style="width:100%;height:100%">'+
-      '<rect x="8" y="34" width="70" height="30" rx="12" fill="#5b6ee1" stroke="#2c3a91" stroke-width="4"/>'+
-      '<rect x="66" y="38" width="48" height="22" rx="10" fill="#8b97ee" stroke="#2c3a91" stroke-width="4"/>'+
-      '<circle cx="30" cy="66" r="10" fill="#28304e"/><circle cx="58" cy="66" r="10" fill="#28304e"/></svg>';
+      '<path d="M14 76 h56 l-8 -14 h-40 Z" fill="#2c3a91"/>'+
+      '<circle cx="42" cy="48" r="22" fill="#5b6ee1" stroke="#2c3a91" stroke-width="5"/>'+
+      '<circle cx="42" cy="48" r="9" fill="#7ef0a8"/>'+
+      '<rect x="52" y="36" width="58" height="20" rx="10" fill="#8b97ee" stroke="#2c3a91" stroke-width="5"/>'+
+      '<rect x="102" y="32" width="12" height="28" rx="6" fill="#ffd75e" stroke="#a3611a" stroke-width="4"/></svg>';
     ui.cannon=cannon;
     const meter=el("div","",field);
     meter.style.cssText="position:absolute;left:30%;top:22%;transform:translateX(-50%);display:flex;gap:4px;z-index:7;"+
@@ -3997,6 +4015,7 @@ GAMES.aveng=ctx=>{
         return;
       }
       st.done=true; q.phase="commit"; ctx.answering(false);
+      ui.cans.forEach(x=>{ if(x!==can){ x.style.transition="opacity .3s"; x.style.opacity="0"; } });
       can.style.transition="left .35s,top .35s,opacity .35s";
       can.style.left="30%"; can.style.top="46%"; can.style.opacity="0";
       SFX.whoosh();
@@ -4012,7 +4031,7 @@ GAMES.aveng=ctx=>{
           ui.mlab.querySelector("b").textContent="10/10";
           SFX.star();
           const beam=el("div","",ui.field);
-          beam.style.cssText="position:absolute;left:42%;top:43%;height:5%;width:0;z-index:9;border-radius:99px;"+
+          beam.style.cssText="position:absolute;left:46%;top:44%;height:5%;width:0;z-index:9;border-radius:99px;"+
             "background:linear-gradient(90deg,#ffd75e,#fff);box-shadow:0 0 18px #ffd75e;transition:width .35s";
           requestAnimationFrame(()=>requestAnimationFrame(()=>{ beam.style.width="38%"; }));
           const bt=el("b","",beam);
@@ -4370,6 +4389,14 @@ GAMES.monkey=ctx=>{
     ui.gate=gate;
     // 枝上的桃（SVG 桃子）
     const peachSVG='<svg viewBox="0 0 60 60" style="width:100%;height:100%"><circle cx="24" cy="34" r="19" fill="#ff9eb0"/><circle cx="37" cy="34" r="19" fill="#ff7f9d"/><path d="M30 16 Q33 6 42 6" stroke="#3f7d2e" stroke-width="4" fill="none"/><ellipse cx="42" cy="9" rx="7" ry="4" fill="#6fbf4a"/></svg>';
+    // 树枝
+    const branch=el("div","",field);
+    branch.style.cssText="position:absolute;left:6%;top:18%;width:34%;height:3.2%;border-radius:99px;z-index:5;"+
+      "background:linear-gradient(#7a5a3a,#5a3c18);box-shadow:0 3px 6px rgba(0,0,0,.35)";
+    const gx2=el("b","",gate);
+    gx2.style.cssText="position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-weight:900;color:#ffd75e;"+
+      "font-size:clamp(22px,5vmin,52px);text-shadow:0 2px 0 rgba(0,0,0,.5)";
+    gx2.textContent="×2";
     ui.peaches=[];
     for(let i=0;i<q.p;i++){
       const o=el("div","",field); o.dataset.peach="1";
@@ -4385,8 +4412,8 @@ GAMES.monkey=ctx=>{
     }
     // 上下两条对齐槽
     ui.rowT=el("div","",field); ui.rowB=el("div","",field);
-    ui.rowT.style.cssText="position:absolute;right:6%;top:26%;display:flex;gap:8px;z-index:6";
-    ui.rowB.style.cssText="position:absolute;right:6%;top:56%;display:flex;gap:8px;z-index:6";
+    ui.rowT.style.cssText="position:absolute;right:7%;top:24%;display:flex;gap:10px;z-index:6";
+    ui.rowB.style.cssText="position:absolute;right:7%;top:52%;display:flex;gap:10px;z-index:6";
     ui.done=0;
     function through(o){
       o.dataset.done="1"; ui.done++;
@@ -4403,7 +4430,7 @@ GAMES.monkey=ctx=>{
         // 裂成两颗：上下槽各一
         [ui.rowT,ui.rowB].forEach((row,j)=>{
           const c=el("div","",row);
-          c.style.cssText="width:clamp(30px,5.6vmin,58px);aspect-ratio:1;position:relative";
+          c.style.cssText="width:clamp(44px,8vmin,88px);aspect-ratio:1;position:relative";
           c.innerHTML=peachSVG;
           c.classList.add("pop");
           const t2=el("b","",c);
