@@ -715,6 +715,12 @@ canvas{display:block}
     <div><b>检测到语音引擎活动：</b><span id="dgSeen">-</span></div>
     <div><b>第一句是否确认发声：</b><span id="dgFirst">-</span></div>
     <div style="margin-top:8px"><b>中文声音列表：</b><div class="vlist" id="dgZhList">-</div></div>
+    <div style="margin-top:8px"><b>选择讲解声音：</b></div>
+    <div style="display:flex;gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap">
+      <select id="dgVoiceSel" style="flex:1 1 auto;min-width:160px;font-size:14px;padding:6px;border-radius:8px"></select>
+      <button class="pb" id="dgVoiceTry">试听</button>
+    </div>
+    <div style="font-size:12px;opacity:.75;margin-top:4px">想要更自然的声音：iPad「设置 → 辅助功能 → 朗读内容 → 声音 → 中文」里下载带「增强」字样的声音，回来点"重新载入声音"就能选到。孩子数数的回声已内置高品质录音，不受此影响。</div>
     <button class="pb" id="dgTest">测试发声</button>
     <button class="pb" id="dgReload">重新载入声音</button>
   </section>
@@ -758,7 +764,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "7.3.0";
+const VERSION = "7.4.0";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -963,6 +969,50 @@ const SFX=(()=>{
     whoosh:()=>beep(240,.2,"sawtooth",.08,0) };
 })();
 
+/* ========================= 计数语音库：预生成神经语音，绕开 speechSynthesis ========================= */
+const VoiceBank=(()=>{
+  let ctx=null,gain=null,cur=null,ready=false,failed=false;
+  const buf={};
+  const FILES={};
+  (()=>{ const cs=n=>n<=10?CN_SEQ[n]:(n<20?("十"+CN_SEQ[n-10]):"二十");
+    for(let i=1;i<=20;i++) FILES[cs(i)]="n"+i;
+    for(let i=1;i<=10;i++) FILES["第"+cs(i)]="d"+i;
+    for(let i=1;i<=6;i++)  FILES["上"+cs(i)]="u"+i; })();
+  function ensure(){
+    if(ctx) return ctx;
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null;
+    try{ ctx=new AC(); gain=ctx.createGain(); gain.gain.value=.95; gain.connect(ctx.destination); }
+    catch(e){ ctx=null; }
+    return ctx;
+  }
+  function warm(){                       // 首次用户手势后调用：解码全部数词（~36 个小文件）
+    if(ready||failed) return;
+    const c=ensure(); if(!c){ failed=true; return; }
+    if(c.state!=="running"){ try{ c.resume(); }catch(e){} }
+    ready=true;
+    Object.keys(FILES).forEach(k=>{
+      fetch("assets/voice/"+FILES[k]+".mp3")
+        .then(r=>{ if(!r.ok) throw 0; return r.arrayBuffer(); })
+        .then(ab=>c.decodeAudioData(ab))
+        .then(b=>{ buf[k]=b; })
+        .catch(()=>{});                  // 单个失败静默：该词自动回退合成器
+    });
+  }
+  function play(text){
+    const b=buf[text]; if(!b) return false;
+    const c=ensure(); if(!c) return false;
+    if(c.state!=="running"){ try{ c.resume(); }catch(e){} }
+    try{
+      if(cur){ try{ cur.stop(); }catch(e){} cur=null; }   // 最新数字优先：上一个立刻让位
+      const src=c.createBufferSource(); src.buffer=b; src.connect(gain);
+      src.start(0); cur=src;
+      src.onended=()=>{ if(cur===src) cur=null; };
+      return true;
+    }catch(e){ return false; }
+  }
+  return { warm, play, has:t=>!!buf[t] };
+})();
+
 /* ========================= 语音（iOS 军规 + 双通道） ========================= */
 const Speech=(()=>{
   const S=window.speechSynthesis;
@@ -986,23 +1036,52 @@ const Speech=(()=>{
   /* 计数通道（永不 cancel，只保留最新待播） */
   let cntLatest=null,cntTimer=null;
   window.__speechLog=[];
+  /* iPad 军规8：WebKit 会把 speaking 状态位卡死为 true（快速连句后不再回调 onend），
+     此后所有排队等"空闲"= 永久静音。看门狗：引擎声称在忙、但我们这边早已收工 ≥2.4s
+     → 判定僵死，强制 cancel 复位再恢复泵。附带 iOS 随机 pause 的 resume 保活。 */
+  let wedgeN=0,lastEndAt=0;
+  if(typeof setInterval==="function") setInterval(()=>{
+    if(!OK) return;
+    try{
+      const claims=busy();
+      const oursDone=!active || Date.now()>activeUntil+1800;
+      if(claims&&oursDone) wedgeN++; else wedgeN=0;
+      if(wedgeN>=2){
+        try{ S.cancel(); }catch(e){}
+        lastCancelAt=Date.now(); active=false; activeUntil=0; curCh=null; chanToken++; wedgeN=0;
+        window.__speechLog.push({id:++serial,t:Math.round(performance.now()),text:"[wedge-reset]",tag:"watchdog",ch:"sys"});
+        setTimeout(()=>{ try{ pump(); }catch(e){} },CANCEL_GAP+40);
+      }
+      if(!claims){ try{ S.resume(); }catch(e){} }
+    }catch(e){}
+  },1200);
 
   function zhVoices(){ let a=[]; try{a=S.getVoices()||[];}catch(e){}
     return a.filter(v=>(v.lang||"").toLowerCase().replace("_","-").indexOf("zh")===0); }
   function score(v){
     const n=(v.name||"").toLowerCase(), l=(v.lang||"").toLowerCase().replace("_","-");
     let s=l.indexOf("zh-cn")===0?100:l.indexOf("zh-hans")===0?92:l.indexOf("zh-sg")===0?60:30;
-    if(/ting-?ting|婷婷/.test(n)) s+=55;
-    if(/xiaoxiao|晓晓/.test(n))   s+=52;
-    if(/xiaoyi|yunxi|yunyang|huihui|kangkang/.test(n)) s+=26;
-    if(/li-?mu|lilian|meijia|sinji|tian-?tian/.test(n)) s+=12;
+    if(/enhanced|premium|增强|高品质/.test(n)) s+=48;   // iOS 下载的增强语音自然得多，永远优先
+    if(/siri/.test(n)) s+=20;
+    if(/ting-?ting|婷婷/.test(n)) s+=16;
+    if(/xiaoxiao|晓晓/.test(n))   s+=15;
+    if(/xiaoyi|yunxi|yunyang|huihui|kangkang/.test(n)) s+=10;
+    if(/li-?mu|lilian|meijia|sinji|tian-?tian/.test(n)) s+=5;
     if(v.localService) s+=6;
     return s;
   }
   function refreshVoice(){
     const zh=zhVoices(); tries++;
     if(!zh.length) return null;
-    zh.sort((a,b)=>score(b)-score(a)); voice=zh[0]; return voice;
+    zh.sort((a,b)=>score(b)-score(a));
+    let saved=null; try{ saved=localStorage.getItem("kidmath2.voice"); }catch(e){}
+    voice=(saved&&zh.find(v=>v.name===saved))||zh[0];
+    return voice;
+  }
+  function listVoices(){ const zh=zhVoices(); zh.sort((a,b)=>score(b)-score(a)); return zh; }
+  function setVoice(name){
+    try{ localStorage.setItem("kidmath2.voice",name); }catch(e){}
+    refreshVoice();
   }
   function busy(){ try{ return !!(S&&(S.speaking||S.pending)); }catch(e){ return false; } }
   /** 判忙必须"原生状态 或 本地标记"取或 —— WebKit 的状态位更新可能滞后 */
@@ -1039,8 +1118,8 @@ const Speech=(()=>{
     // 而这句是在入口 click 的同步栈里跑的 —— 一抛整个启动流程就断了。
     try{ if(voice) u.voice=voice; }catch(e){}
     u.lang=(voice&&voice.lang)?voice.lang:"zh-CN";
-    u.rate =opt&&opt.rate !=null?opt.rate :0.86;
-    u.pitch=opt&&opt.pitch!=null?opt.pitch:1.12;
+    u.rate =opt&&opt.rate !=null?opt.rate :0.92;
+    u.pitch=opt&&opt.pitch!=null?opt.pitch:1.04;
     u.volume=1; keep.push(u); if(keep.length>24) keep.shift();
     return u;
   }
@@ -1066,6 +1145,7 @@ const Speech=(()=>{
   function finish(item){
     if(item._to){ clearTimeout(item._to); item._to=null; }
     if(item.done) return; item.done=true;
+    lastEndAt=Date.now();
     if(typeof item.opt.onDone==="function"){ try{ item.opt.onDone(); }catch(e){} }
     notify(); pump();                     // 这句说完了 → 播队列里的下一句
   }
@@ -1085,6 +1165,8 @@ const Speech=(()=>{
     if(engineBusy()){ pendTimer=setTimeout(()=>{ pendTimer=null; pump(); },120); return; }
     const gap=Date.now()-lastCancelAt;
     if(gap<CANCEL_GAP){ pendTimer=setTimeout(()=>{ pendTimer=null; pump(); },CANCEL_GAP-gap); return; }
+    const g2=Date.now()-lastEndAt;                      // 军规8b：两句之间留 90ms 呼吸
+    if(g2<90){ pendTimer=setTimeout(()=>{ pendTimer=null; pump(); },90-g2); return; }
     fire(queue.shift());                                // 空闲 → 同步开口（军规1 同样受益）
   }
   function say(text,opt){
@@ -1103,8 +1185,9 @@ const Speech=(()=>{
   function count(text,tag){
     lastReqAt=Date.now();
     window.__speechLog.push({id:++serial,t:Math.round(performance.now()),text,tag:tag||"count",ch:"count"});
-    if(!OK) return;
     if(tag==="child-count") cutSay();
+    if(VoiceBank.play(text)) return;   // 神经语音文件：即点即响，永不进合成器、永不塞车
+    if(!OK) return;
     cntLatest=text;
     if(cntTimer) return;
     const flush=()=>{
@@ -1213,7 +1296,7 @@ const Speech=(()=>{
     try{ if(wasBusy){ S.cancel(); lastCancelAt=Date.now(); } }catch(e){}
   }
   return { ok:OK, say, count, clearCount, unlockAndSay, nudge, replay, stopScope,
-    cut:cutSay, talking,
+    cut:cutSay, talking, listVoices, setVoice,
     busy, engineBusy, sinceReq, refreshVoice, hideHint,
     get state(){return state;},
     onChange:f=>subs.push(f),
@@ -5090,6 +5173,7 @@ const App=(()=>{
     let started=false;
     $("#startBtn").addEventListener("click",function(){
       if(started) return; started=true;      // 防重入：重复点击不能再调一次 unlockAndSay
+      VoiceBank.warm();                       // 同一手势里解锁计数语音库
       // 顺序有意为之：TTS 首句最脆弱，放在同步栈最前；
       // AudioContext 解锁与无声 audio 循环紧随其后，三者同属这一次 click 任务。
       Speech.unlockAndSay("欢迎来到星星回家！我们一起帮朋友们把星星送回天上吧！");
@@ -5142,9 +5226,14 @@ const App=(()=>{
     $("#dgVer").textContent=VERSION;
     onTap($("#panelClose"),()=>$("#panel").classList.remove("on"));
     onTap($("#gaCancel"),()=>$("#gateAdult").classList.remove("on"));
-    onTap($("#dgTest"),()=>{ SFX.gesture(); Audio2.kick();
+    onTap($("#dgTest"),()=>{ SFX.gesture(); Audio2.kick(); VoiceBank.warm();
       Speech.say("一，二，三。你好，我是语音测试。",{tag:"diag-test",interrupt:true}); setTimeout(refreshPanel,700); });
     onTap($("#dgReload"),()=>{ Speech.refreshVoice(); refreshPanel(); });
+    const vsel=$("#dgVoiceSel");
+    vsel.addEventListener("change",()=>{ Speech.setVoice(vsel.value); refreshPanel(); });
+    onTap($("#dgVoiceTry"),()=>{ SFX.gesture(); Audio2.kick(); VoiceBank.warm();
+      if(vsel.value) Speech.setVoice(vsel.value);
+      Speech.say("你好呀！我们一起数，一，二，三！",{tag:"diag-try",interrupt:true}); });
     $$("#dgLvRow .pb").forEach(b=>onTap(b,()=>{ Store.setMinLv(+b.dataset.lv); refreshMap(); refreshPanel(); }));
     onTap($("#dgNum"),()=>{ Store.setNum(!Store.symbols()); refreshPanel(); });
     onTap($("#dgUnlockAll"),()=>{ Store.unlockAll(); refreshMap(); refreshPanel();
@@ -5163,6 +5252,19 @@ const App=(()=>{
       b.style.outline=(+b.dataset.lv===Store.minLv())?"3px solid #ffd75e":"none";
     });
     $("#dgNum").textContent=Store.symbols()?"开着（点击隐藏）":"关着（点击显示）";
+    const vsel2=$("#dgVoiceSel");
+    if(vsel2){
+      const vs=Speech.listVoices?Speech.listVoices():[];
+      let saved=null; try{ saved=localStorage.getItem("kidmath2.voice"); }catch(e){}
+      vsel2.innerHTML="";
+      vs.forEach(v=>{ const o=document.createElement("option");
+        o.value=v.name;
+        o.textContent=(/enhanced|premium|增强|高品质/i.test(v.name)?"★ ":"")+v.name+"（"+v.lang+"）";
+        vsel2.appendChild(o); });
+      if(!vs.length){ const o=document.createElement("option"); o.textContent="（没有检测到中文声音）"; vsel2.appendChild(o); }
+      const curName=(saved&&vs.find(v=>v.name===saved))?saved:(vs[0]&&vs[0].name)||"";
+      if(curName) vsel2.value=curName;
+    }
     const d=Speech.diag();
     $("#dgAll").textContent=d.all; $("#dgZhN").textContent=d.zh.length; $("#dgCur").textContent=d.cur;
     $("#dgState").textContent=(d.speaking?"正在发声":"空闲")+(Speech.ok?"":"（本浏览器不支持语音合成）");
