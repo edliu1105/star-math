@@ -612,7 +612,11 @@ canvas{display:block}
 #parentDot{position:fixed;right:8px;bottom:8px;width:48px;height:48px;z-index:210;
   display:flex;align-items:center;justify-content:center;border-radius:50%;
   background:rgba(20,14,50,.4);font-size:24px;opacity:.55;
-  -webkit-user-select:none;user-select:none;touch-action:none}
+  -webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none}
+#parentDot.holding{opacity:1;transform:scale(1.12);transition:transform 1.5s ease}
+#parentDot.holding::before{content:"";position:absolute;inset:-7px;border-radius:50%;
+  border:4px dashed var(--gold);animation:gearspin 1.5s linear;pointer-events:none}
+@keyframes gearspin{from{transform:rotate(0)}to{transform:rotate(300deg)}}
 #gearTip{position:fixed;right:62px;bottom:18px;z-index:211;background:rgba(20,14,50,.9);color:#fff;
   padding:8px 14px;border-radius:12px;font-size:14px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none}
 #gearTip.on{opacity:1}
@@ -764,7 +768,7 @@ canvas{display:block}
    星星回家 — 幼儿数感建构应用
    教学契约：每题独立作答 → 首答判定 → 分技能纠错 → 同构新题复测
    ============================================================================ */
-const VERSION = "7.4.0";
+const VERSION = "7.4.1";
 const $  = s => document.querySelector(s);
 const $$ = s => [].slice.call(document.querySelectorAll(s));
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
@@ -5196,18 +5200,37 @@ const App=(()=>{
       Speech.replay("你好呀！听得到我说话吗？",{tag:"hint-retry"});
     });
 
-    /* 点齿轮直接弹大人验证（两道加法题就是儿童锁）。
-       之前的"长按 3 秒"在 iPad 上会被系统长按手势 pointercancel 掉，打不开。 */
+    /* 齿轮改回长按 1.5 秒（孩子误触短点无效）。上次长按失败的元凶（系统长按手势
+       pointercancel）已被全局 contextmenu/gesturestart 抑制 + touch-action:none +
+       pointer capture 消除；再加 26px 位移容差防手指微滑误取消。长按后仍有加法儿童锁。 */
     let tipT=null;
-    onTap($("#parentDot"),()=>{
-      if(Date.now()<gaCooldownUntil){
-        const t=$("#gearTip"); t.textContent="先休息一下，等 30 秒再试";
-        t.classList.add("on");
-        clearTimeout(tipT); tipT=setTimeout(()=>t.classList.remove("on"),1800);
-        return;
-      }
-      openAdultGate();
-    });
+    (function(){
+      const g=$("#parentDot"); if(!g) return;
+      const tip=(msg,ms)=>{ const t=$("#gearTip"); t.textContent=msg; t.classList.add("on");
+        clearTimeout(tipT); tipT=setTimeout(()=>t.classList.remove("on"),ms||1600); };
+      let hT=null,downAt=0,sx=0,sy=0,pid=null;
+      const cancelHold=()=>{ if(hT){ clearTimeout(hT); hT=null; } g.classList.remove("holding"); pid=null; };
+      g.addEventListener("pointerdown",e=>{
+        e.preventDefault(); e.stopPropagation();
+        if(Date.now()<gaCooldownUntil){ tip("先休息一下，等 30 秒再试",1800); return; }
+        if(pid!==null) return;
+        pid=e.pointerId; sx=e.clientX; sy=e.clientY; downAt=Date.now();
+        try{ g.setPointerCapture(pid); }catch(_){}
+        g.classList.add("holding");
+        hT=setTimeout(()=>{ cancelHold(); SFX.tap(); openAdultGate(); },1500);
+      },{passive:false});
+      g.addEventListener("pointermove",e=>{
+        if(pid===null||e.pointerId!==pid) return;
+        if(Math.hypot(e.clientX-sx,e.clientY-sy)>26) cancelHold();
+      });
+      ["pointerup","pointercancel"].forEach(ev=>g.addEventListener(ev,e=>{
+        if(pid===null||e.pointerId!==pid) return;
+        const held=Date.now()-downAt;
+        cancelHold();
+        if(ev==="pointerup"&&held<1500) tip("家长你好：请按住小齿轮 2 秒");
+      }));
+      g.addEventListener("contextmenu",e=>e.preventDefault());
+    })();
 
     document.addEventListener("contextmenu",e=>e.preventDefault());
     document.addEventListener("gesturestart",e=>e.preventDefault());

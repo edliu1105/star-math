@@ -39,7 +39,7 @@ def check(c, m):
 
 
 def prog(pg, wid):
-    return pg.evaluate("(id)=>{const d=JSON.parse(localStorage['kidmath2.progress.v2']||'{}');"
+    return pg.evaluate("(id)=>{const d=JSON.parse(localStorage['kidmath2.progress.v3']||'{}');"
                        "return (d.w&&d.w[id])||null;}", wid)
 
 
@@ -56,10 +56,10 @@ with sync_playwright() as p:
     pg.goto(BASE); pg.wait_for_function("window.__ready===true", timeout=15000)
     TA.set_level(pg, 1)
     # 只解锁前两个（默认状态），第三个世界必须靠掌握才打开
-    pg.evaluate("""()=>{const d=JSON.parse(localStorage['kidmath2.progress.v2']);
+    pg.evaluate("""()=>{const d=JSON.parse(localStorage['kidmath2.progress.v3']);
         Object.keys(d.w).forEach(k=>{d.w[k].open=0;d.w[k].stars=0;d.w[k].lv=1;
                                      d.w[k].mast=0;d.w[k].tries=0;d.w[k].hist=[];});
-        localStorage.setItem('kidmath2.progress.v2',JSON.stringify(d));}""")
+        localStorage.setItem('kidmath2.progress.v3',JSON.stringify(d));}""")
     pg.reload(); pg.wait_for_function("window.__ready===true")
     pg.click("#startBtn", force=True); pg.wait_for_selector("#map.on")
     TA.enter_world(pg, "peppa")
@@ -103,10 +103,10 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(BASE); pg.wait_for_function("window.__ready===true", timeout=15000)
     TA.set_level(pg, 1)
-    pg.evaluate("""()=>{const d=JSON.parse(localStorage['kidmath2.progress.v2']);
+    pg.evaluate("""()=>{const d=JSON.parse(localStorage['kidmath2.progress.v3']);
         Object.keys(d.w).forEach(k=>{d.w[k].open=0;d.w[k].stars=0;d.w[k].lv=1;d.w[k].mast=0;
                                      d.w[k].tries=0;d.w[k].hist=[];d.w[k].wins=0;d.w[k].winAt=-1;});
-        localStorage.setItem('kidmath2.progress.v2',JSON.stringify(d));}""")
+        localStorage.setItem('kidmath2.progress.v3',JSON.stringify(d));}""")
     pg.reload(); pg.wait_for_function("window.__ready===true")
     pg.click("#startBtn", force=True); pg.wait_for_selector("#map.on")
     TA.enter_world(pg, "peppa")
@@ -139,7 +139,7 @@ with sync_playwright() as p:
     print("    固定位置点了 %d 次 → %s  正确率 %.2f" %
           (done, {k: w[k] for k in ("lv", "mast", "tries", "wins")}, rate))
     check(done >= a.rounds * 2 - 6, "确实跑满了 %d 轮（实际 %d）" % (a.rounds * 2, done))
-    sess = pg.evaluate("()=>JSON.parse(localStorage['kidmath2.progress.v2']).sess")
+    sess = pg.evaluate("()=>JSON.parse(localStorage['kidmath2.progress.v3']).sess")
     print("    全部发生在同一次应用启动内（sess=%s）→ wins 结构上最多为 1" % sess)
     check(rate < 0.45, "随机命中率停留在随机水平（%.2f < 0.45）" % rate)
     locked = pg.evaluate("()=>document.querySelector('.world[data-w=\"bluey\"]').classList.contains('locked')")
@@ -303,11 +303,11 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(BASE); pg.wait_for_function("window.__ready===true", timeout=15000)
     TA.set_level(pg, 1)
-    pg.evaluate("""()=>{const d=JSON.parse(localStorage['kidmath2.progress.v2']);
+    pg.evaluate("""()=>{const d=JSON.parse(localStorage['kidmath2.progress.v3']);
         Object.keys(d.w).forEach(k=>{d.w[k].open=0;d.w[k].stars=0;d.w[k].lv=1;d.w[k].mast=0;
                                      d.w[k].tries=0;d.w[k].hist=[];d.w[k].recent=[];
                                      d.w[k].wins=0;d.w[k].winAt=-1;});
-        d.sess=0; localStorage.setItem('kidmath2.progress.v2',JSON.stringify(d));}""")
+        d.sess=0; localStorage.setItem('kidmath2.progress.v3',JSON.stringify(d));}""")
     for launch in (1, 2):
         pg.reload(); pg.wait_for_function("window.__ready===true", timeout=15000)
         pg.click("#startBtn", force=True); pg.wait_for_selector("#map.on")
@@ -340,7 +340,7 @@ with sync_playwright() as p:
     check(w["lv"] >= 2, "全对后难度升到 L2 以上（实际 L%d）" % w["lv"])
     check(w["mast"] >= 6, "累计掌握 >=6（实际 %d）" % w["mast"])
     check(w["wins"] >= 2, "跨两次启动拿到 2 个掌握窗口（实际 %d）" % w["wins"])
-    rate2 = pg.evaluate("()=>{const d=JSON.parse(localStorage['kidmath2.progress.v2']).w.paw;"
+    rate2 = pg.evaluate("()=>{const d=JSON.parse(localStorage['kidmath2.progress.v3']).w.paw;"
                         "const h=(d.recent||[]).slice(-12);"
                         "return h.length<8?0:h.reduce((a,b)=>a+b,0)/h.length;}")
     check(rate2 >= 0.6, "近期正确率 >=0.6（实际 %.2f）—— 说明 recent 没有被 hist 的清窗连带清掉" % rate2)
@@ -356,10 +356,10 @@ with sync_playwright() as p:
     pg = c.new_page()
     pg.goto(BASE); pg.wait_for_function("window.__ready===true", timeout=15000)
     TA.set_level(pg, 1)                      # 先写入一份合法进度，再改字段
-    pg.evaluate("""()=>{const d=JSON.parse(localStorage['kidmath2.progress.v2']);
+    pg.evaluate("""()=>{const d=JSON.parse(localStorage['kidmath2.progress.v3']);
         Object.keys(d.w).forEach(k=>{d.w[k].open=0;d.w[k].mast=0;d.w[k].lv=1;d.w[k].hist=[];});
         d.w.peppa.stars=10;
-        localStorage.setItem('kidmath2.progress.v2',JSON.stringify(d));}""")
+        localStorage.setItem('kidmath2.progress.v3',JSON.stringify(d));}""")
     pg.reload(); pg.wait_for_function("window.__ready===true")
     pg.click("#startBtn", force=True); pg.wait_for_selector("#map.on")
     locked = pg.evaluate("()=>document.querySelector('.world[data-w=\"bluey\"]').classList.contains('locked')")
